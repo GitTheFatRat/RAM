@@ -12,6 +12,7 @@ using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
 using RbxManager.Core.Common;
 using RbxManager.Core.Models;
+using RbxManager.Core.Processes;
 using RbxManager.Infrastructure.Auth;
 using RbxManager.Infrastructure.Launch;
 using RbxManager.Infrastructure.Storage;
@@ -86,6 +87,12 @@ public sealed class LogLeakTests
             CapturedUri = uri;
             return true;
         }
+    }
+
+    private sealed class FakeProcessProvider : RbxManager.Core.Processes.IProcessProvider
+    {
+        public IReadOnlyList<ProcessSnapshot> GetRobloxProcesses() => [];
+        public bool Kill(int pid, bool graceful) => true;
     }
 
     private sealed class SimpleMockHttpHandler : HttpMessageHandler
@@ -179,7 +186,7 @@ public sealed class LogLeakTests
         using (EncryptedFileVault vault = new(vaultPath))
         {
             RobloxAuthService authService = new(launchHttp, authLogger);
-            using RobloxLauncher launcher = new(vault, authService, processStarter, launcherLogger);
+            using RobloxLauncher launcher = new(vault, authService, processStarter, new FakeProcessProvider(), new RbxManager.Core.Instance.DefaultInstanceGate(), launcherLogger);
 
             LaunchRequest launchReq = new(new AccountId(1), 1818, null);
             Result launchResult = await launcher.LaunchAsync(launchReq);
@@ -189,7 +196,43 @@ public sealed class LogLeakTests
             Assert.Contains(FakeTicket, processStarter.CapturedUri, StringComparison.Ordinal);
         }
 
-        // 4. Assert zero log leakage
+        // 4. ServerBrowser operations (unauthenticated queries)
+        ILogger<RbxManager.Infrastructure.Servers.ServerBrowserService> serverLogger =
+            factory.CreateLogger<RbxManager.Infrastructure.Servers.ServerBrowserService>();
+        using (HttpClient serverHttp = new(new SimpleMockHttpHandler(req =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"data":[]}""", Encoding.UTF8, "application/json")
+            })))
+        {
+            RbxManager.Infrastructure.Servers.ServerBrowserService serverService = new(serverHttp, serverLogger);
+            await serverService.GetServersAsync(1818);
+        }
+
+        // 5. SessionTracker operations (rejoin logging)
+        ILogger<RbxManager.Infrastructure.Sessions.SessionTracker> trackerLogger =
+            factory.CreateLogger<RbxManager.Infrastructure.Sessions.SessionTracker>();
+        using (HttpClient failHttp = new(new SimpleMockHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized))))
+        using (EncryptedFileVault trackerVault = new(vaultPath))
+        {
+            RobloxAuthService authService = new(failHttp, authLogger);
+            using RobloxLauncher launcher = new(trackerVault, authService, processStarter, new FakeProcessProvider(), new RbxManager.Core.Instance.DefaultInstanceGate(), launcherLogger);
+            using RbxManager.Infrastructure.Sessions.SessionTracker tracker = new(
+                new FakeProcessProvider(),
+                trackerVault,
+                authService,
+                launcher,
+                trackerLogger,
+                policyFactory: () => new RbxManager.Core.Sessions.RejoinPolicy(initialDelay: TimeSpan.Zero));
+
+            AccountId accId = new(1);
+            tracker.SetAutoRejoin(accId, true);
+            RbxManager.Core.Sessions.RunningSession session = new(accId, new LaunchRequest(accId, 1818, null), 999, DateTimeOffset.UtcNow);
+            tracker.RegisterSession(session);
+            await tracker.PollProcessesAsync();
+        }
+
+        // 6. Assert zero log leakage
         Assert.NotEmpty(logSink.Messages);
 
         foreach (string logMessage in logSink.Messages)

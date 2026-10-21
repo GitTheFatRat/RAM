@@ -67,3 +67,15 @@ An encrypted export and backup mechanism (protected by a master password) is req
 
 3. **Cookie Rotation Handling**:
    - `Set-Cookie` headers returned by Roblox API endpoints are ignored (`UseCookies = false`). Handling automatic cookie rotation is intentionally deferred as a documented limitation.
+
+---
+
+## Server Browser and Process Monitoring Security (M3)
+
+1. **Unauthenticated Public Server Queries**:
+   - The server browser (`ServerBrowserService`) queries Roblox game server listings via unauthenticated GET requests to `https://games.roblox.com`. No cookies, authentication headers, or user secrets are ever attached to these requests.
+
+2. **Process Management and Safe Rejoin**:
+   - Process enumeration (`SystemProcessProvider`) inspects local running Roblox player processes using standard Windows process APIs.
+   - Auto-rejoin re-validates the account's cookie prior to requesting an authentication ticket. If the cookie is expired, rejoining terminates immediately and the account status is updated to `Expired`.
+   - Rejoin attempts are strictly bounded by `RejoinPolicy` with exponential backoff and a 5-attempt circuit breaker across a 30-minute window to avoid infinite crash loops or spamming Roblox endpoints.

@@ -226,4 +226,97 @@
   <data name="LoginSuccessValidating" xml:space="preserve">
     <value>Login successful. Validating account details...</value>
   </data>
+  <data name="NavServers" xml:space="preserve">
+    <value>Servers</value>
+  </data>
+  <data name="NavRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="ServersPageTitle" xml:space="preserve">
+    <value>Server Browser</value>
+  </data>
+  <data name="RunningPageTitle" xml:space="preserve">
+    <value>Running Sessions</value>
+  </data>
+  <data name="SortAscending" xml:space="preserve">
+    <value>Players: Low to High</value>
+  </data>
+  <data name="SortDescending" xml:space="preserve">
+    <value>Players: High to Low</value>
+  </data>
+  <data name="LoadMore" xml:space="preserve">
+    <value>Load more</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="JoinWithAccount" xml:space="preserve">
+    <value>Join with account...</value>
+  </data>
+  <data name="CopyServerId" xml:space="preserve">
+    <value>Copy server ID</value>
+  </data>
+  <data name="ServerIdCopied" xml:space="preserve">
+    <value>Server ID copied to clipboard.</value>
+  </data>
+  <data name="ColumnPlayers" xml:space="preserve">
+    <value>Players</value>
+  </data>
+  <data name="ColumnFps" xml:space="preserve">
+    <value>FPS</value>
+  </data>
+  <data name="ColumnPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="ColumnServerId" xml:space="preserve">
+    <value>Server ID</value>
+  </data>
+  <data name="ColumnPid" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="ColumnPlace" xml:space="preserve">
+    <value>Place ID</value>
+  </data>
+  <data name="ColumnStarted" xml:space="preserve">
+    <value>Started</value>
+  </data>
+  <data name="ColumnUptime" xml:space="preserve">
+    <value>Uptime</value>
+  </data>
+  <data name="ColumnMemory" xml:space="preserve">
+    <value>Memory (MB)</value>
+  </data>
+  <data name="ColumnAutoRejoin" xml:space="preserve">
+    <value>Auto-rejoin</value>
+  </data>
+  <data name="ColumnAction" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="CloseAction" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="CloseAll" xml:space="preserve">
+    <value>Close all</value>
+  </data>
+  <data name="CloseAllConfirmTitle" xml:space="preserve">
+    <value>Close All Sessions</value>
+  </data>
+  <data name="CloseAllConfirmMessage" xml:space="preserve">
+    <value>Are you sure you want to close all running Roblox sessions?</value>
+  </data>
+  <data name="RejoinGaveUp" xml:space="preserve">
+    <value>Rejoin gave up (breaker tripped)</value>
+  </data>
+  <data name="NoRunningSessions" xml:space="preserve">
+    <value>No Roblox sessions currently running.</value>
+  </data>
+  <data name="NoServersFound" xml:space="preserve">
+    <value>No public servers found for this Place ID.</value>
+  </data>
+  <data name="AccountPickerTitle" xml:space="preserve">
+    <value>Select Account(s) to Join</value>
+  </data>
+  <data name="RobloxAlreadyRunning" xml:space="preserve">
+    <value>Roblox is already running; enable multi-instance in Settings.</value>
+  </data>
 </root>

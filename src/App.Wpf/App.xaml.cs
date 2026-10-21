@@ -64,6 +64,10 @@ public partial class App : Application
         services.AddSingleton<MainWindow>();
         services.AddTransient<AccountsViewModel>();
         services.AddTransient<AccountsPage>();
+        services.AddTransient<ServersViewModel>();
+        services.AddTransient<ServersPage>();
+        services.AddTransient<RunningViewModel>();
+        services.AddTransient<RunningPage>();
         services.AddTransient<SettingsPage>();
     }
 

@@ -1,0 +1,24 @@
+<UserControl x:Class="RbxManager.App.Views.Controls.AccountPickerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             MinWidth="380"
+             MaxHeight="400">
+    <Grid Margin="0,8,0,0">
+        <ListView x:Name="AccountsListView"
+                  SelectionMode="Multiple"
+                  ItemsSource="{Binding Accounts}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <CheckBox IsChecked="{Binding IsSelected}"
+                              Margin="0,4">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Account.Alias}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                            <TextBlock Text="{Binding Account.Username}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </CheckBox>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</UserControl>

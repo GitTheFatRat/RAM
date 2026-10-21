@@ -1,0 +1,119 @@
+<Page x:Class="RbxManager.App.Views.Pages.RunningPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:res="clr-namespace:RbxManager.App.Resources"
+      xmlns:vm="clr-namespace:RbxManager.App.ViewModels"
+      d:DataContext="{d:DesignInstance vm:RunningViewModel}"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      mc:Ignorable="d"
+      Title="{x:Static res:Strings.RunningPageTitle}">
+
+    <Page.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Page.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0"
+                   Text="{x:Static res:Strings.RunningPageTitle}"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,16" />
+
+        <!-- Controls Bar -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <ui:Button Grid.Column="1"
+                       Content="{x:Static res:Strings.CloseAll}"
+                       Icon="{ui:SymbolIcon Dismiss24}"
+                       Appearance="Danger"
+                       Command="{Binding CloseAllSessionsCommand}"
+                       IsEnabled="{Binding HasSessions}" />
+        </Grid>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="2">
+            <!-- Data Grid -->
+            <ui:DataGrid ItemsSource="{Binding Sessions}"
+                         AutoGenerateColumns="False"
+                         CanUserAddRows="False"
+                         IsReadOnly="True"
+                         SelectionMode="Single"
+                         GridLinesVisibility="Horizontal">
+                <ui:DataGrid.Columns>
+                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnAlias}"
+                                        Binding="{Binding Alias}"
+                                        Width="160" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnPid}"
+                                        Binding="{Binding Pid}"
+                                        Width="90" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnPlace}"
+                                        Binding="{Binding PlaceId}"
+                                        Width="120" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnStarted}"
+                                        Binding="{Binding StartedFormatted}"
+                                        Width="100" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnUptime}"
+                                        Binding="{Binding UptimeFormatted}"
+                                        Width="100" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnMemory}"
+                                        Binding="{Binding MemoryMb, StringFormat='{}{0} MB'}"
+                                        Width="110" />
+                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAutoRejoin}"
+                                            Width="170">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox IsChecked="{Binding AutoRejoin, Mode=TwoWay}"
+                                              Margin="0,0,8,0" />
+                                    <ui:InfoBadge Severity="Critical"
+                                                  Value="{x:Static res:Strings.RejoinGaveUp}"
+                                                  Visibility="{Binding GaveUpVisibility}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAction}"
+                                            Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ui:Button Content="{x:Static res:Strings.CloseAction}"
+                                           Icon="{ui:SymbolIcon Dismiss24}"
+                                           Appearance="Secondary"
+                                           Command="{Binding DataContext.CloseSessionCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
+                                           CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </ui:DataGrid.Columns>
+            </ui:DataGrid>
+
+            <!-- Empty State Overlay -->
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
+                <ui:SymbolIcon Symbol="AppGeneric24"
+                               FontSize="48"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,12" />
+                <TextBlock Text="{x:Static res:Strings.NoRunningSessions}"
+                           FontSize="16"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

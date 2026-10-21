@@ -66,6 +66,37 @@ public static class Strings
     public static string WebView2Missing => GetString(nameof(WebView2Missing));
     public static string LoginWindowTitle => GetString(nameof(LoginWindowTitle));
     public static string LoginSuccessValidating => GetString(nameof(LoginSuccessValidating));
+    public static string NavServers => GetString(nameof(NavServers));
+    public static string NavRunning => GetString(nameof(NavRunning));
+    public static string ServersPageTitle => GetString(nameof(ServersPageTitle));
+    public static string RunningPageTitle => GetString(nameof(RunningPageTitle));
+    public static string SortAscending => GetString(nameof(SortAscending));
+    public static string SortDescending => GetString(nameof(SortDescending));
+    public static string LoadMore => GetString(nameof(LoadMore));
+    public static string Refresh => GetString(nameof(Refresh));
+    public static string JoinWithAccount => GetString(nameof(JoinWithAccount));
+    public static string CopyServerId => GetString(nameof(CopyServerId));
+    public static string ServerIdCopied => GetString(nameof(ServerIdCopied));
+    public static string ColumnPlayers => GetString(nameof(ColumnPlayers));
+    public static string ColumnFps => GetString(nameof(ColumnFps));
+    public static string ColumnPing => GetString(nameof(ColumnPing));
+    public static string ColumnServerId => GetString(nameof(ColumnServerId));
+    public static string ColumnPid => GetString(nameof(ColumnPid));
+    public static string ColumnPlace => GetString(nameof(ColumnPlace));
+    public static string ColumnStarted => GetString(nameof(ColumnStarted));
+    public static string ColumnUptime => GetString(nameof(ColumnUptime));
+    public static string ColumnMemory => GetString(nameof(ColumnMemory));
+    public static string ColumnAutoRejoin => GetString(nameof(ColumnAutoRejoin));
+    public static string ColumnAction => GetString(nameof(ColumnAction));
+    public static string CloseAction => GetString(nameof(CloseAction));
+    public static string CloseAll => GetString(nameof(CloseAll));
+    public static string CloseAllConfirmTitle => GetString(nameof(CloseAllConfirmTitle));
+    public static string CloseAllConfirmMessage => GetString(nameof(CloseAllConfirmMessage));
+    public static string RejoinGaveUp => GetString(nameof(RejoinGaveUp));
+    public static string NoRunningSessions => GetString(nameof(NoRunningSessions));
+    public static string NoServersFound => GetString(nameof(NoServersFound));
+    public static string AccountPickerTitle => GetString(nameof(AccountPickerTitle));
+    public static string RobloxAlreadyRunning => GetString(nameof(RobloxAlreadyRunning));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

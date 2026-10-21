@@ -8,7 +8,8 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M1**: Encrypted account vault (`vault.dat` v1) & account list UI with in-dialog editing/validation. (Completed)
 - **M1.1**: Isolated tests from real `%LOCALAPPDATA%` vault path. (Completed)
 - **M2**: Roblox authentication, WebView2 login, cookie validation, game launcher, security guard tests. (Completed)
-- **M3**: Server browser, process monitor, running sessions, auto-rejoin. (Next)
+- **M3**: Server browser, process monitor, running sessions, auto-rejoin. (Completed)
+- **M4**: Settings, multi-instance, group management, encrypted backup. (Next)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

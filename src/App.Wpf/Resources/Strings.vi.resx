@@ -226,4 +226,97 @@
   <data name="LoginSuccessValidating" xml:space="preserve">
     <value>Đăng nhập thành công. Đang xác thực thông tin tài khoản...</value>
   </data>
+  <data name="NavServers" xml:space="preserve">
+    <value>Máy chủ</value>
+  </data>
+  <data name="NavRunning" xml:space="preserve">
+    <value>Đang chạy</value>
+  </data>
+  <data name="ServersPageTitle" xml:space="preserve">
+    <value>Duyệt máy chủ</value>
+  </data>
+  <data name="RunningPageTitle" xml:space="preserve">
+    <value>Phiên đang chạy</value>
+  </data>
+  <data name="SortAscending" xml:space="preserve">
+    <value>Số người: Ít đến nhiều</value>
+  </data>
+  <data name="SortDescending" xml:space="preserve">
+    <value>Số người: Nhiều đến ít</value>
+  </data>
+  <data name="LoadMore" xml:space="preserve">
+    <value>Tải thêm</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="JoinWithAccount" xml:space="preserve">
+    <value>Tham gia bằng tài khoản...</value>
+  </data>
+  <data name="CopyServerId" xml:space="preserve">
+    <value>Sao chép ID máy chủ</value>
+  </data>
+  <data name="ServerIdCopied" xml:space="preserve">
+    <value>Đã sao chép ID máy chủ vào bộ nhớ tạm.</value>
+  </data>
+  <data name="ColumnPlayers" xml:space="preserve">
+    <value>Số người</value>
+  </data>
+  <data name="ColumnFps" xml:space="preserve">
+    <value>FPS</value>
+  </data>
+  <data name="ColumnPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="ColumnServerId" xml:space="preserve">
+    <value>ID máy chủ</value>
+  </data>
+  <data name="ColumnPid" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="ColumnPlace" xml:space="preserve">
+    <value>Place ID</value>
+  </data>
+  <data name="ColumnStarted" xml:space="preserve">
+    <value>Bắt đầu</value>
+  </data>
+  <data name="ColumnUptime" xml:space="preserve">
+    <value>Thời gian chạy</value>
+  </data>
+  <data name="ColumnMemory" xml:space="preserve">
+    <value>Bộ nhớ (MB)</value>
+  </data>
+  <data name="ColumnAutoRejoin" xml:space="preserve">
+    <value>Tự vào lại</value>
+  </data>
+  <data name="ColumnAction" xml:space="preserve">
+    <value>Thao tác</value>
+  </data>
+  <data name="CloseAction" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="CloseAll" xml:space="preserve">
+    <value>Đóng tất cả</value>
+  </data>
+  <data name="CloseAllConfirmTitle" xml:space="preserve">
+    <value>Đóng tất cả các phiên</value>
+  </data>
+  <data name="CloseAllConfirmMessage" xml:space="preserve">
+    <value>Bạn có chắc chắn muốn đóng tất cả các phiên Roblox đang chạy?</value>
+  </data>
+  <data name="RejoinGaveUp" xml:space="preserve">
+    <value>Ngừng vào lại (vượt quá giới hạn)</value>
+  </data>
+  <data name="NoRunningSessions" xml:space="preserve">
+    <value>Hiện không có phiên Roblox nào đang chạy.</value>
+  </data>
+  <data name="NoServersFound" xml:space="preserve">
+    <value>Không tìm thấy máy chủ công khai cho Place ID này.</value>
+  </data>
+  <data name="AccountPickerTitle" xml:space="preserve">
+    <value>Chọn tài khoản tham gia</value>
+  </data>
+  <data name="RobloxAlreadyRunning" xml:space="preserve">
+    <value>Roblox hiện đang chạy; vui lòng bật tính năng đa phiên trong Cài đặt.</value>
+  </data>
 </root>

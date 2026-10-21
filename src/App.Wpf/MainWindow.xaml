@@ -24,6 +24,12 @@
                 <ui:NavigationViewItem Content="{x:Static resources:Strings.NavAccounts}"
                                        Icon="{ui:SymbolIcon People24}"
                                        TargetPageType="{x:Type pages:AccountsPage}" />
+                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavServers}"
+                                       Icon="{ui:SymbolIcon Server24}"
+                                       TargetPageType="{x:Type pages:ServersPage}" />
+                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavRunning}"
+                                       Icon="{ui:SymbolIcon Play24}"
+                                       TargetPageType="{x:Type pages:RunningPage}" />
                 <ui:NavigationViewItem Content="{x:Static resources:Strings.NavSettings}"
                                        Icon="{ui:SymbolIcon Settings24}"
                                        TargetPageType="{x:Type pages:SettingsPage}" />

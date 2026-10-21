@@ -10,8 +10,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
+using RbxManager.Core.Instance;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
+using RbxManager.Core.Processes;
 using RbxManager.Core.Storage;
 
 public sealed partial class RobloxLauncher : ILauncher, IDisposable
@@ -21,6 +23,8 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
     private readonly IAccountStore _accountStore;
     private readonly IRobloxAuthService _authService;
     private readonly IProcessStarter _processStarter;
+    private readonly IProcessProvider _processProvider;
+    private readonly IInstanceGate _instanceGate;
     private readonly ILogger<RobloxLauncher> _logger;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private DateTimeOffset _lastLaunchTime = DateTimeOffset.MinValue;
@@ -30,11 +34,15 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         IAccountStore accountStore,
         IRobloxAuthService authService,
         IProcessStarter processStarter,
+        IProcessProvider processProvider,
+        IInstanceGate instanceGate,
         ILogger<RobloxLauncher>? logger = null)
     {
         _accountStore = accountStore;
         _authService = authService;
         _processStarter = processStarter;
+        _processProvider = processProvider;
+        _instanceGate = instanceGate;
         _logger = logger ?? NullLogger<RobloxLauncher>.Instance;
     }
 
@@ -44,6 +52,16 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         if (!validationResult.IsSuccess)
         {
             return validationResult;
+        }
+
+        if (!_instanceGate.IsMultiInstanceEnabled)
+        {
+            IReadOnlyList<ProcessSnapshot> running = _processProvider.GetRobloxProcesses();
+            if (running.Count > 0)
+            {
+                LogRobloxAlreadyRunning();
+                return Result.Failure("Roblox is already running; enable multi-instance in Settings.", "RobloxAlreadyRunning");
+            }
         }
 
         if (!_processStarter.IsRobloxPlayerInstalled())
@@ -140,4 +158,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
 
     [LoggerMessage(EventId = 305, Level = LogLevel.Error, Message = "Unexpected exception during launch: {ExceptionType}.")]
     private partial void LogLaunchError(string exceptionType);
+
+    [LoggerMessage(EventId = 306, Level = LogLevel.Warning, Message = "Roblox is already running and multi-instance is disabled.")]
+    private partial void LogRobloxAlreadyRunning();
 }
