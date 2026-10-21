@@ -44,3 +44,11 @@
 
 - **Planned Roadmap**:
   - A user-supplied Master Password with modern memory-hard key derivation (Argon2id) is scheduled for the public release to provide defense-in-depth against same-user malware.
+
+---
+
+## Backup and Recovery
+
+The vault is bound to the current Windows user via Windows DPAPI (`DataProtectionScope.CurrentUser`). If the Windows user profile is lost, corrupted, reinstalled, or the user account is recreated, `vault.dat` cannot be decrypted and recovery is cryptographically impossible.
+
+An encrypted export and backup mechanism (protected by a master password) is required before relying on the vault for critical accounts or releasing the application publicly. This functionality is planned for a subsequent milestone and is not yet implemented.

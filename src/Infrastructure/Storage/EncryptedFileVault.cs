@@ -24,6 +24,11 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     private const byte VersionByte = 0x01;
     private static readonly byte[] AadBytes = [0x52, 0x42, 0x58, 0x56, 0x01];
 
+    public static readonly string DefaultPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "RbxManager",
+        "vault.dat");
+
     private readonly string _filePath;
     private readonly ILogger<EncryptedFileVault>? _logger;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -33,10 +38,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
 
     public EncryptedFileVault(string? filePath = null, ILogger<EncryptedFileVault>? logger = null)
     {
-        _filePath = filePath ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "RbxManager",
-            "vault.dat");
+        _filePath = filePath ?? DefaultPath;
         _logger = logger;
     }
 
