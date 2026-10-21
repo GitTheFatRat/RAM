@@ -9,4 +9,7 @@ public sealed record Account(
     string? Note,
     SecretValue Cookie,
     DateTimeOffset CreatedAt,
-    string? Username = null);
+    string? Username = null,
+    long? UserId = null,
+    AccountStatus Status = AccountStatus.Unknown,
+    DateTimeOffset? LastCheckedAt = null);

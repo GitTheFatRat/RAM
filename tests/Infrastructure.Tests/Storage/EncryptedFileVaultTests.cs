@@ -53,6 +53,56 @@ public sealed class EncryptedFileVaultTests
     }
 
     [Fact]
+    public async Task OldPayloadWithoutNewFields_LoadsWithTolerantDefaults()
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath();
+
+        // Simulate an M1 JSON payload that does NOT have UserId, Status, or LastCheckedAt
+        string legacyJson = """[{"Id":10,"Alias":"LegacyAccount","Group":"LegacyGroup","Note":"LegacyNote","Cookie":"FAKE_COOKIE_FOR_TESTS_123","CreatedAt":"2026-01-01T00:00:00+00:00","Username":null}]""";
+        byte[] plaintextBytes = Encoding.UTF8.GetBytes(legacyJson);
+
+        byte[] dataKey = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        byte[] nonce = System.Security.Cryptography.RandomNumberGenerator.GetBytes(12);
+        byte[] tag = new byte[16];
+        byte[] ciphertext = new byte[plaintextBytes.Length];
+        byte[] aad = [0x52, 0x42, 0x58, 0x56, 0x01];
+
+        using (System.Security.Cryptography.AesGcm aes = new(dataKey, 16))
+        {
+            aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, aad);
+        }
+
+        byte[] wrappedKey = System.Security.Cryptography.ProtectedData.Protect(dataKey, null, System.Security.Cryptography.DataProtectionScope.CurrentUser);
+        ushort wrappedKeyLength = checked((ushort)wrappedKey.Length);
+
+        using (FileStream fs = File.Create(vaultFilePath))
+        {
+            fs.Write([0x52, 0x42, 0x58, 0x56, 0x01]);
+            byte[] lenBytes = new byte[2];
+            BinaryPrimitives.WriteUInt16LittleEndian(lenBytes, wrappedKeyLength);
+            fs.Write(lenBytes);
+            fs.Write(wrappedKey);
+            fs.Write(nonce);
+            fs.Write(tag);
+            fs.Write(ciphertext);
+        }
+
+        using (EncryptedFileVault vault = new(vaultFilePath))
+        {
+            IReadOnlyList<Account> accounts = await vault.ListAsync();
+            Assert.Single(accounts);
+            Account account = accounts[0];
+            Assert.Equal(10, account.Id.Value);
+            Assert.Equal("LegacyAccount", account.Alias);
+            Assert.Equal(AccountStatus.Unknown, account.Status);
+            Assert.Null(account.UserId);
+            Assert.Null(account.LastCheckedAt);
+            Assert.Equal(FakeCookie1, account.Cookie.Reveal());
+        }
+    }
+
+    [Fact]
     public async Task Add_LoadsSameDataFromNewInstance()
     {
         using TempDirectory tempDir = new();

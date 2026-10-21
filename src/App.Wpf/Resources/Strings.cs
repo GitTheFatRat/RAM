@@ -42,6 +42,30 @@ public static class Strings
     public static string VaultCorruptedTitle => GetString(nameof(VaultCorruptedTitle));
     public static string VaultCorruptedMessage => GetString(nameof(VaultCorruptedMessage));
     public static string ValidationCookieRequired => GetString(nameof(ValidationCookieRequired));
+    public static string AddViaLogin => GetString(nameof(AddViaLogin));
+    public static string AddViaCookie => GetString(nameof(AddViaCookie));
+    public static string Check => GetString(nameof(Check));
+    public static string CheckAll => GetString(nameof(CheckAll));
+    public static string Launch => GetString(nameof(Launch));
+    public static string ColumnUsername => GetString(nameof(ColumnUsername));
+    public static string ColumnStatus => GetString(nameof(ColumnStatus));
+    public static string ColumnLastChecked => GetString(nameof(ColumnLastChecked));
+    public static string Never => GetString(nameof(Never));
+    public static string StatusUnknown => GetString(nameof(StatusUnknown));
+    public static string StatusValid => GetString(nameof(StatusValid));
+    public static string StatusExpired => GetString(nameof(StatusExpired));
+    public static string StatusError => GetString(nameof(StatusError));
+    public static string ExpiredHint => GetString(nameof(ExpiredHint));
+    public static string LaunchDialogTitle => GetString(nameof(LaunchDialogTitle));
+    public static string PlaceIdLabel => GetString(nameof(PlaceIdLabel));
+    public static string JobIdLabel => GetString(nameof(JobIdLabel));
+    public static string PlaceIdRequired => GetString(nameof(PlaceIdRequired));
+    public static string JobIdInvalid => GetString(nameof(JobIdInvalid));
+    public static string RobloxNotInstalled => GetString(nameof(RobloxNotInstalled));
+    public static string LaunchSuccess => GetString(nameof(LaunchSuccess));
+    public static string WebView2Missing => GetString(nameof(WebView2Missing));
+    public static string LoginWindowTitle => GetString(nameof(LoginWindowTitle));
+    public static string LoginSuccessValidating => GetString(nameof(LoginSuccessValidating));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

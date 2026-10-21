@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using RbxManager.App.ViewModels;
 using RbxManager.App.Views.Pages;
 using RbxManager.Core.Storage;
+using RbxManager.Infrastructure;
 using RbxManager.Infrastructure.Storage;
 using Serilog;
 using Wpf.Ui;
@@ -52,7 +53,7 @@ public partial class App : Application
         services.AddSingleton<Serilog.ILogger>(Log.Logger);
 
         // Core & Infrastructure
-        services.AddSingleton<IAccountStore, EncryptedFileVault>();
+        services.AddInfrastructureServices();
 
         // UI Services
         services.AddSingleton<IContentDialogService, ContentDialogService>();

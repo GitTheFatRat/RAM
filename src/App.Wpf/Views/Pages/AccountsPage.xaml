@@ -18,6 +18,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -29,7 +30,7 @@
                    Margin="0,0,0,16" />
 
         <!-- Controls Bar -->
-        <Grid Grid.Row="1" Margin="0,0,0,16">
+        <Grid Grid.Row="1" Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -40,21 +41,45 @@
                         PlaceholderText="{x:Static resources:Strings.SearchPlaceholder}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                         Icon="{ui:SymbolIcon Search24}"
-                        MaxWidth="400"
+                        MaxWidth="300"
                         HorizontalAlignment="Left" />
 
             <!-- Buttons -->
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
                         Margin="16,0,0,0">
-                <ui:Button Content="{x:Static resources:Strings.AddAccount}"
-                           Icon="{ui:SymbolIcon Add24}"
+                <ui:Button Content="{x:Static resources:Strings.AddViaLogin}"
+                           Icon="{ui:SymbolIcon PersonAdd24}"
                            Appearance="Primary"
-                           Margin="0,0,8,0"
+                           Margin="0,0,6,0"
+                           Command="{Binding AddViaLoginCommand}" />
+                <ui:Button Content="{x:Static resources:Strings.AddViaCookie}"
+                           Icon="{ui:SymbolIcon Key24}"
+                           Margin="0,0,6,0"
                            Command="{Binding AddAccountCommand}" />
+                <ui:Button Content="{x:Static resources:Strings.Check}"
+                           Icon="{ui:SymbolIcon CheckmarkCircle24}"
+                           Margin="0,0,6,0"
+                           Command="{Binding CheckAccountCommand}"
+                           IsEnabled="{Binding IsAccountSelected}" />
+                <ui:Button Content="{x:Static resources:Strings.CheckAll}"
+                           Icon="{ui:SymbolIcon ArrowSync24}"
+                           Margin="0,0,6,0"
+                           Command="{Binding CheckAllCommand}" />
+                <ui:Button Content="{x:Static resources:Strings.Cancel}"
+                           Icon="{ui:SymbolIcon Dismiss24}"
+                           Margin="0,0,6,0"
+                           Command="{Binding CancelCheckAllCommand}"
+                           Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}" />
+                <ui:Button Content="{x:Static resources:Strings.Launch}"
+                           Icon="{ui:SymbolIcon Play24}"
+                           Appearance="Success"
+                           Margin="0,0,6,0"
+                           Command="{Binding LaunchAccountCommand}"
+                           IsEnabled="{Binding IsAccountSelected}" />
                 <ui:Button Content="{x:Static resources:Strings.EditAccount}"
                            Icon="{ui:SymbolIcon Edit24}"
-                           Margin="0,0,8,0"
+                           Margin="0,0,6,0"
                            Command="{Binding EditAccountCommand}"
                            IsEnabled="{Binding IsAccountSelected}" />
                 <ui:Button Content="{x:Static resources:Strings.DeleteAccount}"
@@ -65,8 +90,27 @@
             </StackPanel>
         </Grid>
 
+        <!-- Progress Bar for Check All -->
+        <Grid Grid.Row="2"
+              Margin="0,0,0,12"
+              Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ProgressBar Grid.Column="0"
+                         IsIndeterminate="True"
+                         Height="6"
+                         VerticalAlignment="Center"
+                         Margin="0,0,12,0" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding CheckAllProgressText}"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Grid>
+
         <!-- Main Content Area -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <!-- Data Grid -->
             <ui:DataGrid ItemsSource="{Binding FilteredAccounts}"
                          SelectedItem="{Binding SelectedAccount}"
@@ -78,13 +122,28 @@
                 <ui:DataGrid.Columns>
                     <DataGridTextColumn Header="{x:Static resources:Strings.ColumnAlias}"
                                         Binding="{Binding Alias}"
-                                        Width="*" />
+                                        Width="160" />
+                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnUsername}"
+                                        Binding="{Binding Username}"
+                                        Width="160" />
+                    <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnStatus}"
+                                            Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ui:InfoBadge Severity="{Binding StatusSeverity}"
+                                              Value="{Binding StatusText}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{x:Static resources:Strings.ColumnGroup}"
                                         Binding="{Binding Group}"
-                                        Width="200" />
+                                        Width="140" />
+                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnLastChecked}"
+                                        Binding="{Binding LastCheckedFormatted}"
+                                        Width="170" />
                     <DataGridTextColumn Header="{x:Static resources:Strings.ColumnCreated}"
                                         Binding="{Binding CreatedFormatted}"
-                                        Width="220" />
+                                        Width="170" />
                 </ui:DataGrid.Columns>
             </ui:DataGrid>
 

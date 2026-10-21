@@ -6,7 +6,9 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 ## Milestone Status
 - **M0**: Scaffold, project structure, build pipeline & analyzers. (Completed)
 - **M1**: Encrypted account vault (`vault.dat` v1) & account list UI with in-dialog editing/validation. (Completed)
-- **M2**: Roblox API integration, cookie validation, profile retrieval. (Next)
+- **M1.1**: Isolated tests from real `%LOCALAPPDATA%` vault path. (Completed)
+- **M2**: Roblox authentication, WebView2 login, cookie validation, game launcher, security guard tests. (Completed)
+- **M3**: Server browser, process monitor, running sessions, auto-rejoin. (Next)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

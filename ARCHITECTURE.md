@@ -20,23 +20,23 @@ graph TD
 ### Layer Overview
 
 1. **`src/Core/`**
-   - **Responsibility**: Pure domain models (`AccountId`, `SecretValue`, `Account`), domain validation (`AccountValidator`), storage contracts (`IAccountStore`), and domain exceptions (`VaultCorruptedException`).
+   - **Responsibility**: Pure domain models (`AccountId`, `SecretValue`, `Account`, `RobloxUser`, `LaunchRequest`), domain validation (`AccountValidator`, `LaunchRequest.Validate`), storage and service contracts (`IAccountStore`, `IRobloxAuthService`, `ILauncher`), and domain exceptions (`VaultCorruptedException`).
    - **Dependencies**: None. Pure .NET standard/runtime library.
 
 2. **`src/Infrastructure/`**
-   - **Responsibility**: Encrypted file persistence (`EncryptedFileVault`), internal DTO mapping (`AccountDto`), DPAPI key wrapping, and AES-256-GCM authenticated encryption.
+   - **Responsibility**: Encrypted file persistence (`EncryptedFileVault`), internal DTO mapping (`AccountDto`), DPAPI key wrapping, AES-256-GCM authenticated encryption, Roblox HTTP client pipeline (`RobloxHostGuardHandler`, `RobloxCsrfHandler`, `RobloxRetryHandler`), Roblox authentication service (`RobloxAuthService`), and game launcher (`RobloxLauncher`, `RobloxUriBuilder`).
    - **Dependencies**: References `Core`.
 
 3. **`src/App.Wpf/`**
-   - **Responsibility**: WPF UI shell, MVVM view models (`AccountsViewModel`), Views & Controls (`AccountsPage`, `AccountEditorControl`), dialogs (`IContentDialogService`), notifications (`ISnackbarService`), and DI bootstrapping.
+   - **Responsibility**: WPF UI shell, MVVM view models (`AccountsViewModel`), Views & Controls (`AccountsPage`, `AccountEditorControl`, `LaunchDialogControl`), Windows (`LoginWindow` with WebView2), dialogs (`IContentDialogService`), notifications (`ISnackbarService`), and DI bootstrapping.
    - **Dependencies**: References `Core` and `Infrastructure`.
 
 4. **`tests/Core.Tests/`**
-   - **Responsibility**: Unit tests exercising core domain types, value objects, and business validation rules.
+   - **Responsibility**: Unit tests exercising core domain types, value objects, business validation rules, and architecture boundaries (`ArchitectureTests` enforcing `SecretValue.Reveal` allowlist).
    - **Dependencies**: References `Core`.
 
 5. **`tests/Infrastructure.Tests/`**
-   - **Responsibility**: Integration tests verifying DPAPI wrapping, AES-GCM encryption round-trip, backup generation, and corruption/tamper detection.
+   - **Responsibility**: Integration and security tests verifying DPAPI wrapping, AES-GCM encryption round-trip, backup generation, tamper detection, HTTP handlers, Roblox authentication flows, URI construction, and log leak prevention (`LogLeakTests`).
    - **Dependencies**: References `Core` and `Infrastructure`.
 
 ---
@@ -44,4 +44,6 @@ graph TD
 ### Milestone Status
 - **M0**: Scaffolding, solution structure, build pipeline & analyzers. (Completed)
 - **M1**: Encrypted account vault + Account list UI + In-dialog editing & validation. (Completed)
-- **M2**: Roblox API integration, cookie validation & user profile retrieval. (Next)
+- **M1.1**: Test isolation from real user paths. (Completed)
+- **M2**: Roblox authentication, WebView2 login, cookie validation, game launcher, security guard tests. (Completed)
+- **M3**: Server browser, process monitor, running sessions, auto-rejoin. (Next)

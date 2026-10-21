@@ -154,4 +154,76 @@
   <data name="ValidationCookieRequired" xml:space="preserve">
     <value>Vui lòng nhập cookie.</value>
   </data>
+  <data name="AddViaLogin" xml:space="preserve">
+    <value>Thêm qua đăng nhập</value>
+  </data>
+  <data name="AddViaCookie" xml:space="preserve">
+    <value>Thêm qua cookie</value>
+  </data>
+  <data name="Check" xml:space="preserve">
+    <value>Kiểm tra</value>
+  </data>
+  <data name="CheckAll" xml:space="preserve">
+    <value>Kiểm tra tất cả</value>
+  </data>
+  <data name="Launch" xml:space="preserve">
+    <value>Khởi chạy</value>
+  </data>
+  <data name="ColumnUsername" xml:space="preserve">
+    <value>Tên người dùng</value>
+  </data>
+  <data name="ColumnStatus" xml:space="preserve">
+    <value>Trạng thái</value>
+  </data>
+  <data name="ColumnLastChecked" xml:space="preserve">
+    <value>Kiểm tra gần nhất</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>Chưa có</value>
+  </data>
+  <data name="StatusUnknown" xml:space="preserve">
+    <value>Chưa kiểm tra</value>
+  </data>
+  <data name="StatusValid" xml:space="preserve">
+    <value>Hợp lệ</value>
+  </data>
+  <data name="StatusExpired" xml:space="preserve">
+    <value>Hết hạn</value>
+  </data>
+  <data name="StatusError" xml:space="preserve">
+    <value>Lỗi</value>
+  </data>
+  <data name="ExpiredHint" xml:space="preserve">
+    <value>Cookie tài khoản đã hết hạn. Vui lòng thêm lại qua đăng nhập để làm mới.</value>
+  </data>
+  <data name="LaunchDialogTitle" xml:space="preserve">
+    <value>Khởi chạy Roblox</value>
+  </data>
+  <data name="PlaceIdLabel" xml:space="preserve">
+    <value>Place ID (bắt buộc)</value>
+  </data>
+  <data name="JobIdLabel" xml:space="preserve">
+    <value>Job ID (máy chủ tùy chọn - GUID)</value>
+  </data>
+  <data name="PlaceIdRequired" xml:space="preserve">
+    <value>Vui lòng nhập Place ID hợp lệ.</value>
+  </data>
+  <data name="JobIdInvalid" xml:space="preserve">
+    <value>Job ID phải là định dạng GUID hợp lệ.</value>
+  </data>
+  <data name="RobloxNotInstalled" xml:space="preserve">
+    <value>Roblox Player chưa được cài đặt trên hệ thống này.</value>
+  </data>
+  <data name="LaunchSuccess" xml:space="preserve">
+    <value>Đã gửi lệnh khởi chạy Roblox thành công.</value>
+  </data>
+  <data name="WebView2Missing" xml:space="preserve">
+    <value>Không tìm thấy WebView2 Runtime. Vui lòng cài đặt Microsoft Edge WebView2 Evergreen Runtime.</value>
+  </data>
+  <data name="LoginWindowTitle" xml:space="preserve">
+    <value>Đăng nhập Roblox</value>
+  </data>
+  <data name="LoginSuccessValidating" xml:space="preserve">
+    <value>Đăng nhập thành công. Đang xác thực thông tin tài khoản...</value>
+  </data>
 </root>

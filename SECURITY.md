@@ -52,3 +52,18 @@
 The vault is bound to the current Windows user via Windows DPAPI (`DataProtectionScope.CurrentUser`). If the Windows user profile is lost, corrupted, reinstalled, or the user account is recreated, `vault.dat` cannot be decrypted and recovery is cryptographically impossible.
 
 An encrypted export and backup mechanism (protected by a master password) is required before relying on the vault for critical accounts or releasing the application publicly. This functionality is planned for a subsequent milestone and is not yet implemented.
+
+---
+
+## Authentication and Launch Security (M2)
+
+1. **Roblox Player Protocol Ticket Visibility**:
+   - The game launch mechanism passes the single-use authentication ticket via the custom URI protocol handler (`roblox-player:...gameinfo:{ticket}...`).
+   - Consequently, the ticket briefly appears in the process start arguments and command line of the invoked application, making it visible to other local processes running under the same user account with query privileges. This is an inherent design constraint of the official Roblox client URI launch protocol.
+
+2. **Isolated WebView2 Login Profiles**:
+   - When authenticating via the embedded browser, an ephemeral user data directory (`%TEMP%\RbxManager\login-{guid}`) is allocated.
+   - Upon capturing the authentication cookie or dismissing the window, the temporary profile directory is recursively deleted to ensure session cookies and cached credentials do not persist unencrypted on disk.
+
+3. **Cookie Rotation Handling**:
+   - `Set-Cookie` headers returned by Roblox API endpoints are ignored (`UseCookies = false`). Handling automatic cookie rotation is intentionally deferred as a documented limitation.

@@ -7,6 +7,8 @@
     <!-- Infrastructure -->
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.13" />
+    <PackageVersion Include="Polly" Version="8.8.0" />
 
     <!-- App.Wpf -->
     <PackageVersion Include="WPF-UI" Version="4.3.0" />

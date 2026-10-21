@@ -244,6 +244,10 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         {
             foreach (AccountDto dto in dtos)
             {
+                AccountStatus status = Enum.IsDefined(typeof(AccountStatus), dto.Status)
+                    ? (AccountStatus)dto.Status
+                    : AccountStatus.Unknown;
+
                 accounts.Add(new Account(
                     Id: new AccountId(dto.Id),
                     Alias: dto.Alias,
@@ -251,7 +255,10 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     Note: dto.Note,
                     Cookie: SecretValue.FromString(dto.Cookie),
                     CreatedAt: dto.CreatedAt,
-                    Username: dto.Username));
+                    Username: dto.Username,
+                    UserId: dto.UserId,
+                    Status: status,
+                    LastCheckedAt: dto.LastCheckedAt));
             }
         }
 
@@ -271,7 +278,10 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 Note = account.Note,
                 Cookie = account.Cookie.Reveal(),
                 CreatedAt = account.CreatedAt,
-                Username = account.Username
+                Username = account.Username,
+                UserId = account.UserId,
+                Status = (int)account.Status,
+                LastCheckedAt = account.LastCheckedAt
             });
         }
 
