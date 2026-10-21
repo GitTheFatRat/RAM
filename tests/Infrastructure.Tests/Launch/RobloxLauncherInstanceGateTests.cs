@@ -41,6 +41,9 @@ public sealed class RobloxLauncherInstanceGateTests
     private sealed class FakeInstanceGate : IInstanceGate
     {
         public bool IsMultiInstanceEnabled { get; set; }
+        public bool IsAvailable => true;
+        public Result TryEnable() => Result.Success();
+        public void Disable() => IsMultiInstanceEnabled = false;
     }
 
     private sealed class FakeAccountStore : IAccountStore

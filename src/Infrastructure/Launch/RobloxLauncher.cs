@@ -25,6 +25,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
     private readonly IProcessStarter _processStarter;
     private readonly IProcessProvider _processProvider;
     private readonly IInstanceGate _instanceGate;
+    private readonly Core.Settings.ISettingsService? _settingsService;
     private readonly ILogger<RobloxLauncher> _logger;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private DateTimeOffset _lastLaunchTime = DateTimeOffset.MinValue;
@@ -36,7 +37,8 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         IProcessStarter processStarter,
         IProcessProvider processProvider,
         IInstanceGate instanceGate,
-        ILogger<RobloxLauncher>? logger = null)
+        ILogger<RobloxLauncher>? logger = null,
+        Core.Settings.ISettingsService? settingsService = null)
     {
         _accountStore = accountStore;
         _authService = authService;
@@ -44,6 +46,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         _processProvider = processProvider;
         _instanceGate = instanceGate;
         _logger = logger ?? NullLogger<RobloxLauncher>.Instance;
+        _settingsService = settingsService;
     }
 
     public async Task<Result> LaunchAsync(LaunchRequest request, CancellationToken ct = default)
@@ -80,10 +83,11 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            int minInterval = _settingsService?.CurrentSettings.LaunchDelayMs ?? MinimumLaunchIntervalMs;
             TimeSpan elapsed = DateTimeOffset.UtcNow - _lastLaunchTime;
-            if (elapsed.TotalMilliseconds < MinimumLaunchIntervalMs)
+            if (elapsed.TotalMilliseconds < minInterval)
             {
-                int delayMs = MinimumLaunchIntervalMs - (int)elapsed.TotalMilliseconds;
+                int delayMs = minInterval - (int)elapsed.TotalMilliseconds;
                 if (delayMs > 0)
                 {
                     await Task.Delay(delayMs, ct).ConfigureAwait(false);

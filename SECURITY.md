@@ -47,11 +47,33 @@
 
 ---
 
-## Backup and Recovery
+## Backup and Recovery (Format v1)
 
-The vault is bound to the current Windows user via Windows DPAPI (`DataProtectionScope.CurrentUser`). If the Windows user profile is lost, corrupted, reinstalled, or the user account is recreated, `vault.dat` cannot be decrypted and recovery is cryptographically impossible.
+The live vault is bound to the current Windows user via Windows DPAPI (`DataProtectionScope.CurrentUser`). If the Windows user profile is lost, corrupted, reinstalled, or the user account is recreated, `vault.dat` cannot be decrypted and recovery is cryptographically impossible.
 
-An encrypted export and backup mechanism (protected by a master password) is required before relying on the vault for critical accounts or releasing the application publicly. This functionality is planned for a subsequent milestone and is not yet implemented.
+To eliminate this single point of failure without exposing plaintext credentials, RbxManager provides an encrypted export and backup mechanism (`.rbxbackup` format v1).
+
+### Binary Layout (Format v1)
+- `magic` (4 bytes ASCII: `RBXB`)
+- `version` (1 byte: `0x01`)
+- `salt` (16 bytes): cryptographically secure random bytes
+- `iterations` (4 bytes `UInt32` Little-Endian): minimum 600,000 iterations (downgrade protected)
+- `nonce` (12 bytes): cryptographically secure random bytes
+- `tag` (16 bytes): AES-GCM authentication tag
+- `ciphertext` (remaining bytes): AES-256-GCM encrypted UTF-8 JSON array of internal account DTOs
+- Associated Authenticated Data (AAD): 25 bytes (`RBXB\x01` + 16-byte salt + 4-byte iterations)
+
+### Cryptographic Parameters & Key Derivation
+- **KDF**: `PBKDF2-HMAC-SHA512` via `Rfc2898DeriveBytes.Pbkdf2`.
+- **Iteration Count**: Minimum and default 600,000 iterations.
+- **Key Size**: 256-bit (32 bytes).
+- **Cipher**: `AES-256-GCM` with an explicit 128-bit (16 bytes) authentication tag.
+- **Password Enforcement**: Minimum 12 characters, entered twice upon export, buffers zeroed after derivation (`CryptographicOperations.ZeroMemory`).
+
+### Restore Guidance & Downgrade Defense
+- Tampered ciphertexts and invalid passwords both yield the identical typed generic `BackupException` to avoid oracle leakages.
+- Iteration counts below 600,000 are rejected immediately upon import to protect against low-iteration downgrade attacks.
+- Account merge policy skips existing aliases without overwriting existing vault accounts.
 
 ---
 

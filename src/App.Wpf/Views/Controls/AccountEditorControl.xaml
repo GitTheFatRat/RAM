@@ -26,8 +26,9 @@
             <TextBlock Margin="0,0,0,4"
                        Text="{x:Static resources:Strings.FieldGroup}"
                        FontWeight="SemiBold" />
-            <ui:TextBox Text="{Binding Group, UpdateSourceTrigger=PropertyChanged}"
-                        MaxLength="30" />
+            <ComboBox Text="{Binding Group, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding AvailableGroups}"
+                      IsEditable="True" />
         </StackPanel>
 
         <StackPanel Margin="0,0,0,12">

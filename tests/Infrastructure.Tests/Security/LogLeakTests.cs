@@ -23,6 +23,7 @@ public sealed class LogLeakTests
 {
     private const string FakeCookie = "FAKE_COOKIE_FOR_TESTS_123";
     private const string FakeTicket = "FAKE_TICKET_FOR_TESTS_456";
+    private const string FakePassword = "FAKE_PASSWORD_FOR_TESTS_1234!";
 
     private sealed class InMemoryLogSink
     {
@@ -232,13 +233,30 @@ public sealed class LogLeakTests
             await tracker.PollProcessesAsync();
         }
 
-        // 6. Assert zero log leakage
+        // 6. EncryptedBackupService operations (export & import)
+        ILogger<RbxManager.Infrastructure.Backup.EncryptedBackupService> backupLogger =
+            factory.CreateLogger<RbxManager.Infrastructure.Backup.EncryptedBackupService>();
+        string backupFile = tempDir.CreateFilePath("backup.rbxbackup");
+        using (EncryptedFileVault backupVault = new(vaultPath))
+        {
+            RbxManager.Infrastructure.Backup.EncryptedBackupService backupService = new(backupVault, backupLogger);
+            await backupService.ExportAsync(backupFile, FakePassword);
+        }
+
+        using (EncryptedFileVault destVault = new(tempDir.CreateFilePath("destVault.dat")))
+        {
+            RbxManager.Infrastructure.Backup.EncryptedBackupService importService = new(destVault, backupLogger);
+            await importService.ImportAsync(backupFile, FakePassword);
+        }
+
+        // 7. Assert zero log leakage
         Assert.NotEmpty(logSink.Messages);
 
         foreach (string logMessage in logSink.Messages)
         {
             Assert.DoesNotContain(FakeCookie, logMessage, StringComparison.Ordinal);
             Assert.DoesNotContain(FakeTicket, logMessage, StringComparison.Ordinal);
+            Assert.DoesNotContain(FakePassword, logMessage, StringComparison.Ordinal);
         }
     }
 }

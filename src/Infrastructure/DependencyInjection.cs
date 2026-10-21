@@ -7,18 +7,23 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RbxManager.Core.Auth;
+using RbxManager.Core.Backup;
 using RbxManager.Core.Instance;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Processes;
 using RbxManager.Core.Servers;
 using RbxManager.Core.Sessions;
+using RbxManager.Core.Settings;
 using RbxManager.Core.Storage;
 using RbxManager.Infrastructure.Auth;
+using RbxManager.Infrastructure.Backup;
 using RbxManager.Infrastructure.Http;
+using RbxManager.Infrastructure.Instance;
 using RbxManager.Infrastructure.Launch;
 using RbxManager.Infrastructure.Processes;
 using RbxManager.Infrastructure.Servers;
 using RbxManager.Infrastructure.Sessions;
+using RbxManager.Infrastructure.Settings;
 using RbxManager.Infrastructure.Storage;
 
 [SupportedOSPlatform("windows")]
@@ -28,11 +33,13 @@ public static class InfrastructureServiceExtensions
 
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
+        services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IAccountStore, EncryptedFileVault>();
         services.AddSingleton<IProcessStarter, WindowsProcessStarter>();
         services.AddSingleton<IProcessProvider, SystemProcessProvider>();
-        services.AddSingleton<IInstanceGate, DefaultInstanceGate>();
+        services.AddSingleton<IInstanceGate, NamedMutexInstanceGate>();
         services.AddSingleton<ILauncher, RobloxLauncher>();
+        services.AddTransient<IBackupService, EncryptedBackupService>();
 
         services.AddTransient<RobloxHostGuardHandler>();
         services.AddTransient<RobloxCsrfHandler>();

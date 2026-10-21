@@ -319,4 +319,106 @@
   <data name="RobloxAlreadyRunning" xml:space="preserve">
     <value>Roblox hiện đang chạy; vui lòng bật tính năng đa phiên trong Cài đặt.</value>
   </data>
+  <data name="LanguageLabel" xml:space="preserve">
+    <value>Ngôn ngữ</value>
+  </data>
+  <data name="ThemeLabel" xml:space="preserve">
+    <value>Giao diện</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Tối</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Sáng</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Hệ thống</value>
+  </data>
+  <data name="LaunchDelayLabel" xml:space="preserve">
+    <value>Thời gian trễ giữa các lần khởi chạy (ms)</value>
+  </data>
+  <data name="RejoinDelayLabel" xml:space="preserve">
+    <value>Thời gian trễ khi tự động vào lại (giây)</value>
+  </data>
+  <data name="RejoinMaxAttemptsLabel" xml:space="preserve">
+    <value>Số lần thử vào lại tối đa</value>
+  </data>
+  <data name="MultiInstanceLabel" xml:space="preserve">
+    <value>Chạy nhiều tài khoản Roblox</value>
+  </data>
+  <data name="MultiInstanceNotAvailable" xml:space="preserve">
+    <value>Tính năng chạy nhiều tài khoản không khả dụng trong bản dựng này.</value>
+  </data>
+  <data name="MultiInstanceWarningTitle" xml:space="preserve">
+    <value>Cảnh báo rủi ro chạy nhiều tài khoản</value>
+  </data>
+  <data name="MultiInstanceWarningMessage" xml:space="preserve">
+    <value>Chạy nhiều tiến trình Roblox cùng lúc có thể bị hệ thống Roblox phát hiện là hành vi bất thường và có thể gây rủi ro cho tài khoản của bạn. Bạn tự chịu trách nhiệm khi kích hoạt tính năng này. Bạn có muốn tiếp tục không?</value>
+  </data>
+  <data name="RestartRequiredMessage" xml:space="preserve">
+    <value>Khởi động lại ứng dụng để áp dụng ngôn ngữ mới.</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>Đã lưu cài đặt thành công.</value>
+  </data>
+  <data name="GroupFilterAll" xml:space="preserve">
+    <value>Tất cả</value>
+  </data>
+  <data name="RenameGroup" xml:space="preserve">
+    <value>Đổi tên nhóm</value>
+  </data>
+  <data name="RenameGroupTitle" xml:space="preserve">
+    <value>Đổi tên nhóm tài khoản</value>
+  </data>
+  <data name="NewGroupNameLabel" xml:space="preserve">
+    <value>Tên nhóm mới</value>
+  </data>
+  <data name="LaunchSelected" xml:space="preserve">
+    <value>Khởi chạy đã chọn</value>
+  </data>
+  <data name="LaunchGroup" xml:space="preserve">
+    <value>Khởi chạy nhóm</value>
+  </data>
+  <data name="GroupRenamed" xml:space="preserve">
+    <value>Đã đổi tên nhóm '{0}' thành '{1}' (cập nhật {2} tài khoản).</value>
+  </data>
+  <data name="BulkLaunchCompleted" xml:space="preserve">
+    <value>Hoàn tất khởi chạy ({0} thành công, {1} thất bại).</value>
+  </data>
+  <data name="BulkLaunchCancelled" xml:space="preserve">
+    <value>Đã hủy khởi chạy hàng loạt.</value>
+  </data>
+  <data name="ExportBackup" xml:space="preserve">
+    <value>Sao lưu</value>
+  </data>
+  <data name="ImportBackup" xml:space="preserve">
+    <value>Khôi phục</value>
+  </data>
+  <data name="BackupPasswordTitle" xml:space="preserve">
+    <value>Mật khẩu sao lưu</value>
+  </data>
+  <data name="BackupPasswordMessage" xml:space="preserve">
+    <value>Nhập mật khẩu ít nhất 12 ký tự để mã hóa tệp sao lưu.</value>
+  </data>
+  <data name="PasswordConfirmLabel" xml:space="preserve">
+    <value>Xác nhận mật khẩu</value>
+  </data>
+  <data name="PasswordMismatch" xml:space="preserve">
+    <value>Mật khẩu xác nhận không khớp.</value>
+  </data>
+  <data name="PasswordTooShort" xml:space="preserve">
+    <value>Mật khẩu phải dài ít nhất 12 ký tự.</value>
+  </data>
+  <data name="EmptyVaultCannotBackup" xml:space="preserve">
+    <value>Không thể sao lưu: danh sách tài khoản đang trống.</value>
+  </data>
+  <data name="BackupExportSuccess" xml:space="preserve">
+    <value>Đã xuất sao lưu thành công {0} tài khoản.</value>
+  </data>
+  <data name="BackupImportSuccess" xml:space="preserve">
+    <value>Đã nhập {0} tài khoản ({1} tài khoản trùng bị bỏ qua).</value>
+  </data>
+  <data name="BackupImportFailed" xml:space="preserve">
+    <value>Không thể khôi phục sao lưu: {0}</value>
+  </data>
 </root>

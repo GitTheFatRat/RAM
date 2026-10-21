@@ -19,6 +19,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -29,7 +30,7 @@
                    FontWeight="SemiBold"
                    Margin="0,0,0,16" />
 
-        <!-- Controls Bar -->
+        <!-- Controls Bar 1: Search + Individual Actions -->
         <Grid Grid.Row="1" Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -90,8 +91,69 @@
             </StackPanel>
         </Grid>
 
+        <!-- Controls Bar 2: Group Chips + Bulk Launch + Backup -->
+        <Grid Grid.Row="2" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Group Filter Chips -->
+            <ScrollViewer Grid.Column="0"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:Button Content="{Binding}"
+                                           Margin="0,0,6,0"
+                                           Command="{Binding DataContext.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                           CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ui:Button Content="{x:Static resources:Strings.RenameGroup}"
+                               Icon="{ui:SymbolIcon Edit24}"
+                               Margin="6,0,0,0"
+                               Command="{Binding RenameGroupCommand}"
+                               Visibility="{Binding IsRenameGroupVisible, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Bulk Launch and Backup Actions -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Margin="16,0,0,0">
+                <ui:Button Content="{x:Static resources:Strings.LaunchSelected}"
+                           Icon="{ui:SymbolIcon PlayMultiple24}"
+                           Appearance="Primary"
+                           Margin="0,0,6,0"
+                           Command="{Binding LaunchSelectedAccountsCommand}" />
+                <ui:Button Content="{x:Static resources:Strings.LaunchGroup}"
+                           Icon="{ui:SymbolIcon PlayMultiple24}"
+                           Appearance="Success"
+                           Margin="0,0,6,0"
+                           Command="{Binding LaunchGroupAccountsCommand}"
+                           Visibility="{Binding IsLaunchGroupVisible, Converter={StaticResource BoolToVis}}" />
+                <ui:Button Content="{x:Static resources:Strings.ExportBackup}"
+                           Icon="{ui:SymbolIcon ArrowUpload24}"
+                           Margin="0,0,6,0"
+                           Command="{Binding ExportBackupCommand}" />
+                <ui:Button Content="{x:Static resources:Strings.ImportBackup}"
+                           Icon="{ui:SymbolIcon ArrowDownload24}"
+                           Command="{Binding ImportBackupCommand}" />
+            </StackPanel>
+        </Grid>
+
         <!-- Progress Bar for Check All -->
-        <Grid Grid.Row="2"
+        <Grid Grid.Row="3"
               Margin="0,0,0,12"
               Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
@@ -110,7 +172,7 @@
         </Grid>
 
         <!-- Main Content Area -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="4">
             <!-- Data Grid -->
             <ui:DataGrid ItemsSource="{Binding FilteredAccounts}"
                          SelectedItem="{Binding SelectedAccount}"
@@ -120,6 +182,15 @@
                          SelectionMode="Single"
                          GridLinesVisibility="Horizontal">
                 <ui:DataGrid.Columns>
+                    <DataGridTemplateColumn Width="40" CanUserResize="False">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{x:Static resources:Strings.ColumnAlias}"
                                         Binding="{Binding Alias}"
                                         Width="160" />

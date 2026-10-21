@@ -9,12 +9,13 @@ public sealed class ArchitectureTests
 {
     private static readonly HashSet<string> AllowedRevealFileNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "SecretValue.cs",        // Definition of Reveal()
-        "AccountValidator.cs",   // Core cookie non-empty validation
-        "EncryptedFileVault.cs", // Vault serialization
-        "RobloxAuthService.cs",  // Cookie header builder for Roblox API
-        "RobloxLauncher.cs",     // Ticket extraction for Roblox game launch URI
-        "AccountsViewModel.cs"   // Account update / edit cloning
+        "SecretValue.cs",             // Definition of Reveal()
+        "AccountValidator.cs",        // Core cookie non-empty validation
+        "EncryptedFileVault.cs",      // Vault serialization
+        "RobloxAuthService.cs",       // Cookie header builder for Roblox API
+        "RobloxLauncher.cs",          // Ticket extraction for Roblox game launch URI
+        "AccountsViewModel.cs",        // Account update / edit cloning
+        "EncryptedBackupService.cs"   // Encrypted backup export serialization
     };
 
     [Fact]

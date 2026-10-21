@@ -1,9 +1,12 @@
 namespace RbxManager.App.ViewModels;
 
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 public partial class AccountEditorViewModel : ObservableObject
 {
+    public ObservableCollection<string> AvailableGroups { get; } = new();
+
     [ObservableProperty]
     private string _alias = string.Empty;
 

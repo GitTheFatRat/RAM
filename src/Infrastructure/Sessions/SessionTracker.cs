@@ -44,14 +44,25 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         IRobloxAuthService authService,
         ILauncher launcher,
         ILogger<SessionTracker>? logger = null,
-        Func<RejoinPolicy>? policyFactory = null)
+        Func<RejoinPolicy>? policyFactory = null,
+        Core.Settings.ISettingsService? settingsService = null)
     {
         _processProvider = processProvider;
         _accountStore = accountStore;
         _authService = authService;
         _launcher = launcher;
         _logger = logger ?? NullLogger<SessionTracker>.Instance;
-        _policyFactory = policyFactory ?? (() => new RejoinPolicy());
+        _policyFactory = policyFactory ?? (() =>
+        {
+            if (settingsService != null)
+            {
+                Core.Settings.AppSettings s = settingsService.CurrentSettings;
+                return new RejoinPolicy(
+                    initialDelay: TimeSpan.FromSeconds(s.RejoinDelaySeconds),
+                    maxAttempts: s.RejoinMaxAttempts);
+            }
+            return new RejoinPolicy();
+        });
     }
 
     public bool GetAutoRejoin(AccountId accountId)

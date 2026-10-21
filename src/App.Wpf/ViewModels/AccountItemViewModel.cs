@@ -11,6 +11,9 @@ public partial class AccountItemViewModel : ObservableObject
 {
     public Account Account { get; }
 
+    [ObservableProperty]
+    private bool _isSelected;
+
     public AccountId Id => Account.Id;
     public string Alias => Account.Alias;
     public string? Group => Account.Group;

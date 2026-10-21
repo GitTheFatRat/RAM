@@ -68,6 +68,7 @@ public partial class App : Application
         services.AddTransient<ServersPage>();
         services.AddTransient<RunningViewModel>();
         services.AddTransient<RunningPage>();
+        services.AddTransient<SettingsViewModel>();
         services.AddTransient<SettingsPage>();
     }
 
@@ -79,8 +80,29 @@ public partial class App : Application
 
         await _host.StartAsync();
 
+        Core.Settings.ISettingsService settingsService = _host.Services.GetRequiredService<Core.Settings.ISettingsService>();
+        Core.Settings.AppSettings settings = await settingsService.LoadSettingsAsync();
+        ApplyTheme(settings.Theme);
+
         MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
         mainWindow.Show();
+    }
+
+    private static void ApplyTheme(string theme)
+    {
+        try
+        {
+            Wpf.Ui.Appearance.ApplicationTheme appTheme = theme switch
+            {
+                var t when string.Equals(t, "Light", StringComparison.OrdinalIgnoreCase) => Wpf.Ui.Appearance.ApplicationTheme.Light,
+                var t when string.Equals(t, "System", StringComparison.OrdinalIgnoreCase) => Wpf.Ui.Appearance.ApplicationTheme.HighContrast,
+                _ => Wpf.Ui.Appearance.ApplicationTheme.Dark
+            };
+            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(appTheme);
+        }
+        catch
+        {
+        }
     }
 
     protected override async void OnExit(ExitEventArgs e)

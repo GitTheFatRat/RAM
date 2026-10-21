@@ -34,12 +34,24 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private readonly ISnackbarService _snackbarService;
     private readonly IRobloxAuthService _authService;
     private readonly ILauncher _launcher;
+    private readonly Core.Settings.ISettingsService? _settingsService;
+    private readonly Core.Backup.IBackupService? _backupService;
     private readonly List<AccountItemViewModel> _allAccounts = new();
 
     private CancellationTokenSource? _checkAllCts;
+    private CancellationTokenSource? _bulkLaunchCts;
     private bool _disposed;
 
     public ObservableCollection<AccountItemViewModel> FilteredAccounts { get; } = new();
+    public ObservableCollection<string> Groups { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRenameGroupVisible))]
+    [NotifyPropertyChangedFor(nameof(IsLaunchGroupVisible))]
+    private string? _selectedGroup;
+
+    public bool IsRenameGroupVisible => !string.IsNullOrEmpty(SelectedGroup) && !string.Equals(SelectedGroup, Strings.GroupFilterAll, StringComparison.OrdinalIgnoreCase);
+    public bool IsLaunchGroupVisible => IsRenameGroupVisible;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAccountSelected))]
@@ -70,16 +82,29 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         IContentDialogService contentDialogService,
         ISnackbarService snackbarService,
         IRobloxAuthService authService,
-        ILauncher launcher)
+        ILauncher launcher,
+        Core.Settings.ISettingsService? settingsService = null,
+        Core.Backup.IBackupService? backupService = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _contentDialogService = contentDialogService ?? throw new ArgumentNullException(nameof(contentDialogService));
         _snackbarService = snackbarService ?? throw new ArgumentNullException(nameof(snackbarService));
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _launcher = launcher ?? throw new ArgumentNullException(nameof(launcher));
+        _settingsService = settingsService;
+        _backupService = backupService;
+
+        _selectedGroup = Strings.GroupFilterAll;
     }
 
+    partial void OnSelectedGroupChanged(string? value) => ApplyFilter();
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    [RelayCommand]
+    private void SelectGroup(string? group)
+    {
+        SelectedGroup = group;
+    }
 
     [RelayCommand]
     public async Task LoadAccountsAsync()
@@ -93,6 +118,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             {
                 _allAccounts.Add(new AccountItemViewModel(account));
             }
+            UpdateGroups();
             ApplyFilter();
         }
         catch (VaultCorruptedException)
@@ -102,6 +128,34 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private void UpdateGroups()
+    {
+        string? currentSelected = SelectedGroup;
+        Groups.Clear();
+        Groups.Add(Strings.GroupFilterAll);
+
+        HashSet<string> distinct = _allAccounts
+            .Select(a => a.Group?.Trim())
+            .Where(g => !string.IsNullOrEmpty(g))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)!;
+
+        foreach (string group in distinct)
+        {
+            Groups.Add(group);
+        }
+
+        if (currentSelected != null && Groups.Contains(currentSelected))
+        {
+            SelectedGroup = currentSelected;
+        }
+        else
+        {
+            SelectedGroup = Strings.GroupFilterAll;
         }
     }
 
@@ -160,6 +214,10 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     public async Task AddAccountAsync()
     {
         AccountEditorViewModel editorViewModel = new(isEdit: false);
+        foreach (string group in _allAccounts.Select(a => a.Group?.Trim()).Where(g => !string.IsNullOrEmpty(g)).Distinct()!)
+        {
+            editorViewModel.AvailableGroups.Add(group);
+        }
         AccountEditorControl editorControl = new()
         {
             DataContext = editorViewModel
@@ -265,6 +323,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             Group = current.Group ?? string.Empty,
             Note = current.Note ?? string.Empty
         };
+
+        foreach (string group in _allAccounts.Select(a => a.Group?.Trim()).Where(g => !string.IsNullOrEmpty(g)).Distinct()!)
+        {
+            editorViewModel.AvailableGroups.Add(group);
+        }
 
         AccountEditorControl editorControl = new()
         {
@@ -560,6 +623,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         FilteredAccounts.Clear();
         IEnumerable<AccountItemViewModel> query = _allAccounts;
 
+        if (!string.IsNullOrEmpty(SelectedGroup) && !string.Equals(SelectedGroup, Strings.GroupFilterAll, StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(a => string.Equals(a.Group, SelectedGroup, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             string search = SearchText.Trim();
@@ -576,6 +644,292 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
 
         HasAccounts = FilteredAccounts.Count > 0;
+    }
+
+    [RelayCommand]
+    private async Task RenameGroupAsync()
+    {
+        if (string.IsNullOrEmpty(SelectedGroup) || string.Equals(SelectedGroup, Strings.GroupFilterAll, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        RenameGroupDialogControl dialogControl = new(SelectedGroup);
+        ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+        {
+            Title = Strings.RenameGroupTitle,
+            Content = dialogControl,
+            PrimaryButtonText = Strings.Save,
+            CloseButtonText = Strings.Cancel
+        });
+
+        if (result != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        string? newGroupName = dialogControl.GetNewGroupName();
+        if (string.IsNullOrWhiteSpace(newGroupName))
+        {
+            return;
+        }
+
+        string oldGroup = SelectedGroup;
+        int count = 0;
+
+        foreach (AccountItemViewModel item in _allAccounts.Where(a => string.Equals(a.Group, oldGroup, StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            using SecretValue cookieClone = SecretValue.FromString(item.Account.Cookie.Reveal());
+            Account updated = item.Account with { Group = newGroupName, Cookie = cookieClone };
+            Result updateResult = await _accountStore.UpdateAsync(updated);
+            if (updateResult.IsSuccess)
+            {
+                count++;
+            }
+        }
+
+        await LoadAccountsAsync();
+        SelectedGroup = newGroupName;
+        CompositeFormat renameFormat = CompositeFormat.Parse(Strings.GroupRenamed);
+        string message = string.Format(CultureInfo.CurrentCulture, renameFormat, oldGroup, newGroupName, count);
+        _snackbarService.Show(Strings.SuccessTitle, message, ControlAppearance.Success);
+    }
+
+    [RelayCommand]
+    private async Task LaunchSelectedAccountsAsync()
+    {
+        List<AccountItemViewModel> selected = _allAccounts.Where(a => a.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        await ExecuteBulkLaunchAsync(selected);
+    }
+
+    [RelayCommand]
+    private async Task LaunchGroupAccountsAsync()
+    {
+        if (string.IsNullOrEmpty(SelectedGroup) || string.Equals(SelectedGroup, Strings.GroupFilterAll, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        List<AccountItemViewModel> groupAccounts = _allAccounts.Where(a => string.Equals(a.Group, SelectedGroup, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (groupAccounts.Count == 0)
+        {
+            return;
+        }
+
+        await ExecuteBulkLaunchAsync(groupAccounts);
+    }
+
+    private async Task ExecuteBulkLaunchAsync(List<AccountItemViewModel> accounts)
+    {
+        LaunchDialogControl dialogControl = new()
+        {
+            PlaceIdText = _lastPlaceId
+        };
+        ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+        {
+            Title = Strings.LaunchDialogTitle,
+            Content = dialogControl,
+            PrimaryButtonText = Strings.Launch,
+            CloseButtonText = Strings.Cancel
+        });
+
+        if (result != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        string placeIdStr = dialogControl.PlaceIdText;
+        if (!long.TryParse(placeIdStr, out long placeId) || placeId <= 0)
+        {
+            _snackbarService.Show(Strings.ErrorTitle, Strings.PlaceIdRequired, ControlAppearance.Danger);
+            return;
+        }
+
+        _lastPlaceId = placeIdStr;
+        string? jobId = dialogControl.JobIdText;
+        if (!string.IsNullOrWhiteSpace(jobId) && !Guid.TryParse(jobId, out _))
+        {
+            _snackbarService.Show(Strings.ErrorTitle, Strings.JobIdInvalid, ControlAppearance.Danger);
+            return;
+        }
+
+        _bulkLaunchCts = new CancellationTokenSource();
+        int successCount = 0;
+        int failCount = 0;
+        int delayMs = _settingsService?.CurrentSettings.LaunchDelayMs ?? 3000;
+
+        for (int i = 0; i < accounts.Count; i++)
+        {
+            if (_bulkLaunchCts.IsCancellationRequested)
+            {
+                _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
+                return;
+            }
+
+            AccountItemViewModel account = accounts[i];
+            LaunchRequest req = new(account.Id, placeId, jobId);
+            Result launchResult = await _launcher.LaunchAsync(req, _bulkLaunchCts.Token);
+
+            if (launchResult.IsSuccess)
+            {
+                successCount++;
+            }
+            else
+            {
+                failCount++;
+                _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
+            }
+
+            if (i < accounts.Count - 1 && delayMs > 0)
+            {
+                try
+                {
+                    await Task.Delay(delayMs, _bulkLaunchCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
+                    return;
+                }
+            }
+        }
+
+        CompositeFormat bulkFormat = CompositeFormat.Parse(Strings.BulkLaunchCompleted);
+        string summary = string.Format(CultureInfo.CurrentCulture, bulkFormat, successCount, failCount);
+        _snackbarService.Show(Strings.SuccessTitle, summary, ControlAppearance.Success);
+    }
+
+    [RelayCommand]
+    private async Task ExportBackupAsync()
+    {
+        if (_backupService == null)
+        {
+            return;
+        }
+
+        if (_allAccounts.Count == 0)
+        {
+            _snackbarService.Show(Strings.ErrorTitle, Strings.EmptyVaultCannotBackup, ControlAppearance.Caution);
+            return;
+        }
+
+        BackupPasswordDialogControl dialogControl = new(isConfirmRequired: true);
+        ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+        {
+            Title = Strings.BackupPasswordTitle,
+            Content = dialogControl,
+            PrimaryButtonText = Strings.Save,
+            CloseButtonText = Strings.Cancel
+        });
+
+        if (result != ContentDialogResult.Primary)
+        {
+            dialogControl.ClearPasswords();
+            return;
+        }
+
+        string? password = dialogControl.GetPassword();
+        if (string.IsNullOrEmpty(password))
+        {
+            dialogControl.ClearPasswords();
+            return;
+        }
+
+        Microsoft.Win32.SaveFileDialog saveDialog = new()
+        {
+            Filter = "Roblox Backup (*.rbxbackup)|*.rbxbackup",
+            DefaultExt = ".rbxbackup",
+            FileName = $"rbxmanager-backup-{DateTime.Now:yyyyMMdd}.rbxbackup"
+        };
+
+        if (saveDialog.ShowDialog() == true)
+        {
+            try
+            {
+                Core.Backup.BackupExportResult exportResult = await _backupService.ExportAsync(saveDialog.FileName, password);
+                CompositeFormat exportSuccessFormat = CompositeFormat.Parse(Strings.BackupExportSuccess);
+                string message = string.Format(CultureInfo.CurrentCulture, exportSuccessFormat, exportResult.ExportedCount);
+                _snackbarService.Show(Strings.SuccessTitle, message, ControlAppearance.Success);
+            }
+            catch (Exception ex)
+            {
+                _snackbarService.Show(Strings.ErrorTitle, ex.Message, ControlAppearance.Danger);
+            }
+            finally
+            {
+                dialogControl.ClearPasswords();
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task ImportBackupAsync()
+    {
+        if (_backupService == null)
+        {
+            return;
+        }
+
+        Microsoft.Win32.OpenFileDialog openDialog = new()
+        {
+            Filter = "Roblox Backup (*.rbxbackup)|*.rbxbackup",
+            DefaultExt = ".rbxbackup"
+        };
+
+        if (openDialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        BackupPasswordDialogControl dialogControl = new(isConfirmRequired: false);
+        ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+        {
+            Title = Strings.BackupPasswordTitle,
+            Content = dialogControl,
+            PrimaryButtonText = Strings.Save,
+            CloseButtonText = Strings.Cancel
+        });
+
+        if (result != ContentDialogResult.Primary)
+        {
+            dialogControl.ClearPasswords();
+            return;
+        }
+
+        string? password = dialogControl.GetPassword();
+        if (string.IsNullOrEmpty(password))
+        {
+            dialogControl.ClearPasswords();
+            return;
+        }
+
+        try
+        {
+            Core.Backup.BackupImportResult importResult = await _backupService.ImportAsync(openDialog.FileName, password);
+            await LoadAccountsAsync();
+            CompositeFormat importSuccessFormat = CompositeFormat.Parse(Strings.BackupImportSuccess);
+            string message = string.Format(CultureInfo.CurrentCulture, importSuccessFormat, importResult.ImportedCount, importResult.SkippedCount);
+            _snackbarService.Show(Strings.SuccessTitle, message, ControlAppearance.Success);
+        }
+        catch (Core.Backup.BackupException ex)
+        {
+            CompositeFormat importFailedFormat = CompositeFormat.Parse(Strings.BackupImportFailed);
+            string message = string.Format(CultureInfo.CurrentCulture, importFailedFormat, ex.Message);
+            _snackbarService.Show(Strings.ErrorTitle, message, ControlAppearance.Danger);
+        }
+        catch (Exception ex)
+        {
+            _snackbarService.Show(Strings.ErrorTitle, ex.Message, ControlAppearance.Danger);
+        }
+        finally
+        {
+            dialogControl.ClearPasswords();
+        }
     }
 
     private async Task ShowVaultCorruptedDialogAsync(string vaultPath)
@@ -605,6 +959,13 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _checkAllCts.Cancel();
             _checkAllCts.Dispose();
             _checkAllCts = null;
+        }
+
+        if (_bulkLaunchCts != null)
+        {
+            _bulkLaunchCts.Cancel();
+            _bulkLaunchCts.Dispose();
+            _bulkLaunchCts = null;
         }
 
         GC.SuppressFinalize(this);
