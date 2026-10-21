@@ -73,4 +73,85 @@
   <data name="SettingsPageTitle" xml:space="preserve">
     <value>Cài đặt</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Tìm kiếm tài khoản...</value>
+  </data>
+  <data name="AddAccount" xml:space="preserve">
+    <value>Thêm</value>
+  </data>
+  <data name="EditAccount" xml:space="preserve">
+    <value>Sửa</value>
+  </data>
+  <data name="DeleteAccount" xml:space="preserve">
+    <value>Xóa</value>
+  </data>
+  <data name="ColumnAlias" xml:space="preserve">
+    <value>Tên gợi nhớ</value>
+  </data>
+  <data name="ColumnGroup" xml:space="preserve">
+    <value>Nhóm</value>
+  </data>
+  <data name="ColumnCreated" xml:space="preserve">
+    <value>Ngày tạo</value>
+  </data>
+  <data name="EmptyAccountsList" xml:space="preserve">
+    <value>Chưa có tài khoản nào. Nhấn 'Thêm' để bắt đầu.</value>
+  </data>
+  <data name="DeleteConfirmTitle" xml:space="preserve">
+    <value>Xác nhận xóa</value>
+  </data>
+  <data name="DeleteConfirmMessage" xml:space="preserve">
+    <value>Bạn có chắc chắn muốn xóa tài khoản '{0}' không?</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Lưu</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Xóa</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="FieldAlias" xml:space="preserve">
+    <value>Tên gợi nhớ</value>
+  </data>
+  <data name="FieldGroup" xml:space="preserve">
+    <value>Nhóm (tùy chọn)</value>
+  </data>
+  <data name="FieldNote" xml:space="preserve">
+    <value>Ghi chú (tùy chọn)</value>
+  </data>
+  <data name="FieldCookie" xml:space="preserve">
+    <value>Cookie (.ROBLOSECURITY)</value>
+  </data>
+  <data name="AddAccountDialogTitle" xml:space="preserve">
+    <value>Thêm tài khoản</value>
+  </data>
+  <data name="EditAccountDialogTitle" xml:space="preserve">
+    <value>Sửa tài khoản</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>Lỗi</value>
+  </data>
+  <data name="SuccessTitle" xml:space="preserve">
+    <value>Thành công</value>
+  </data>
+  <data name="AccountSavedMessage" xml:space="preserve">
+    <value>Đã lưu tài khoản thành công.</value>
+  </data>
+  <data name="AccountDeletedMessage" xml:space="preserve">
+    <value>Đã xóa tài khoản thành công.</value>
+  </data>
+  <data name="VaultCorruptedTitle" xml:space="preserve">
+    <value>Lỗi tệp lưu trữ</value>
+  </data>
+  <data name="VaultCorruptedMessage" xml:space="preserve">
+    <value>Tệp dữ liệu tại '{0}' bị hỏng hoặc không thể đọc. Tệp gốc KHÔNG bị ghi đè.</value>
+  </data>
+  <data name="ValidationCookieRequired" xml:space="preserve">
+    <value>Vui lòng nhập cookie.</value>
+  </data>
 </root>

@@ -73,4 +73,85 @@
   <data name="SettingsPageTitle" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Search accounts...</value>
+  </data>
+  <data name="AddAccount" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="EditAccount" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="DeleteAccount" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ColumnAlias" xml:space="preserve">
+    <value>Alias</value>
+  </data>
+  <data name="ColumnGroup" xml:space="preserve">
+    <value>Group</value>
+  </data>
+  <data name="ColumnCreated" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="EmptyAccountsList" xml:space="preserve">
+    <value>No accounts found. Click 'Add' to add an account.</value>
+  </data>
+  <data name="DeleteConfirmTitle" xml:space="preserve">
+    <value>Confirm Delete</value>
+  </data>
+  <data name="DeleteConfirmMessage" xml:space="preserve">
+    <value>Are you sure you want to delete account '{0}'?</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="FieldAlias" xml:space="preserve">
+    <value>Alias</value>
+  </data>
+  <data name="FieldGroup" xml:space="preserve">
+    <value>Group (optional)</value>
+  </data>
+  <data name="FieldNote" xml:space="preserve">
+    <value>Note (optional)</value>
+  </data>
+  <data name="FieldCookie" xml:space="preserve">
+    <value>Cookie (.ROBLOSECURITY)</value>
+  </data>
+  <data name="AddAccountDialogTitle" xml:space="preserve">
+    <value>Add Account</value>
+  </data>
+  <data name="EditAccountDialogTitle" xml:space="preserve">
+    <value>Edit Account</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="SuccessTitle" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="AccountSavedMessage" xml:space="preserve">
+    <value>Account saved successfully.</value>
+  </data>
+  <data name="AccountDeletedMessage" xml:space="preserve">
+    <value>Account deleted successfully.</value>
+  </data>
+  <data name="VaultCorruptedTitle" xml:space="preserve">
+    <value>Vault Corrupted</value>
+  </data>
+  <data name="VaultCorruptedMessage" xml:space="preserve">
+    <value>The vault file at '{0}' is corrupted or cannot be read. The existing file was NOT overwritten.</value>
+  </data>
+  <data name="ValidationCookieRequired" xml:space="preserve">
+    <value>Cookie is required.</value>
+  </data>
 </root>

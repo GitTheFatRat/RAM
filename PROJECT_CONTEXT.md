@@ -3,11 +3,16 @@
 ## Purpose
 A Windows desktop application designed to manage multiple Roblox accounts with a default Vietnamese user interface (`vi-VN`). Built for personal use initially with a path to public release.
 
+## Milestone Status
+- **M0**: Scaffold, project structure, build pipeline & analyzers. (Completed)
+- **M1**: Encrypted account vault (`vault.dat` v1) & account list UI with in-dialog editing/validation. (Completed)
+- **M2**: Roblox API integration, cookie validation, profile retrieval. (Next)
+
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).
 - **Target Frameworks**:
   - `net10.0-windows` for `src/App.Wpf`.
-  - `net10.0` for `src/Core`, `src/Infrastructure`, and `tests/Core.Tests`.
+  - `net10.0` for `src/Core`, `src/Infrastructure`, `tests/Core.Tests`, and `tests/Infrastructure.Tests`.
 - **Platform**: Windows 10/11 x64 only.
 - **UI & Pattern**: WPF, MVVM (via `CommunityToolkit.Mvvm`), Fluent Dark UI (via `WPF-UI`).
 - **Dependency Injection & Hosting**: `Microsoft.Extensions.Hosting` (Generic Host).
@@ -15,10 +20,11 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **Package Management**: Central Package Management (`Directory.Packages.props`).
 
 ## Solution Layout (Root Namespace: `RbxManager`)
-- **`src/Core/`**: Domain models, value objects, and service contracts. Zero dependencies on UI or Infrastructure.
-- **`src/Infrastructure/`**: Data persistence, file operations, secure credential stores. References `Core`.
+- **`src/Core/`**: Domain models (`AccountId`, `SecretValue`, `Account`), `AccountValidator`, `IAccountStore`, and `VaultCorruptedException`. Zero external dependencies.
+- **`src/Infrastructure/`**: `EncryptedFileVault` persistence using DPAPI and AES-256-GCM. References `Core`.
 - **`src/App.Wpf/`**: WPF shell, Fluent UI views, navigation, ViewModels, and DI container bootstrap. References `Core` and `Infrastructure`.
-- **`tests/Core.Tests/`**: Unit tests verifying Core models and logic via xUnit and NSubstitute. References `Core`.
+- **`tests/Core.Tests/`**: Unit tests verifying Core models and validation logic. References `Core`.
+- **`tests/Infrastructure.Tests/`**: Integration tests verifying DPAPI wrapping, AES-GCM encryption round-trip, backup generation, and tamper detection. References `Core` and `Infrastructure`.
 
 ## Core Rules
 

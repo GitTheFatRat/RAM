@@ -29,5 +29,11 @@
                                        TargetPageType="{x:Type pages:SettingsPage}" />
             </ui:NavigationView.MenuItems>
         </ui:NavigationView>
+
+        <ui:ContentDialogHost x:Name="RootContentDialogHost"
+                              Grid.Row="1" />
+
+        <ui:SnackbarPresenter x:Name="RootSnackbarPresenter"
+                              Grid.Row="1" />
     </Grid>
 </ui:FluentWindow>

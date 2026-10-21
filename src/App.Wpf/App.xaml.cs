@@ -8,7 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RbxManager.App.ViewModels;
 using RbxManager.App.Views.Pages;
+using RbxManager.Core.Storage;
+using RbxManager.Infrastructure.Storage;
 using Serilog;
+using Wpf.Ui;
 
 public partial class App : Application
 {
@@ -48,8 +51,17 @@ public partial class App : Application
     {
         services.AddSingleton<Serilog.ILogger>(Log.Logger);
 
+        // Core & Infrastructure
+        services.AddSingleton<IAccountStore, EncryptedFileVault>();
+
+        // UI Services
+        services.AddSingleton<IContentDialogService, ContentDialogService>();
+        services.AddSingleton<ISnackbarService, SnackbarService>();
+
+        // Views & ViewModels
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
+        services.AddTransient<AccountsViewModel>();
         services.AddTransient<AccountsPage>();
         services.AddTransient<SettingsPage>();
     }
