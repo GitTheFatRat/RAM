@@ -6,4 +6,4 @@
 - M2: done (11467e2) - BLOCKED: private server launch (format unconfirmed from public documentation)
 - M3: done (34c71ba) - server browser, process monitor, running sessions, auto-rejoin
 - M4: done (ca4d92a) - BLOCKED: multi-instance real gate (undocumented by official Roblox docs; gate safely abstracted behind interface, toggle disabled in production)
-- M5: done - hardening, packaging, docs, quality guards
+- M5: done (7029aa9) - hardening, packaging, docs, quality guards
