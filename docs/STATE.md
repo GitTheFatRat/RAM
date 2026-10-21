@@ -4,6 +4,6 @@
 - M1: done (08b5140) - encrypted account vault, account list UI
 - M1.1: done (8bcd3cb) - fix tests to not touch real vault path
 - M2: done (11467e2) - BLOCKED: private server launch (format unconfirmed from public documentation)
-- M3: done - server browser, process monitor, running sessions, auto-rejoin
+- M3: done (34c71ba) - server browser, process monitor, running sessions, auto-rejoin
 - M4: pending
 - M5: pending
