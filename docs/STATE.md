@@ -7,4 +7,4 @@
 - M3: done (34c71ba) - server browser, process monitor, running sessions, auto-rejoin
 - M4: done (ca4d92a) - settings, multi-instance gate abstraction, group management, encrypted backup
 - M5: done (7029aa9) - hardening, packaging, docs, quality guards
-- M6: done - multi-instance gate, reveal surface, report fixes
+- M6: done (1c716e9) - multi-instance gate, reveal surface, report fixes
