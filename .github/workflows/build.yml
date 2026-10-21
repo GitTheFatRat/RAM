@@ -27,3 +27,14 @@ jobs:
 
     - name: Run Tests
       run: dotnet test -c Release --no-build --verbosity normal
+
+    - name: Package Application
+      shell: pwsh
+      run: powershell -ExecutionPolicy Bypass -File tools/publish.ps1
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: RbxManager-win-x64
+        path: artifacts/RbxManager-win-x64.zip
+        if-no-files-found: error

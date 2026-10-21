@@ -24,7 +24,7 @@ graph TD
    - **Dependencies**: None. Pure .NET standard/runtime library.
 
 2. **`src/Infrastructure/`**
-   - **Responsibility**: Encrypted file persistence (`EncryptedFileVault`), internal DTO mapping (`AccountDto`), DPAPI key wrapping, AES-256-GCM authenticated encryption, Roblox HTTP client pipeline (`RobloxHostGuardHandler`, `RobloxCsrfHandler`, `RobloxRetryHandler`), Roblox authentication service (`RobloxAuthService`), game launcher (`RobloxLauncher`, `RobloxUriBuilder`), server browser service (`ServerBrowserService`), process provider (`SystemProcessProvider`), background session tracker (`SessionTracker`), settings service (`SettingsService`), multi-instance gate (`NamedMutexInstanceGate`), and encrypted backup service (`EncryptedBackupService`).
+   - **Responsibility**: Encrypted file persistence (`EncryptedFileVault`), internal DTO mapping (`AccountDto`), DPAPI key wrapping, AES-256-GCM authenticated encryption, Roblox HTTP client pipeline (`RobloxHostGuardHandler`, `RobloxCsrfHandler`, `RobloxRetryHandler`), Roblox authentication service (`RobloxAuthService`), game launcher (`RobloxLauncher`, `RobloxUriBuilder`), server browser service (`ServerBrowserService`), process provider (`SystemProcessProvider`), background session tracker (`SessionTracker`), settings service (`SettingsService`), multi-instance gate (`NamedMutexInstanceGate`), encrypted backup service (`EncryptedBackupService`), and logging redaction enricher (`RobloxSecretRedactionEnricher`).
    - **Dependencies**: References `Core`.
 
 3. **`src/App.Wpf/`**
@@ -48,4 +48,4 @@ graph TD
 - **M2**: Roblox authentication, WebView2 login, cookie validation, game launcher, security guard tests. (Completed)
 - **M3**: Server browser, process monitor, running sessions, auto-rejoin. (Completed)
 - **M4**: Settings, multi-instance, group management, encrypted backup. (Completed)
-- **M5**: Hardening, packaging, and final documentation. (Next)
+- **M5**: Hardening, packaging, and final documentation. (Completed)

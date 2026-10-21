@@ -10,7 +10,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M2**: Roblox authentication, WebView2 login, cookie validation, game launcher, security guard tests. (Completed)
 - **M3**: Server browser, process monitor, running sessions, auto-rejoin. (Completed)
 - **M4**: Settings, multi-instance gate, group management, encrypted backup. (Completed)
-- **M5**: Hardening, packaging, and final documentation. (Next)
+- **M5**: Hardening, packaging, and final documentation. (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

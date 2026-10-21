@@ -101,3 +101,25 @@ To eliminate this single point of failure without exposing plaintext credentials
    - Process enumeration (`SystemProcessProvider`) inspects local running Roblox player processes using standard Windows process APIs.
    - Auto-rejoin re-validates the account's cookie prior to requesting an authentication ticket. If the cookie is expired, rejoining terminates immediately and the account status is updated to `Expired`.
    - Rejoin attempts are strictly bounded by `RejoinPolicy` with exponential backoff and a 5-attempt circuit breaker across a 30-minute window to avoid infinite crash loops or spamming Roblox endpoints.
+
+---
+
+## Hardening, Redaction & Quality Guards (M5)
+
+1. **Global Exception Sanitization**:
+   - `DispatcherUnhandledException`, `TaskScheduler.UnobservedTaskException`, and `AppDomain.UnhandledException` log only the exception's type name and stack frame without raw message strings or request URLs, preventing secret leakage during runtime failures.
+   - Non-fatal UI dialogs prevent recursive unhandled exception crash loops.
+
+2. **Log Redaction Enricher**:
+   - A custom Serilog enricher (`RobloxSecretRedactionEnricher`) inspects all scalar log properties.
+   - Any property value containing `.ROBLOSECURITY=` or `_|WARNING:-DO-NOT-SHARE-THIS` is automatically masked to `[REDACTED]`.
+   - Daily log file sink retains logs for at most 14 days.
+
+3. **Application Single-Instance Mutex**:
+   - RbxManager uses a named mutex (`Local\RbxManager_Application_SingleInstance_Mutex`) to ensure only one instance of the manager runs at a time.
+   - Subsequent launches activate the existing window via Win32 `SetForegroundWindow` and terminate gracefully, preventing database race conditions.
+
+4. **Automated Quality Guards**:
+   - `SecretScanTests`: Scans all tracked source code and documentation to ensure no live Roblox secrets or warning prefixes with payloads exist in the codebase.
+   - `I18nParityTests`: Validates 100% key and value parity across `Strings.resx` and `Strings.vi.resx`.
+   - `XamlLiteralTests`: Prevents untranslated raw string literals in XAML presentation files.

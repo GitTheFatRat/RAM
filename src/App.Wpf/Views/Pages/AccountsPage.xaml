@@ -8,6 +8,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d"
+      PreviewKeyDown="OnPagePreviewKeyDown"
       Title="{x:Static resources:Strings.AccountsPageTitle}">
 
     <Page.Resources>
@@ -38,7 +39,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- Search box -->
-            <ui:TextBox Grid.Column="0"
+            <ui:TextBox x:Name="SearchBox"
+                        Grid.Column="0"
                         PlaceholderText="{x:Static resources:Strings.SearchPlaceholder}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                         Icon="{ui:SymbolIcon Search24}"
