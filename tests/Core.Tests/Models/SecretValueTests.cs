@@ -90,4 +90,58 @@ public class SecretValueTests
     {
         Assert.Throws<ArgumentNullException>(() => SecretValue.FromString(null!));
     }
+
+    [Fact]
+    public void Clone_CreatesIndependentBuffer_DisposingOriginalDoesNotAffectClone()
+    {
+        SecretValue original = SecretValue.FromString(FakeCookie);
+        using SecretValue clone = original.Clone();
+
+        original.Dispose();
+
+        Assert.Equal(FakeCookie, clone.Reveal());
+    }
+
+    [Fact]
+    public void Clone_DisposingCloneDoesNotAffectOriginal()
+    {
+        using SecretValue original = SecretValue.FromString(FakeCookie);
+        SecretValue clone = original.Clone();
+
+        clone.Dispose();
+
+        Assert.Equal(FakeCookie, original.Reveal());
+    }
+
+    [Fact]
+    public void Clone_AfterDispose_ThrowsObjectDisposedException()
+    {
+        SecretValue secret = SecretValue.FromString(FakeCookie);
+        secret.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => secret.Clone());
+    }
+
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData("\t\r\n \v\f", false)]
+    [InlineData("a", true)]
+    [InlineData("   cookie   ", true)]
+    [InlineData(FakeCookie, true)]
+    public void HasContent_ReturnsExpectedValue(string input, bool expected)
+    {
+        using SecretValue secret = SecretValue.FromString(input);
+
+        Assert.Equal(expected, secret.HasContent);
+    }
+
+    [Fact]
+    public void HasContent_AfterDispose_ReturnsFalse()
+    {
+        SecretValue secret = SecretValue.FromString(FakeCookie);
+        secret.Dispose();
+
+        Assert.False(secret.HasContent);
+    }
 }

@@ -488,3 +488,5 @@ accounts.json
 accounts.dat
 secrets.*
 logs/
+artifacts/
+review.zip

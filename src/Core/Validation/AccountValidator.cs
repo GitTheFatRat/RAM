@@ -33,8 +33,7 @@ public static class AccountValidator
             return Result.Failure("Note must not exceed 200 characters.");
         }
 
-        string revealedCookie = account.Cookie.Reveal();
-        if (string.IsNullOrWhiteSpace(revealedCookie))
+        if (!account.Cookie.HasContent)
         {
             return Result.Failure("Cookie must not be empty.");
         }

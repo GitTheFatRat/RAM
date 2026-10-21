@@ -191,7 +191,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             Alias: user.Name,
             Group: null,
             Note: null,
-            Cookie: SecretValue.FromString(cookie.Reveal()),
+            Cookie: cookie.Clone(),
             CreatedAt: DateTimeOffset.UtcNow,
             Username: user.Name,
             UserId: user.Id,
@@ -348,7 +348,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             string newCookie = editorControl.ReadPassword();
             SecretValue cookieToUse = !string.IsNullOrWhiteSpace(newCookie)
                 ? SecretValue.FromString(newCookie)
-                : SecretValue.FromString(current.Cookie.Reveal());
+                : current.Cookie.Clone();
 
             editorControl.ClearPassword();
 
@@ -602,7 +602,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             newStatus = AccountStatus.Error;
         }
 
-        using SecretValue cookieClone = SecretValue.FromString(account.Cookie.Reveal());
+        using SecretValue cookieClone = account.Cookie.Clone();
         Account updated = new(
             Id: account.Id,
             Alias: account.Alias,
@@ -679,7 +679,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
         foreach (AccountItemViewModel item in _allAccounts.Where(a => string.Equals(a.Group, oldGroup, StringComparison.OrdinalIgnoreCase)).ToList())
         {
-            using SecretValue cookieClone = SecretValue.FromString(item.Account.Cookie.Reveal());
+            using SecretValue cookieClone = item.Account.Cookie.Clone();
             Account updated = item.Account with { Group = newGroupName, Cookie = cookieClone };
             Result updateResult = await _accountStore.UpdateAsync(updated);
             if (updateResult.IsSuccess)

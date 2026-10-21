@@ -30,6 +30,45 @@ public sealed class SecretValue : IDisposable, IEquatable<SecretValue>
         return Encoding.UTF8.GetString(_bytes);
     }
 
+    /// <summary>
+    /// Creates an independent clone of this secret value with a separate byte buffer.
+    /// </summary>
+    public SecretValue Clone()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        byte[] copy = new byte[_bytes.Length];
+        Array.Copy(_bytes, copy, _bytes.Length);
+        return new SecretValue(copy);
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the secret contains at least one non-ASCII whitespace byte.
+    /// Evaluated directly on the underlying byte buffer without allocating a string.
+    /// </summary>
+    public bool HasContent
+    {
+        get
+        {
+            if (_disposed)
+            {
+                return false;
+            }
+
+            foreach (byte b in _bytes)
+            {
+                if (!IsAsciiWhitespace(b))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    private static bool IsAsciiWhitespace(byte b) =>
+        b is (byte)' ' or (byte)'\t' or (byte)'\n' or (byte)'\r' or 0x0B or 0x0C;
+
     public override string ToString() => "[REDACTED]";
 
     public bool Equals(SecretValue? other)

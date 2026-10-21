@@ -7,11 +7,13 @@ using System.Threading;
 using RbxManager.Core.Common;
 using RbxManager.Core.Processes;
 using RbxManager.Infrastructure.Instance;
+using Xunit;
 
 [SupportedOSPlatform("windows")]
 public sealed class NamedMutexInstanceGateTests
 {
-    private const string PrivateTestMutexName = "Local\\RbxManager_UnitTest_PrivateMutex_Test";
+    private static string CreateUniqueMutexName() => $"RbxManagerTest_Mutex_{Guid.NewGuid():N}";
+    private static string CreateUniqueEventName() => $"RbxManagerTest_Event_{Guid.NewGuid():N}";
 
     private sealed class FakeProcessProvider : IProcessProvider
     {
@@ -30,7 +32,10 @@ public sealed class NamedMutexInstanceGateTests
             Processes = [new ProcessSnapshot(1001, DateTimeOffset.UtcNow, 50000)]
         };
 
-        using NamedMutexInstanceGate gate = new(provider, PrivateTestMutexName);
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
+
+        using NamedMutexInstanceGate gate = new(provider, mutexName, eventName);
         Result result = gate.TryEnable();
 
         Assert.False(result.IsSuccess);
@@ -39,57 +44,141 @@ public sealed class NamedMutexInstanceGateTests
     }
 
     [Fact]
-    public void TryEnable_NoProcessRunning_AcquiresTestMutex()
+    public void TryEnable_CreatesBothObjects_SecondProbeSeesThem()
     {
-        FakeProcessProvider provider = new()
-        {
-            Processes = []
-        };
+        FakeProcessProvider provider = new();
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
 
-        using NamedMutexInstanceGate gate = new(provider, PrivateTestMutexName);
+        using NamedMutexInstanceGate gate = new(provider, mutexName, eventName);
         Result result = gate.TryEnable();
 
         Assert.True(result.IsSuccess);
         Assert.True(gate.IsMultiInstanceEnabled);
 
-        gate.Disable();
-        Assert.False(gate.IsMultiInstanceEnabled);
+        // Probe 1: attempt to create mutex with initiallyOwned: false; must detect that it already exists (createdNew = false)
+        using Mutex probeMutex = new(initiallyOwned: false, mutexName, out bool mutexCreatedNew);
+        Assert.False(mutexCreatedNew);
+
+        // Probe 2: attempt to create event; must detect that it already exists (createdNew = false)
+        using EventWaitHandle probeEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        Assert.False(eventCreatedNew);
     }
 
     [Fact]
-    public void Disable_ReleasesMutex_AllowingReacquire()
+    public void Disable_ReleasesBothObjects_ProbeCanCreateThemAfresh()
     {
         FakeProcessProvider provider = new();
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
 
-        using (NamedMutexInstanceGate gate1 = new(provider, PrivateTestMutexName))
+        using (NamedMutexInstanceGate gate = new(provider, mutexName, eventName))
         {
-            Result res1 = gate1.TryEnable();
-            Assert.True(res1.IsSuccess);
+            Result res = gate.TryEnable();
+            Assert.True(res.IsSuccess);
+            Assert.True(gate.IsMultiInstanceEnabled);
 
-            gate1.Disable();
-            Assert.False(gate1.IsMultiInstanceEnabled);
+            gate.Disable();
+            Assert.False(gate.IsMultiInstanceEnabled);
         }
 
-        using (NamedMutexInstanceGate gate2 = new(provider, PrivateTestMutexName))
-        {
-            Result res2 = gate2.TryEnable();
-            Assert.True(res2.IsSuccess);
-            Assert.True(gate2.IsMultiInstanceEnabled);
-        }
+        // Probes can now create the objects afresh as brand new
+        using Mutex probeMutex = new(initiallyOwned: false, mutexName, out bool mutexCreatedNew);
+        Assert.True(mutexCreatedNew);
+
+        using EventWaitHandle probeEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        Assert.True(eventCreatedNew);
     }
 
     [Fact]
-    public void GateWithoutMutexName_ReturnsNotAvailable()
+    public void Dispose_TwiceIsSafe_AndReleasesObjects()
     {
         FakeProcessProvider provider = new();
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
 
-        using NamedMutexInstanceGate gate = new(provider, mutexName: null);
+        NamedMutexInstanceGate gate = new(provider, mutexName, eventName);
+        Result res = gate.TryEnable();
+        Assert.True(res.IsSuccess);
 
-        Assert.False(gate.IsAvailable);
+        // Disposing twice must be idempotent and not throw
+        gate.Dispose();
+        gate.Dispose();
+
         Assert.False(gate.IsMultiInstanceEnabled);
 
+        using Mutex probeMutex = new(initiallyOwned: false, mutexName, out bool mutexCreatedNew);
+        Assert.True(mutexCreatedNew);
+    }
+
+    [Fact]
+    public void TryEnable_PartialCreationFailure_EventAlreadyExists_LeavesNoHeldObject()
+    {
+        FakeProcessProvider provider = new();
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
+
+        // Pre-create the event so gate's attempt to create the event will fail (createdNew == false)
+        using EventWaitHandle preExistingEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        Assert.True(eventCreatedNew);
+
+        using NamedMutexInstanceGate gate = new(provider, mutexName, eventName);
         Result result = gate.TryEnable();
+
         Assert.False(result.IsSuccess);
-        Assert.Equal("MultiInstanceNotAvailable", result.ErrorCode);
+        Assert.Equal("CouldNotTakeOver", result.ErrorCode);
+        Assert.False(gate.IsMultiInstanceEnabled);
+
+        // Mutex was attempted during TryEnable, but on failure it MUST be released and disposed immediately.
+        // A probe must be able to create the mutex afresh.
+        using Mutex probeMutex = new(initiallyOwned: false, mutexName, out bool mutexCreatedNew);
+        Assert.True(mutexCreatedNew);
+    }
+
+    [Fact]
+    public void TryEnable_PartialCreationFailure_MutexAlreadyExists_LeavesNoHeldObject()
+    {
+        FakeProcessProvider provider = new();
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
+
+        // Pre-create the mutex so gate's attempt to create mutex will fail (createdNew == false)
+        using Mutex preExistingMutex = new(initiallyOwned: true, mutexName, out bool mutexCreatedNew);
+        Assert.True(mutexCreatedNew);
+
+        using NamedMutexInstanceGate gate = new(provider, mutexName, eventName);
+        Result result = gate.TryEnable();
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("CouldNotTakeOver", result.ErrorCode);
+        Assert.False(gate.IsMultiInstanceEnabled);
+
+        // Event must not be left held; probe must be able to create the event afresh
+        using EventWaitHandle probeEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        Assert.True(eventCreatedNew);
+    }
+
+    [Fact]
+    public void GateWithoutMutexOrEventName_ReturnsNotAvailable()
+    {
+        FakeProcessProvider provider = new();
+
+        using NamedMutexInstanceGate gate1 = new(provider, mutexName: null, eventName: null);
+        Assert.False(gate1.IsAvailable);
+        Result res1 = gate1.TryEnable();
+        Assert.False(res1.IsSuccess);
+        Assert.Equal("MultiInstanceNotAvailable", res1.ErrorCode);
+
+        using NamedMutexInstanceGate gate2 = new(provider, mutexName: "test", eventName: null);
+        Assert.False(gate2.IsAvailable);
+    }
+
+    [Fact]
+    public void ProductionDefaults_IsAvailableIsTrue()
+    {
+        FakeProcessProvider provider = new();
+
+        using NamedMutexInstanceGate gate = new(provider);
+        Assert.True(gate.IsAvailable);
     }
 }

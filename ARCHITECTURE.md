@@ -49,3 +49,4 @@ graph TD
 - **M3**: Server browser, process monitor, running sessions, auto-rejoin. (Completed)
 - **M4**: Settings, multi-instance, group management, encrypted backup. (Completed)
 - **M5**: Hardening, packaging, and final documentation. (Completed)
+- **M6**: Multi-instance real gate, Reveal() surface reduction, report reconciliation, review bundle. (Completed)

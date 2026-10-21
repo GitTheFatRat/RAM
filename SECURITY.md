@@ -123,3 +123,17 @@ To eliminate this single point of failure without exposing plaintext credentials
    - `SecretScanTests`: Scans all tracked source code and documentation to ensure no live Roblox secrets or warning prefixes with payloads exist in the codebase.
    - `I18nParityTests`: Validates 100% key and value parity across `Strings.resx` and `Strings.vi.resx`.
    - `XamlLiteralTests`: Prevents untranslated raw string literals in XAML presentation files.
+
+---
+
+## Multi-Instance Gate & Secret Lifecycle (M6)
+
+1. **Multi-Instance Gate Boundaries**:
+   - The multi-instance gate (`NamedMutexInstanceGate`) creates named synchronization objects (`ROBLOX_singletonMutex` and `ROBLOX_singletonEvent`) inside **its own process** on a dedicated background worker thread with proper thread affinity.
+   - **What it does NOT do**: It does NOT inject into, patch, hook, or inspect the memory of Roblox client processes, nor does it close or duplicate handles belonging to `RobloxPlayerBeta.exe`.
+   - It only operates when no Roblox processes are currently running. If named objects already exist, it aborts without holding partial handles.
+
+2. **SecretValue Lifecycle & Transient Plaintext**:
+   - In WPF user interfaces, capturing user input from a `PasswordBox` or retrieving a session cookie from WebView2 momentarily creates a transient managed `string` in memory.
+   - The application minimizes this exposure window: the string is immediately wrapped into a `SecretValue` via `SecretValue.FromString(secret)`, and the UI input control is cleared immediately (`ClearPassword()`). The plaintext string is never stored in any ViewModel field, property, collection, or state object.
+   - Calling `SecretValue.Reveal()` is prohibited in UI ViewModels and Validation layers (enforced by `ArchitectureTests`). Duplication is performed via memory-isolated `SecretValue.Clone()`, and empty checks are performed directly on byte buffers via `SecretValue.HasContent`.

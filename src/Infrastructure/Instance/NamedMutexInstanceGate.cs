@@ -11,25 +11,61 @@ using RbxManager.Core.Processes;
 [SupportedOSPlatform("windows")]
 public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
 {
+    public const string DefaultMutexName = "ROBLOX_singletonMutex";
+    public const string DefaultEventName = "ROBLOX_singletonEvent";
+
     private readonly IProcessProvider _processProvider;
     private readonly string? _mutexName;
-    private Mutex? _mutex;
+    private readonly string? _eventName;
+
+    private readonly object _syncLock = new();
+    private readonly ManualResetEventSlim _commandReady = new(false);
+    private readonly ManualResetEventSlim _commandDone = new(false);
+    private readonly Thread _workerThread;
+
+    private enum GateCommand
+    {
+        None,
+        Enable,
+        Disable,
+        Shutdown
+    }
+
+    private GateCommand _pendingCommand = GateCommand.None;
+    private Result _commandResult = Result.Success();
+
     private bool _isEnabled;
     private bool _disposed;
 
-    public bool IsAvailable => !string.IsNullOrEmpty(_mutexName);
+    public bool IsAvailable => !string.IsNullOrEmpty(_mutexName) && !string.IsNullOrEmpty(_eventName);
 
     public bool IsMultiInstanceEnabled => _isEnabled;
 
-    public NamedMutexInstanceGate(IProcessProvider processProvider, string? mutexName = null)
+    public NamedMutexInstanceGate(IProcessProvider processProvider)
+        : this(processProvider, DefaultMutexName, DefaultEventName)
     {
-        _processProvider = processProvider;
+    }
+
+    public NamedMutexInstanceGate(
+        IProcessProvider processProvider,
+        string? mutexName,
+        string? eventName = DefaultEventName)
+    {
+        _processProvider = processProvider ?? throw new ArgumentNullException(nameof(processProvider));
         _mutexName = mutexName;
+        _eventName = eventName;
+
+        _workerThread = new Thread(WorkerLoop)
+        {
+            IsBackground = true,
+            Name = "RbxManager_InstanceGateWorker"
+        };
+        _workerThread.Start();
     }
 
     public Result TryEnable()
     {
-        if (string.IsNullOrEmpty(_mutexName))
+        if (!IsAvailable)
         {
             return Result.Failure("Tính năng chạy nhiều tài khoản không khả dụng trong bản dựng này.", "MultiInstanceNotAvailable");
         }
@@ -40,45 +76,180 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             return Result.Failure("Roblox đang chạy; vui lòng đóng tất cả tiến trình Roblox trước khi bật.", "RobloxRunning");
         }
 
-        try
+        lock (_syncLock)
         {
-            _mutex = new Mutex(initiallyOwned: true, _mutexName, out _);
-            _isEnabled = true;
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure($"Không thể kích hoạt đối tượng đồng bộ hóa: {ex.Message}", "MutexError");
+            if (_disposed)
+            {
+                return Result.Failure("Cổng đa phiên đã bị hủy.", "Disposed");
+            }
+
+            if (_isEnabled)
+            {
+                return Result.Success();
+            }
+
+            _pendingCommand = GateCommand.Enable;
+            _commandDone.Reset();
+            _commandReady.Set();
+            _commandDone.Wait();
+
+            return _commandResult;
         }
     }
 
     public void Disable()
     {
-        if (_mutex != null)
+        lock (_syncLock)
         {
-            try
+            if (_disposed || !_isEnabled)
             {
-                _mutex.ReleaseMutex();
-            }
-            catch
-            {
-                // Ignore if mutex was not acquired or already released
+                return;
             }
 
-            _mutex.Dispose();
-            _mutex = null;
+            _pendingCommand = GateCommand.Disable;
+            _commandDone.Reset();
+            _commandReady.Set();
+            _commandDone.Wait();
         }
-
-        _isEnabled = false;
     }
 
     public void Dispose()
     {
-        if (!_disposed)
+        lock (_syncLock)
         {
-            Disable();
+            if (_disposed)
+            {
+                return;
+            }
+
             _disposed = true;
-            GC.SuppressFinalize(this);
+            _pendingCommand = GateCommand.Shutdown;
+            _commandDone.Reset();
+            _commandReady.Set();
+            _commandDone.Wait();
+        }
+
+        if (_workerThread.IsAlive)
+        {
+            _workerThread.Join(TimeSpan.FromSeconds(3));
+        }
+
+        _commandReady.Dispose();
+        _commandDone.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void WorkerLoop()
+    {
+        Mutex? mutex = null;
+        EventWaitHandle? eventHandle = null;
+
+        while (true)
+        {
+            _commandReady.Wait();
+            _commandReady.Reset();
+
+            GateCommand cmd = _pendingCommand;
+            _pendingCommand = GateCommand.None;
+
+            if (cmd == GateCommand.Enable)
+            {
+                try
+                {
+                    mutex = new Mutex(initiallyOwned: true, _mutexName, out bool mutexCreatedNew);
+                    if (!mutexCreatedNew)
+                    {
+                        CleanupHandles(ref mutex, ref eventHandle);
+                        _isEnabled = false;
+                        _commandResult = Result.Failure(
+                            "Không thể tiếp quản đối tượng đồng bộ hóa; vui lòng đóng Roblox và thử lại.",
+                            "CouldNotTakeOver");
+                    }
+                    else
+                    {
+                        eventHandle = new EventWaitHandle(
+                            initialState: true,
+                            mode: EventResetMode.ManualReset,
+                            name: _eventName,
+                            out bool eventCreatedNew);
+
+                        if (!eventCreatedNew)
+                        {
+                            CleanupHandles(ref mutex, ref eventHandle);
+                            _isEnabled = false;
+                            _commandResult = Result.Failure(
+                                "Không thể tiếp quản đối tượng đồng bộ hóa; vui lòng đóng Roblox và thử lại.",
+                                "CouldNotTakeOver");
+                        }
+                        else
+                        {
+                            _isEnabled = true;
+                            _commandResult = Result.Success();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CleanupHandles(ref mutex, ref eventHandle);
+                    _isEnabled = false;
+                    _commandResult = Result.Failure(
+                        $"Không thể kích hoạt đối tượng đồng bộ hóa: {ex.Message}",
+                        "MutexError");
+                }
+
+                _commandDone.Set();
+            }
+            else if (cmd == GateCommand.Disable)
+            {
+                CleanupHandles(ref mutex, ref eventHandle);
+                _isEnabled = false;
+                _commandResult = Result.Success();
+                _commandDone.Set();
+            }
+            else if (cmd == GateCommand.Shutdown)
+            {
+                CleanupHandles(ref mutex, ref eventHandle);
+                _isEnabled = false;
+                _commandDone.Set();
+                break;
+            }
+        }
+    }
+
+    private static void CleanupHandles(ref Mutex? mutex, ref EventWaitHandle? eventHandle)
+    {
+        if (mutex != null)
+        {
+            try
+            {
+                mutex.ReleaseMutex();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                mutex.Dispose();
+            }
+            catch
+            {
+            }
+
+            mutex = null;
+        }
+
+        if (eventHandle != null)
+        {
+            try
+            {
+                eventHandle.Dispose();
+            }
+            catch
+            {
+            }
+
+            eventHandle = null;
         }
     }
 }

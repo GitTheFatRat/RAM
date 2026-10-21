@@ -52,8 +52,18 @@
 ---
 
 ### 6. Đa phiên (Multi-Instance)
-- [ ] Hiện tại tính năng mở đa phiên thật bị đánh dấu `BLOCKED` do Roblox không công bố cơ chế Mutex chính thức.
-- [ ] Kiểm tra trên giao diện Cài đặt: Tùy chọn đa phiên hiển thị cảnh báo rủi ro rõ ràng cho người dùng.
+- [ ] Đảm bảo toàn bộ tiến trình Roblox (`RobloxPlayerBeta.exe`) đã đóng hoàn toàn trước khi bắt đầu.
+- [ ] Vào trang **Cài đặt**, bật tùy chọn **Bật chạy nhiều phiên Roblox** (Enable Multi-Instance Roblox).
+- [ ] Hộp thoại cảnh báo rủi ro xuất hiện; đọc kỹ và nhấn **Đồng ý**. Trạng thái gạt chuyển sang Bật thành công.
+- [ ] Thử mở một tiến trình Roblox bất kỳ bên ngoài rồi thử tắt/bật lại tùy chọn: Ứng dụng từ chối bật với thông báo yêu cầu đóng Roblox trước.
+- [ ] Đóng Roblox, bật lại tùy chọn Đa phiên.
+- [ ] Sử dụng **HAI TÀI KHOẢN PHỤ (THROWAWAY ACCOUNTS)**:
+  - Khởi chạy tài khoản A vào một Place bất kỳ (ví dụ: `1818`).
+  - Đợi cửa sổ game của tài khoản A xuất hiện và kết nối vào phòng.
+  - Khởi chạy tiếp tài khoản B vào cùng Place hoặc Place khác.
+- [ ] **Ghi nhận kết quả thực tế**:
+  - Quan sát xem cửa sổ Roblox của tài khoản B có mở lên song song và cả hai tiến trình cùng duy trì trạng thái hoạt động (alive) hay không, hoặc Roblox có kích hoạt cơ chế phát hiện/đóng cửa sổ thứ hai không.
+  - *Lưu ý*: Nếu client thứ 2 bị đóng bởi Roblox, ghi nhận lại kết quả để báo cáo (không can thiệp hoặc chèn mã vào bộ nhớ của tiến trình Roblox).
 
 ---
 

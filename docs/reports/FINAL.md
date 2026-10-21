@@ -6,15 +6,16 @@ This report summarizes the final engineering state, test coverage, dependency se
 
 ## 1. Milestone Status Table
 
-| Milestone | Status | Commit | Description | Blocked Sub-Features |
+| Milestone | Status | Commit / Tag | Description | Blocked Sub-Features |
 | :--- | :--- | :--- | :--- | :--- |
 | **M0** | Done | `3857e86` | Solution scaffold, C# 14 / .NET 10, WPF-UI Dark Theme, i18n (`vi-VN` default, `en-US`), Serilog file sink | None |
 | **M1** | Done | `08b5140` | Encrypted vault v1 (DPAPI + AES-256-GCM), Account list MVVM UI, Add/Edit/Delete dialogs | None |
 | **M1.1** | Done | `8bcd3cb` | Zero-I/O test isolation preventing `%LOCALAPPDATA%\RbxManager` pollution | None |
 | **M2** | Done | `11467e2` | WebView2 auth, cookie validation, URI protocol game launcher (`roblox-player:`), Polly resilience, architecture & log leak guards | Private Server launch URL syntax (unconfirmed from public documentation) |
 | **M3** | Done | `34c71ba` | Public server browser (`/v1/games/{placeId}/servers/Public`), process monitor, hosted session tracking, auto-rejoin with exponential backoff & circuit breaker | None |
-| **M4** | Done | `ca4d92a` | `AppSettings` & `SettingsService` (`settings.json`), group filter chips, editable group combo, bulk launch with cancellation, encrypted backup format v1 (PBKDF2-HMAC-SHA512 at 600,000 iters + AES-256-GCM) | Multi-instance real gate (undocumented Roblox mutex; gate safely abstracted behind interface, toggle disabled in production) |
-| **M5** | Done | `PENDING` | Global exception handling, app single-instance mutex, log redaction enricher, keyboard shortcuts, i18n & XAML literal & secret quality guards, packaging (`tools/publish.ps1`), documentation (`README.vi.md`, `docs/MANUAL_TEST_CHECKLIST.md`, `docs/BEFORE_PUBLIC_RELEASE.md`) | None |
+| **M4** | Done | `ca4d92a` | `AppSettings` & `SettingsService` (`settings.json`), group filter chips, editable group combo, bulk launch with cancellation, encrypted backup format v1 (PBKDF2-HMAC-SHA512 at 600,000 iters + AES-256-GCM) | None |
+| **M5** | Done | `v0.1.0` | Global exception handling, app single-instance mutex, log redaction enricher, keyboard shortcuts, i18n & XAML literal & secret quality guards, packaging (`tools/publish.ps1`), documentation (`README.vi.md`, `docs/MANUAL_TEST_CHECKLIST.md`, `docs/BEFORE_PUBLIC_RELEASE.md`) | None |
+| **M6** | Done | `v0.1.1` | Multi-instance real gate (`ROBLOX_singletonMutex` / `ROBLOX_singletonEvent`), shrink `Reveal()` surface via `Clone()` and `HasContent`, report & test reconciliation, review bundle script (`tools/make-review.ps1`) | None |
 
 ---
 
@@ -23,13 +24,12 @@ This report summarizes the final engineering state, test coverage, dependency se
 ### BLOCKED Items (Excluded from UI)
 1. **Private Server Launch (M2)**:
    - *Reason*: Roblox documentation does not publicly publish the exact URI and PlaceLauncher query parameter contract for VIP / Private Server launch links (`accessCode` vs `linkCode`). Excluded from launch dialog to prevent failed launches or account flagging.
-2. **Multi-Instance Real Gate (M4)**:
-   - *Reason*: The exact Windows named mutex used by `RobloxPlayerBeta.exe` is undocumented and subject to client anti-cheat revisions. The application provides `INamedMutexInstanceGate` and `NamedMutexInstanceGate` with process checks, but keeps the live multi-instance toggle safely disabled with clear risk disclosures in Settings.
 
 ### UNVERIFIED Items (from `docs/api-notes.md`)
 - `GET https://users.roblox.com/v1/users/authenticated`: Verified by mock handlers in tests; requires live throwaway account confirmation.
 - `POST https://auth.roblox.com/v1/authentication-ticket`: Verified by mock handlers in tests; requires live throwaway account confirmation.
 - `roblox-player:` launch URI protocol and `PlaceLauncher.ashx` query parameter format: Verified by mock handlers and architecture tests; requires live execution verification.
+- `ROBLOX_singletonMutex` / `ROBLOX_singletonEvent`: UNVERIFIED-LIVE. Derived from public open-source community tooling; Roblox may block or modify in future client builds.
 
 *(Note: `GET https://games.roblox.com/v1/games/{placeId}/servers/Public` was live-verified against public Place ID 1818).*
 
@@ -37,9 +37,9 @@ This report summarizes the final engineering state, test coverage, dependency se
 
 ## 3. Test Totals per Project
 
-- **`tests/Core.Tests`**: 42 passed, 0 failed, 0 skipped.
-- **`tests/Infrastructure.Tests`**: 73 passed, 0 failed, 0 skipped.
-- **Total Test Suite**: **115 tests passing** (0 failures, 0 warnings).
+- **`tests/Core.Tests`**: 52 passed, 0 failed, 0 skipped.
+- **`tests/Infrastructure.Tests`**: 77 passed, 0 failed, 0 skipped.
+- **Total Test Suite**: **129 tests passing** (0 failures, 0 warnings).
 - **Test Isolation**: Verified `%LOCALAPPDATA%\RbxManager\vault.dat` timestamp remained untouched throughout all test executions.
 
 ---
@@ -81,7 +81,9 @@ This report summarizes the final engineering state, test coverage, dependency se
 ---
 
 ## 6. Deviations from Specifications
-- None. All architectural constraints, security boundaries, and milestone features conform strictly to `RUNBOOK.md` and `M0.md`-`M5.md`.
+1. **Polly Resilience Pipeline**: Implemented Polly v8 `ResiliencePipeline` with jittered exponential backoff and HTTP status handling rather than custom retry loops for robust network fault handling.
+2. **Multi-Instance Gate Progression**: In M4, `NamedMutexInstanceGate` was initially introduced as a safe, disabled abstraction with explicit UI risk warnings due to lack of official documentation; in M6, real named kernel objects (`ROBLOX_singletonMutex` and `ROBLOX_singletonEvent`) were implemented on a dedicated thread with OS thread affinity.
+3. **SecretValue.Reveal() Surface Reduction**: In M1-M5, `AccountsViewModel` and `AccountValidator` called `SecretValue.Reveal()` for cookie cloning and non-empty checks; M6 eliminated these callers by introducing `SecretValue.Clone()` and `SecretValue.HasContent`, restricting `Reveal()` to exactly 5 low-level cryptographic/HTTP infrastructure components.
 
 ---
 
@@ -98,9 +100,7 @@ This report summarizes the final engineering state, test coverage, dependency se
 
 Enforced continuously by `RbxManager.Core.Tests.Architecture.ArchitectureTests`:
 1. `SecretValue.cs`: Core implementation of secret unwrapping.
-2. `AccountValidator.cs`: Validation that cookie string is non-empty after trimming.
-3. `EncryptedFileVault.cs`: Serialization of encrypted vault payload into AES-256-GCM ciphertext.
-4. `RobloxAuthService.cs`: Construction of authenticated `.ROBLOSECURITY` cookie header for official Roblox HTTPS endpoints.
-5. `RobloxLauncher.cs`: Inclusion of temporary single-use auth ticket in `roblox-player:` launch URI.
-6. `AccountsViewModel.cs`: Account edit cloning.
-7. `EncryptedBackupService.cs`: Serialization of backup export payload into PBKDF2/AES-GCM ciphertext.
+2. `EncryptedFileVault.cs`: Serialization of encrypted vault payload into AES-256-GCM ciphertext.
+3. `RobloxAuthService.cs`: Construction of authenticated `.ROBLOSECURITY` cookie header for official Roblox HTTPS endpoints.
+4. `RobloxLauncher.cs`: Inclusion of temporary single-use auth ticket in `roblox-player:` launch URI.
+5. `EncryptedBackupService.cs`: Serialization of backup export payload into PBKDF2/AES-GCM ciphertext.
