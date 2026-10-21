@@ -421,4 +421,52 @@
   <data name="BackupImportFailed" xml:space="preserve">
     <value>Failed to import backup: {0}</value>
   </data>
+  <data name="NavDiagnostics" xml:space="preserve">
+    <value>Diagnostics</value>
+  </data>
+  <data name="DryRun" xml:space="preserve">
+    <value>Dry Run</value>
+  </data>
+  <data name="DryRunResultTitle" xml:space="preserve">
+    <value>Dry Run Result</value>
+  </data>
+  <data name="RunDiagnostics" xml:space="preserve">
+    <value>Run Diagnostics</value>
+  </data>
+  <data name="CopyReport" xml:space="preserve">
+    <value>Copy Report</value>
+  </data>
+  <data name="ReportCopied" xml:space="preserve">
+    <value>Report copied to clipboard.</value>
+  </data>
+  <data name="DiagnosticsTitle" xml:space="preserve">
+    <value>System &amp; Roblox Diagnostics</value>
+  </data>
+  <data name="AccountPickerLabel" xml:space="preserve">
+    <value>Account (optional):</value>
+  </data>
+  <data name="AllAccountsOption" xml:space="preserve">
+    <value>-- None --</value>
+  </data>
+  <data name="AdvancedSettingsTitle" xml:space="preserve">
+    <value>Advanced Templates</value>
+  </data>
+  <data name="AdvancedSettingsSubtitle" xml:space="preserve">
+    <value>Configurable launch URI and PlaceLauncher templates via settings.json.</value>
+  </data>
+  <data name="LaunchUriTemplateStatus" xml:space="preserve">
+    <value>Launch URI Template:</value>
+  </data>
+  <data name="PlaceLauncherUrlTemplateStatus" xml:space="preserve">
+    <value>PlaceLauncher URL Template:</value>
+  </data>
+  <data name="TemplateDefault" xml:space="preserve">
+    <value>Default (active)</value>
+  </data>
+  <data name="TemplateCustomValid" xml:space="preserve">
+    <value>Custom (valid)</value>
+  </data>
+  <data name="TemplateCustomInvalid" xml:space="preserve">
+    <value>Custom (invalid - ignored)</value>
+  </data>
 </root>

@@ -28,7 +28,7 @@ public sealed class RobloxSecretRedactionEnricherTests
     {
         var sink = new MemorySink();
 
-        using var logger = new LoggerConfiguration()
+        using Logger logger = new LoggerConfiguration()
             .Enrich.With<RobloxSecretRedactionEnricher>()
             .WriteTo.Sink(sink)
             .CreateLogger();
@@ -37,7 +37,7 @@ public sealed class RobloxSecretRedactionEnricherTests
 
         LogEvent logEvent = Assert.Single(sink.Events);
         Assert.True(logEvent.Properties.TryGetValue("Payload", out LogEventPropertyValue? propValue));
-        var scalar = Assert.IsType<ScalarValue>(propValue);
+        ScalarValue scalar = Assert.IsType<ScalarValue>(propValue);
         Assert.Equal(expected, scalar.Value);
     }
 }

@@ -109,14 +109,23 @@ public partial class App : Application
     {
         try
         {
-            Process current = Process.GetCurrentProcess();
-            Process? other = Process.GetProcessesByName(current.ProcessName)
-                .FirstOrDefault(p => p.Id != current.Id);
-
-            if (other != null && other.MainWindowHandle != IntPtr.Zero)
+            using Process current = Process.GetCurrentProcess();
+            Process[] processes = Process.GetProcessesByName(current.ProcessName);
+            try
             {
-                ShowWindow(other.MainWindowHandle, 9); // SW_RESTORE
-                SetForegroundWindow(other.MainWindowHandle);
+                Process? other = processes.FirstOrDefault(p => p.Id != current.Id);
+                if (other != null && other.MainWindowHandle != IntPtr.Zero)
+                {
+                    ShowWindow(other.MainWindowHandle, 9); // SW_RESTORE
+                    SetForegroundWindow(other.MainWindowHandle);
+                }
+            }
+            finally
+            {
+                foreach (Process p in processes)
+                {
+                    p.Dispose();
+                }
             }
         }
         catch
@@ -132,6 +141,7 @@ public partial class App : Application
         services.AddInfrastructureServices();
 
         // UI Services
+        services.AddSingleton<Core.Diagnostics.IRegistryProvider, Services.WindowsRegistryProvider>();
         services.AddSingleton<IContentDialogService, ContentDialogService>();
         services.AddSingleton<ISnackbarService, SnackbarService>();
 
@@ -146,6 +156,8 @@ public partial class App : Application
         services.AddTransient<RunningPage>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<SettingsPage>();
+        services.AddTransient<ViewModels.DiagnosticsViewModel>();
+        services.AddTransient<Views.Pages.DiagnosticsPage>();
     }
 
     protected override async void OnStartup(StartupEventArgs e)

@@ -74,6 +74,18 @@ public static class InfrastructureServiceExtensions
             return new ServerBrowserService(httpClient, logger);
         });
 
+        services.AddTransient<Core.Diagnostics.IDiagnosticsService>(sp =>
+        {
+            Core.Diagnostics.IRegistryProvider registryProvider = sp.GetRequiredService<Core.Diagnostics.IRegistryProvider>();
+            IProcessProvider processProvider = sp.GetRequiredService<IProcessProvider>();
+            IInstanceGate instanceGate = sp.GetRequiredService<IInstanceGate>();
+            ISettingsService settingsService = sp.GetRequiredService<ISettingsService>();
+            IRobloxAuthService authService = sp.GetRequiredService<IRobloxAuthService>();
+            IHttpClientFactory factory = sp.GetRequiredService<IHttpClientFactory>();
+            HttpClient httpClient = factory.CreateClient(RobloxHttpClientName);
+            return new Diagnostics.DiagnosticsService(registryProvider, processProvider, instanceGate, settingsService, authService, httpClient);
+        });
+
         services.AddSingleton<SessionTracker>();
         services.AddSingleton<ISessionTracker>(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService(sp => sp.GetRequiredService<SessionTracker>());

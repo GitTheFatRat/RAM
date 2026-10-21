@@ -108,8 +108,8 @@ public partial class LoginWindow : FluentWindow, IDisposable
                     break;
                 }
 
-                var cookies = await WebViewControl.CoreWebView2.CookieManager.GetCookiesAsync("https://www.roblox.com");
-                var roblosecurityCookie = cookies.FirstOrDefault(c => string.Equals(c.Name, ".ROBLOSECURITY", StringComparison.OrdinalIgnoreCase));
+                List<CoreWebView2Cookie> cookies = await WebViewControl.CoreWebView2.CookieManager.GetCookiesAsync("https://www.roblox.com");
+                CoreWebView2Cookie? roblosecurityCookie = cookies.FirstOrDefault(c => string.Equals(c.Name, ".ROBLOSECURITY", StringComparison.OrdinalIgnoreCase));
 
                 if (roblosecurityCookie != null && !string.IsNullOrWhiteSpace(roblosecurityCookie.Value))
                 {

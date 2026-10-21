@@ -27,6 +27,7 @@ public sealed class WindowsProcessStarter : IProcessStarter
         {
             UseShellExecute = true
         };
-        return Process.Start(psi) != null;
+        using Process? process = Process.Start(psi);
+        return process != null;
     }
 }

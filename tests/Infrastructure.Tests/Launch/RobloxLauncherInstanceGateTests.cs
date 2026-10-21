@@ -57,16 +57,16 @@ public sealed class RobloxLauncherInstanceGateTests
             _accounts.AddRange(accounts);
         }
 
-        public Task<IReadOnlyList<Account>> ListAsync() =>
+        public Task<IReadOnlyList<Account>> ListAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Account>>(_accounts);
 
-        public Task<Result> AddAsync(Account account) =>
+        public Task<Result> AddAsync(Account account, CancellationToken ct = default) =>
             Task.FromResult(Result.Success());
 
-        public Task<Result> UpdateAsync(Account account) =>
+        public Task<Result> UpdateAsync(Account account, CancellationToken ct = default) =>
             Task.FromResult(Result.Success());
 
-        public Task RemoveAsync(AccountId id) =>
+        public Task RemoveAsync(AccountId id, CancellationToken ct = default) =>
             Task.CompletedTask;
     }
 

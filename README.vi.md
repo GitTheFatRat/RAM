@@ -74,6 +74,27 @@ Có 2 phương thức để thêm tài khoản vào RbxManager:
 - **Sao lưu**: Nhấn nút **Xuất sao lưu**, đặt mật khẩu mã hóa mạnh và chọn vị trí lưu tập tin `.rbxbackup`.
 - **Khôi phục**: Nhấn nút **Nhập sao lưu**, chọn tập tin sao lưu và nhập đúng mật khẩu để giải mã. Dữ liệu tài khoản sẽ được đồng bộ an toàn vào kho hiện tại.
 
+### 4.6. Chẩn đoán hệ thống (Diagnostics) & Thử nghiệm khô (Dry Run)
+- **Thử nghiệm khô (Dry Run)**: Trong hộp thoại Khởi chạy trò chơi, nhấn nút **Thử nghiệm khô** để xem trước định dạng URI giao thức `roblox-player:` hoàn chỉnh với giả lập `<ticket>` mà không cần kết nối mạng hay kích hoạt tiến trình thực tế.
+- **Trang Chẩn đoán**: Chọn tab **Chẩn đoán** từ thanh điều hướng bên trái:
+  - Kiểm tra môi trường (phiên bản Windows, kiến trúc x64, runtime .NET, trạng thái quyền quản trị Administrator, WebView2 Runtime).
+  - Kiểm tra Roblox Client (giao thức `roblox-player:`, đường dẫn thực thi, phát hiện bootstrapper Bloxstrap/Fishstrap).
+  - Kiểm tra kết nối mạng không gửi cookie tới các endpoint cốt lõi của Roblox (`roblox.com`, `auth`, `games`, `presence`, `apis`).
+  - Tùy chọn kiểm tra tài khoản cụ thể và xem báo cáo đã được khử nhạy cảm (redacted), an toàn 100% để chia sẻ khi gặp sự cố kỹ thuật.
+
+### 4.7. Tùy biến mẫu khởi chạy nâng cao (Advanced Launch Templates)
+Trong trường hợp Roblox thay đổi cú pháp tham số giao thức `roblox-player:`, bạn có thể can thiệp bằng cách chỉnh sửa tập tin `%LOCALAPPDATA%\RbxManager\settings.json` trong phần `Advanced`:
+```json
+{
+  "Language": "vi-VN",
+  "Advanced": {
+    "LaunchUriTemplate": "roblox-player:1+launchmode:play+gameinfo:{ticket}+launchtime:{launchTimeMs}+placelauncherurl:{placeLauncherUrl}",
+    "PlaceLauncherUrlTemplate": "https://assetgame.roblox.com/game/PlaceLauncher.ashx?request={request}&browserTrackerId={trackerId}&placeId={placeId}{gameIdParam}"
+  }
+}
+```
+*Ghi chú: Nếu giá trị là `null`, ứng dụng sẽ tự động dùng định dạng mặc định tích hợp sẵn. Các placeholder hợp lệ bao gồm `{ticket}`, `{launchTimeMs}`, `{placeLauncherUrl}`, `{trackerId}`, `{request}`, `{placeId}`, `{gameIdParam}`.*
+
 ---
 
 ## 5. Lưu ý quan trọng về tính năng Đa phiên (Multi-Instance)

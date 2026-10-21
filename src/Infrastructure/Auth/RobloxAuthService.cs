@@ -110,7 +110,7 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
 
             if (response.IsSuccessStatusCode)
             {
-                if (response.Headers.TryGetValues("rbx-authentication-ticket", out var values))
+                if (response.Headers.TryGetValues("rbx-authentication-ticket", out IEnumerable<string>? values))
                 {
                     string? ticket = values.FirstOrDefault();
                     if (!string.IsNullOrWhiteSpace(ticket))

@@ -131,6 +131,22 @@ public static class Strings
     public static string BackupExportSuccess => GetString(nameof(BackupExportSuccess));
     public static string BackupImportSuccess => GetString(nameof(BackupImportSuccess));
     public static string BackupImportFailed => GetString(nameof(BackupImportFailed));
+    public static string NavDiagnostics => GetString(nameof(NavDiagnostics));
+    public static string DryRun => GetString(nameof(DryRun));
+    public static string DryRunResultTitle => GetString(nameof(DryRunResultTitle));
+    public static string RunDiagnostics => GetString(nameof(RunDiagnostics));
+    public static string CopyReport => GetString(nameof(CopyReport));
+    public static string ReportCopied => GetString(nameof(ReportCopied));
+    public static string DiagnosticsTitle => GetString(nameof(DiagnosticsTitle));
+    public static string AccountPickerLabel => GetString(nameof(AccountPickerLabel));
+    public static string AllAccountsOption => GetString(nameof(AllAccountsOption));
+    public static string AdvancedSettingsTitle => GetString(nameof(AdvancedSettingsTitle));
+    public static string AdvancedSettingsSubtitle => GetString(nameof(AdvancedSettingsSubtitle));
+    public static string LaunchUriTemplateStatus => GetString(nameof(LaunchUriTemplateStatus));
+    public static string PlaceLauncherUrlTemplateStatus => GetString(nameof(PlaceLauncherUrlTemplateStatus));
+    public static string TemplateDefault => GetString(nameof(TemplateDefault));
+    public static string TemplateCustomValid => GetString(nameof(TemplateCustomValid));
+    public static string TemplateCustomInvalid => GetString(nameof(TemplateCustomInvalid));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

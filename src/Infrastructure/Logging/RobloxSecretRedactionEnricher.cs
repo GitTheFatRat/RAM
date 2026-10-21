@@ -15,7 +15,7 @@ public sealed class RobloxSecretRedactionEnricher : ILogEventEnricher
 
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        foreach (var kvp in logEvent.Properties.ToList())
+        foreach (KeyValuePair<string, LogEventPropertyValue> kvp in logEvent.Properties.ToList())
         {
             if (kvp.Value is ScalarValue scalar && scalar.Value is string text)
             {

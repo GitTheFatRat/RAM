@@ -2,6 +2,10 @@ namespace RbxManager.Core.Settings;
 
 using System;
 
+public sealed record AdvancedSettings(
+    string? LaunchUriTemplate = null,
+    string? PlaceLauncherUrlTemplate = null);
+
 public sealed record AppSettings(
     string Language = AppSettings.DefaultLanguage,
     string Theme = AppSettings.DefaultTheme,
@@ -9,7 +13,8 @@ public sealed record AppSettings(
     int RejoinDelaySeconds = AppSettings.DefaultRejoinDelaySeconds,
     int RejoinMaxAttempts = AppSettings.DefaultRejoinMaxAttempts,
     bool MultiInstanceEnabled = false,
-    bool MultiInstanceAcknowledged = false)
+    bool MultiInstanceAcknowledged = false,
+    AdvancedSettings? Advanced = null)
 {
     public const string DefaultLanguage = "vi";
     public const string DefaultTheme = "Dark";

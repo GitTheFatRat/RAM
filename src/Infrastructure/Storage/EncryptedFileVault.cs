@@ -42,12 +42,12 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<Account>> ListAsync()
+    public async Task<IReadOnlyList<Account>> ListAsync(CancellationToken ct = default)
     {
-        await _semaphore.WaitAsync().ConfigureAwait(false);
+        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            List<Account> accounts = await LoadInternalAsync().ConfigureAwait(false);
+            List<Account> accounts = await LoadInternalAsync(ct).ConfigureAwait(false);
             if (_logger != null)
             {
                 LogListedAccounts(_logger, accounts.Count);
@@ -61,14 +61,14 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
     }
 
-    public async Task<Result> AddAsync(Account account)
+    public async Task<Result> AddAsync(Account account, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(account);
 
-        await _semaphore.WaitAsync().ConfigureAwait(false);
+        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            List<Account> accounts = await LoadInternalAsync().ConfigureAwait(false);
+            List<Account> accounts = await LoadInternalAsync(ct).ConfigureAwait(false);
 
             Result validationResult = AccountValidator.Validate(account, accounts);
             if (!validationResult.IsSuccess)
@@ -82,7 +82,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             }
 
             accounts.Add(account);
-            await SaveInternalAsync(accounts).ConfigureAwait(false);
+            await SaveInternalAsync(accounts, ct).ConfigureAwait(false);
 
             if (_logger != null)
             {
@@ -97,14 +97,14 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
     }
 
-    public async Task<Result> UpdateAsync(Account account)
+    public async Task<Result> UpdateAsync(Account account, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(account);
 
-        await _semaphore.WaitAsync().ConfigureAwait(false);
+        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            List<Account> accounts = await LoadInternalAsync().ConfigureAwait(false);
+            List<Account> accounts = await LoadInternalAsync(ct).ConfigureAwait(false);
 
             Result validationResult = AccountValidator.Validate(account, accounts);
             if (!validationResult.IsSuccess)
@@ -119,7 +119,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             }
 
             accounts[index] = account;
-            await SaveInternalAsync(accounts).ConfigureAwait(false);
+            await SaveInternalAsync(accounts, ct).ConfigureAwait(false);
 
             if (_logger != null)
             {
@@ -134,17 +134,17 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
     }
 
-    public async Task RemoveAsync(AccountId id)
+    public async Task RemoveAsync(AccountId id, CancellationToken ct = default)
     {
-        await _semaphore.WaitAsync().ConfigureAwait(false);
+        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            List<Account> accounts = await LoadInternalAsync().ConfigureAwait(false);
+            List<Account> accounts = await LoadInternalAsync(ct).ConfigureAwait(false);
             int removedCount = accounts.RemoveAll(existing => existing.Id == id);
 
             if (removedCount > 0)
             {
-                await SaveInternalAsync(accounts).ConfigureAwait(false);
+                await SaveInternalAsync(accounts, ct).ConfigureAwait(false);
                 if (_logger != null)
                 {
                     LogRemovedAccount(_logger, id.Value, accounts.Count);
@@ -157,14 +157,14 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
     }
 
-    private async Task<List<Account>> LoadInternalAsync()
+    private async Task<List<Account>> LoadInternalAsync(CancellationToken ct = default)
     {
         if (!File.Exists(_filePath))
         {
             return new List<Account>();
         }
 
-        byte[] fileBytes = await File.ReadAllBytesAsync(_filePath).ConfigureAwait(false);
+        byte[] fileBytes = await File.ReadAllBytesAsync(_filePath, ct).ConfigureAwait(false);
 
         if (fileBytes.Length < 7)
         {
@@ -265,7 +265,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         return accounts;
     }
 
-    private async Task SaveInternalAsync(List<Account> accounts)
+    private async Task SaveInternalAsync(List<Account> accounts, CancellationToken ct = default)
     {
         List<AccountDto> dtos = new(accounts.Count);
         foreach (Account account in accounts)
@@ -337,7 +337,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         string tmpPath = _filePath + ".tmp";
         string bakPath = _filePath + ".bak";
 
-        await File.WriteAllBytesAsync(tmpPath, outputBuffer).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(tmpPath, outputBuffer, ct).ConfigureAwait(false);
 
         if (File.Exists(_filePath))
         {

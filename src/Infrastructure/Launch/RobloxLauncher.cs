@@ -73,7 +73,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
             return Result.Failure("Roblox player is not installed on this system.", "RobloxNotInstalled");
         }
 
-        IReadOnlyList<Account> accounts = await _accountStore.ListAsync().ConfigureAwait(false);
+        IReadOnlyList<Account> accounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
         Account? account = accounts.FirstOrDefault(a => a.Id == request.AccountId);
         if (account == null)
         {
@@ -108,7 +108,29 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
             string trackerId = Random.Shared.Next(100000000, 999999999).ToString(CultureInfo.InvariantCulture);
             long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            string launchUri = RobloxUriBuilder.BuildLaunchUri(ticket, request.PlaceId, request.JobId, unixMs, trackerId);
+            string? launchUriTemplate = _settingsService?.CurrentSettings.Advanced?.LaunchUriTemplate;
+            string? placeLauncherUrlTemplate = _settingsService?.CurrentSettings.Advanced?.PlaceLauncherUrlTemplate;
+
+            if (!string.IsNullOrWhiteSpace(launchUriTemplate) &&
+                !LaunchTemplateValidator.ValidateLaunchUriTemplate(launchUriTemplate).IsSuccess)
+            {
+                LogInvalidLaunchUriTemplateOverride();
+            }
+
+            if (!string.IsNullOrWhiteSpace(placeLauncherUrlTemplate) &&
+                !LaunchTemplateValidator.ValidatePlaceLauncherUrlTemplate(placeLauncherUrlTemplate).IsSuccess)
+            {
+                LogInvalidPlaceLauncherUrlTemplateOverride();
+            }
+
+            string launchUri = RobloxUriBuilder.BuildLaunchUri(
+                ticket,
+                request.PlaceId,
+                request.JobId,
+                unixMs,
+                trackerId,
+                launchUriTemplate,
+                placeLauncherUrlTemplate);
 
             bool started = _processStarter.Start(launchUri);
             _lastLaunchTime = DateTimeOffset.UtcNow;
@@ -165,4 +187,10 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
 
     [LoggerMessage(EventId = 306, Level = LogLevel.Warning, Message = "Roblox is already running and multi-instance is disabled.")]
     private partial void LogRobloxAlreadyRunning();
+
+    [LoggerMessage(EventId = 307, Level = LogLevel.Warning, Message = "Invalid LaunchUriTemplate override specified in settings; falling back to default.")]
+    private partial void LogInvalidLaunchUriTemplateOverride();
+
+    [LoggerMessage(EventId = 308, Level = LogLevel.Warning, Message = "Invalid PlaceLauncherUrlTemplate override specified in settings; falling back to default.")]
+    private partial void LogInvalidPlaceLauncherUrlTemplateOverride();
 }

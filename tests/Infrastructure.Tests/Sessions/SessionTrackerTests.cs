@@ -45,22 +45,22 @@ public sealed class SessionTrackerTests
             }
         }
 
-        public Task<IReadOnlyList<Account>> ListAsync() =>
+        public Task<IReadOnlyList<Account>> ListAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Account>>(Accounts.Values.ToList());
 
-        public Task<Result> AddAsync(Account account)
+        public Task<Result> AddAsync(Account account, CancellationToken ct = default)
         {
             Accounts[account.Id.Value] = account;
             return Task.FromResult(Result.Success());
         }
 
-        public Task<Result> UpdateAsync(Account account)
+        public Task<Result> UpdateAsync(Account account, CancellationToken ct = default)
         {
             Accounts[account.Id.Value] = account;
             return Task.FromResult(Result.Success());
         }
 
-        public Task RemoveAsync(AccountId id)
+        public Task RemoveAsync(AccountId id, CancellationToken ct = default)
         {
             Accounts.Remove(id.Value);
             return Task.CompletedTask;

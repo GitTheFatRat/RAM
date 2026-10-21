@@ -22,7 +22,7 @@ public sealed class RobloxCsrfHandler : DelegatingHandler
 
         if (response.StatusCode == HttpStatusCode.Forbidden)
         {
-            if (response.Headers.TryGetValues("x-csrf-token", out var csrfTokens) ||
+            if (response.Headers.TryGetValues("x-csrf-token", out IEnumerable<string>? csrfTokens) ||
                 response.Headers.TryGetValues("X-CSRF-TOKEN", out csrfTokens))
             {
                 string? token = csrfTokens.FirstOrDefault();
@@ -49,7 +49,7 @@ public sealed class RobloxCsrfHandler : DelegatingHandler
             Version = req.Version
         };
 
-        foreach (var header in req.Headers)
+        foreach (KeyValuePair<string, IEnumerable<string>> header in req.Headers)
         {
             clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
@@ -58,7 +58,7 @@ public sealed class RobloxCsrfHandler : DelegatingHandler
         {
             byte[] contentBytes = req.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
             clone.Content = new ByteArrayContent(contentBytes);
-            foreach (var header in req.Content.Headers)
+            foreach (KeyValuePair<string, IEnumerable<string>> header in req.Content.Headers)
             {
                 clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }

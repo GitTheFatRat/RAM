@@ -137,3 +137,19 @@ To eliminate this single point of failure without exposing plaintext credentials
    - In WPF user interfaces, capturing user input from a `PasswordBox` or retrieving a session cookie from WebView2 momentarily creates a transient managed `string` in memory.
    - The application minimizes this exposure window: the string is immediately wrapped into a `SecretValue` via `SecretValue.FromString(secret)`, and the UI input control is cleared immediately (`ClearPassword()`). The plaintext string is never stored in any ViewModel field, property, collection, or state object.
    - Calling `SecretValue.Reveal()` is prohibited in UI ViewModels and Validation layers (enforced by `ArchitectureTests`). Duplication is performed via memory-isolated `SecretValue.Clone()`, and empty checks are performed directly on byte buffers via `SecretValue.HasContent`.
+
+---
+
+## Diagnostics Report Sanitization (M7)
+
+1. **Redacted by Design**:
+   - The diagnostics report begins with the mandatory line: `Safe to share: redacted. No cookies or tickets.`
+   - No cookies (`.ROBLOSECURITY`), auth tickets, or credential values are ever printed or captured in the report.
+   - HTTP response bodies are never logged or exported verbatim; only HTTP status codes, exception types, and structured Roblox JSON error codes/messages (truncated to 120 characters) are included.
+   - HTTP header values are completely excluded; only header names are reported.
+   - Account launch verification renders the launch URI using the literal placeholder `<ticket>`, matching the Dry Run pattern.
+   - The entire generated report is passed through `RobloxSecretRedactor` prior to UI display or clipboard copy.
+
+2. **Network Diagnostics**:
+   - Probing of public endpoints (`roblox.com`, `users`, `auth`, `games`, `presence`, `apis`) executes unauthenticated GET requests without cookies or authentication headers.
+

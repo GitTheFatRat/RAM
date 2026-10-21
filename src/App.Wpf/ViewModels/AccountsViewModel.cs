@@ -21,6 +21,7 @@ using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
 using RbxManager.Core.Storage;
 using RbxManager.Core.Validation;
+using RbxManager.Infrastructure.Launch;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Extensions;
@@ -525,7 +526,15 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
         LaunchDialogControl dialogControl = new()
         {
-            PlaceIdText = _lastPlaceId
+            PlaceIdText = _lastPlaceId,
+            DryRunBuilder = (placeId, jobId) =>
+            {
+                long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                string trackerId = "123456789";
+                string? launchTemplate = _settingsService?.CurrentSettings.Advanced?.LaunchUriTemplate;
+                string? placeLauncherTemplate = _settingsService?.CurrentSettings.Advanced?.PlaceLauncherUrlTemplate;
+                return RobloxUriBuilder.BuildLaunchUri("<ticket>", placeId, jobId, unixMs, trackerId, launchTemplate, placeLauncherTemplate);
+            }
         };
 
         ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(
@@ -615,7 +624,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             Status: newStatus,
             LastCheckedAt: DateTimeOffset.UtcNow);
 
-        await _accountStore.UpdateAsync(updated);
+        await _accountStore.UpdateAsync(updated, CancellationToken.None);
     }
 
     private void ApplyFilter()
@@ -728,7 +737,15 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     {
         LaunchDialogControl dialogControl = new()
         {
-            PlaceIdText = _lastPlaceId
+            PlaceIdText = _lastPlaceId,
+            DryRunBuilder = (placeId, jobId) =>
+            {
+                long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                string trackerId = "123456789";
+                string? launchTemplate = _settingsService?.CurrentSettings.Advanced?.LaunchUriTemplate;
+                string? placeLauncherTemplate = _settingsService?.CurrentSettings.Advanced?.PlaceLauncherUrlTemplate;
+                return RobloxUriBuilder.BuildLaunchUri("<ticket>", placeId, jobId, unixMs, trackerId, launchTemplate, placeLauncherTemplate);
+            }
         };
         ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
         {

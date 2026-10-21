@@ -175,7 +175,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         IReadOnlyList<ProcessSnapshot> currentProcesses = _processProvider.GetRobloxProcesses();
         HashSet<int> activePids = currentProcesses.Select(p => p.Pid).ToHashSet();
 
-        foreach (var kvp in _activeSessions.ToList())
+        foreach (KeyValuePair<int, RunningSession> kvp in _activeSessions.ToList())
         {
             int pid = kvp.Key;
             RunningSession session = kvp.Value;

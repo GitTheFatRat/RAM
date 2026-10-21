@@ -37,6 +37,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     private int _rejoinMaxAttempts = 5;
 
     [ObservableProperty]
+    private string _launchUriTemplateStatus = string.Empty;
+
+    [ObservableProperty]
+    private string _placeLauncherUrlTemplateStatus = string.Empty;
+
+    [ObservableProperty]
     private bool _multiInstanceEnabled;
 
     [ObservableProperty]
@@ -72,6 +78,20 @@ public sealed partial class SettingsViewModel : ObservableObject
         RejoinDelaySeconds = settings.RejoinDelaySeconds;
         RejoinMaxAttempts = settings.RejoinMaxAttempts;
         MultiInstanceEnabled = _instanceGate.IsMultiInstanceEnabled;
+
+        string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
+        LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
+            ? Strings.TemplateDefault
+            : Core.Launch.LaunchTemplateValidator.ValidateLaunchUriTemplate(launchUriTpl).IsSuccess
+                ? Strings.TemplateCustomValid
+                : Strings.TemplateCustomInvalid;
+
+        string? placeLauncherTpl = settings.Advanced?.PlaceLauncherUrlTemplate;
+        PlaceLauncherUrlTemplateStatus = string.IsNullOrWhiteSpace(placeLauncherTpl)
+            ? Strings.TemplateDefault
+            : Core.Launch.LaunchTemplateValidator.ValidatePlaceLauncherUrlTemplate(placeLauncherTpl).IsSuccess
+                ? Strings.TemplateCustomValid
+                : Strings.TemplateCustomInvalid;
     }
 
     [RelayCommand]
@@ -93,7 +113,8 @@ public sealed partial class SettingsViewModel : ObservableObject
                 RejoinDelaySeconds: RejoinDelaySeconds,
                 RejoinMaxAttempts: RejoinMaxAttempts,
                 MultiInstanceEnabled: MultiInstanceEnabled,
-                MultiInstanceAcknowledged: current.MultiInstanceAcknowledged);
+                MultiInstanceAcknowledged: current.MultiInstanceAcknowledged,
+                Advanced: current.Advanced);
 
             await _settingsService.SaveSettingsAsync(updated);
 

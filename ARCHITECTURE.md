@@ -50,3 +50,4 @@ graph TD
 - **M4**: Settings, multi-instance, group management, encrypted backup. (Completed)
 - **M5**: Hardening, packaging, and final documentation. (Completed)
 - **M6**: Multi-instance real gate, Reveal() surface reduction, report reconciliation, review bundle. (Completed)
+- **M7**: Diagnostics page, redacted report generator, customizable launch templates, code health pass. (Completed)

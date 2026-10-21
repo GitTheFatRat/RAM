@@ -20,6 +20,24 @@
             <ui:TextBox x:Name="JobIdTextBox" />
         </StackPanel>
 
+        <ui:Button x:Name="DryRunButton"
+                   Content="{x:Static res:Strings.DryRun}"
+                   Click="OnDryRunButtonClick"
+                   Margin="0,0,0,12" />
+
+        <StackPanel x:Name="DryRunResultPanel"
+                    Margin="0,0,0,12"
+                    Visibility="Collapsed">
+            <TextBlock Margin="0,0,0,4"
+                       Text="{x:Static res:Strings.DryRunResultTitle}"
+                       FontWeight="SemiBold" />
+            <ui:TextBox x:Name="DryRunResultTextBox"
+                        IsReadOnly="True"
+                        TextWrapping="Wrap"
+                        MaxHeight="120"
+                        VerticalScrollBarVisibility="Auto" />
+        </StackPanel>
+
         <TextBlock x:Name="ErrorTextBlock"
                    Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                    TextWrapping="Wrap"

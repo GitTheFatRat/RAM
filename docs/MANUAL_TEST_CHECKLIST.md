@@ -8,6 +8,14 @@
 
 ## Danh sách các bước kiểm tra thực tế
 
+### 0. Chạy Chẩn đoán hệ thống (Diagnostics) & Báo cáo sự cố
+- [ ] Mở ứng dụng RbxManager, chuyển sang trang **Chẩn đoán (Diagnostics)**.
+- [ ] Chọn tài khoản thử nghiệm và nhấn **Chạy chẩn đoán (Run diagnostics)**.
+- [ ] Kiểm tra báo cáo hoàn chỉnh hiển thị đủ các phần: Environment, Roblox Client, Network, Templates, Account Check.
+- [ ] Nhấn nút **Sao chép báo cáo (Copy report)** và kiểm tra snackbar xác nhận.
+- [ ] Báo cáo luôn bắt đầu bằng: `Safe to share: redacted. No cookies or tickets.` và tuyệt đối không chứa cookie hoặc auth ticket.
+- [ ] **LƯU Ý QUAN TRỌNG KHI GẶP LỖI**: Khi bất kỳ bước kiểm thử nào phía dưới thất bại, hãy chạy Diagnostics đầu tiên, sao chép toàn bộ báo cáo và dán trực tiếp cho Tech Lead để đối chiếu lỗi mà không sợ lộ bí mật tài khoản.
+
 ### 1. Thêm tài khoản qua WebView2 & Xác thực trạng thái
 - [ ] Mở ứng dụng RbxManager.
 - [ ] Nhấn nút **Thêm tài khoản**, chọn phương thức đăng nhập WebView2.

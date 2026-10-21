@@ -30,6 +30,9 @@
                 <ui:NavigationViewItem Content="{x:Static resources:Strings.NavRunning}"
                                        Icon="{ui:SymbolIcon Play24}"
                                        TargetPageType="{x:Type pages:RunningPage}" />
+                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavDiagnostics}"
+                                       Icon="{ui:SymbolIcon Stethoscope24}"
+                                       TargetPageType="{x:Type pages:DiagnosticsPage}" />
                 <ui:NavigationViewItem Content="{x:Static resources:Strings.NavSettings}"
                                        Icon="{ui:SymbolIcon Settings24}"
                                        TargetPageType="{x:Type pages:SettingsPage}" />
