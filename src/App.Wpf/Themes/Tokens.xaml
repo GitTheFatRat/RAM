@@ -16,6 +16,7 @@
     <Thickness x:Key="MarginTight">4</Thickness>
     <Thickness x:Key="MarginBase">8</Thickness>
     <Thickness x:Key="MarginMedium">16</Thickness>
+    <Thickness x:Key="MarginBottomMedium">0,0,0,16</Thickness>
     <Thickness x:Key="MarginLarge">24</Thickness>
 
     <!-- Corner Radii -->
@@ -33,26 +34,44 @@
     <FontFamily x:Key="FontFamilyPrimary">Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
     <FontFamily x:Key="FontFamilyMonospace">Cascadia Mono, Consolas, Courier New, monospace</FontFamily>
 
-    <!-- Status Colors (Dark Palette: Default) -->
-    <Color x:Key="StatusValidForegroundDarkColor">#81C784</Color>
-    <Color x:Key="StatusValidBackgroundDarkColor">#142918</Color>
-    <Color x:Key="StatusValidBorderDarkColor">#2E7D32</Color>
+    <!-- Theme Contrast Colors (Dark Palette: Default) -->
+    <Color x:Key="ApplicationBackgroundDarkColor">#111111</Color>
+    <Color x:Key="CardBackgroundDarkColor">#2D2D2D</Color>
+    <Color x:Key="ControlFillColorDefaultDarkColor">#2D2D2D</Color>
+    <Color x:Key="TextFillColorPrimaryDarkColor">#FFFFFF</Color>
+    <Color x:Key="TextFillColorSecondaryDarkColor">#CCCCCC</Color>
+    <Color x:Key="DataGridRowAlternatingDarkColor">#181818</Color>
+    <Color x:Key="DataGridHeaderBorderDarkColor">#3E3E3E</Color>
 
-    <Color x:Key="StatusExpiredForegroundDarkColor">#FFB74D</Color>
-    <Color x:Key="StatusExpiredBackgroundDarkColor">#2D1E0C</Color>
-    <Color x:Key="StatusExpiredBorderDarkColor">#F57C00</Color>
+    <!-- Status Colors (Dark Palette: High Contrast) -->
+    <Color x:Key="StatusValidForegroundDarkColor">#FFFFFF</Color>
+    <Color x:Key="StatusValidBackgroundDarkColor">#1B5E20</Color>
+    <Color x:Key="StatusValidBorderDarkColor">#4CAF50</Color>
 
-    <Color x:Key="StatusErrorForegroundDarkColor">#E57373</Color>
-    <Color x:Key="StatusErrorBackgroundDarkColor">#2C1314</Color>
-    <Color x:Key="StatusErrorBorderDarkColor">#D32F2F</Color>
+    <Color x:Key="StatusExpiredForegroundDarkColor">#FFFFFF</Color>
+    <Color x:Key="StatusExpiredBackgroundDarkColor">#B71C1C</Color>
+    <Color x:Key="StatusExpiredBorderDarkColor">#EF5350</Color>
 
-    <Color x:Key="StatusUnknownForegroundDarkColor">#CFD8DC</Color>
-    <Color x:Key="StatusUnknownBackgroundDarkColor">#1E252B</Color>
-    <Color x:Key="StatusUnknownBorderDarkColor">#546E7A</Color>
+    <Color x:Key="StatusErrorForegroundDarkColor">#FFFFFF</Color>
+    <Color x:Key="StatusErrorBackgroundDarkColor">#B71C1C</Color>
+    <Color x:Key="StatusErrorBorderDarkColor">#EF5350</Color>
 
-    <Color x:Key="StatusRunningForegroundDarkColor">#64B5F6</Color>
-    <Color x:Key="StatusRunningBackgroundDarkColor">#0D233A</Color>
-    <Color x:Key="StatusRunningBorderDarkColor">#1976D2</Color>
+    <Color x:Key="StatusUnknownForegroundDarkColor">#FFFFFF</Color>
+    <Color x:Key="StatusUnknownBackgroundDarkColor">#37474F</Color>
+    <Color x:Key="StatusUnknownBorderDarkColor">#78909C</Color>
+
+    <Color x:Key="StatusRunningForegroundDarkColor">#FFFFFF</Color>
+    <Color x:Key="StatusRunningBackgroundDarkColor">#0D47A1</Color>
+    <Color x:Key="StatusRunningBorderDarkColor">#42A5F5</Color>
+
+    <!-- Theme Contrast Colors (Light Palette) -->
+    <Color x:Key="ApplicationBackgroundLightColor">#F4F4F4</Color>
+    <Color x:Key="CardBackgroundLightColor">#FFFFFF</Color>
+    <Color x:Key="ControlFillColorDefaultLightColor">#FFFFFF</Color>
+    <Color x:Key="TextFillColorPrimaryLightColor">#161616</Color>
+    <Color x:Key="TextFillColorSecondaryLightColor">#5C5C5C</Color>
+    <Color x:Key="DataGridRowAlternatingLightColor">#FAFAFA</Color>
+    <Color x:Key="DataGridHeaderBorderLightColor">#D0D0D0</Color>
 
     <!-- Status Colors (Light Palette) -->
     <Color x:Key="StatusValidForegroundLightColor">#1B5E20</Color>
@@ -76,6 +95,15 @@
     <Color x:Key="StatusRunningBorderLightColor">#90CAF9</Color>
 
     <!-- Active Dynamic Brushes (Default to Dark) -->
+    <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="{StaticResource ApplicationBackgroundDarkColor}" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundDarkColor}" />
+    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="{StaticResource CardBackgroundDarkColor}" />
+    <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="{StaticResource ControlFillColorDefaultDarkColor}" />
+    <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="{StaticResource TextFillColorPrimaryDarkColor}" />
+    <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="{StaticResource TextFillColorSecondaryDarkColor}" />
+    <SolidColorBrush x:Key="DataGridRowAlternatingBrush" Color="{StaticResource DataGridRowAlternatingDarkColor}" />
+    <SolidColorBrush x:Key="DataGridHeaderBorderBrush" Color="{StaticResource DataGridHeaderBorderDarkColor}" />
+
     <SolidColorBrush x:Key="StatusValidForegroundBrush" Color="{StaticResource StatusValidForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusValidBackgroundBrush" Color="{StaticResource StatusValidBackgroundDarkColor}" />
     <SolidColorBrush x:Key="StatusValidBorderBrush" Color="{StaticResource StatusValidBorderDarkColor}" />
@@ -95,5 +123,16 @@
     <SolidColorBrush x:Key="StatusRunningForegroundBrush" Color="{StaticResource StatusRunningForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusRunningBackgroundBrush" Color="{StaticResource StatusRunningBackgroundDarkColor}" />
     <SolidColorBrush x:Key="StatusRunningBorderBrush" Color="{StaticResource StatusRunningBorderDarkColor}" />
+
+    <!-- DataGrid Column Header High Legibility Style -->
+    <Style x:Key="HighContrastColumnHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,2" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DataGridHeaderBorderBrush}" />
+        <Setter Property="Padding" Value="10,8" />
+    </Style>
+
+    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HighContrastColumnHeaderStyle}" />
 
 </ResourceDictionary>

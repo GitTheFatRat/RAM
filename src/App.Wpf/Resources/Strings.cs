@@ -213,6 +213,7 @@ public static class Strings
     public static string EnableSmartServerHoppingDescription => GetString(nameof(EnableSmartServerHoppingDescription));
     public static string EnableGhostDisconnectDetection => GetString(nameof(EnableGhostDisconnectDetection));
     public static string EnableGhostDisconnectDetectionDescription => GetString(nameof(EnableGhostDisconnectDetectionDescription));
+    public static string LoadingRoblox => GetString(nameof(LoadingRoblox));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

@@ -19,6 +19,20 @@
 
         <Grid Grid.Row="1">
             <wv2:WebView2 x:Name="WebViewControl" />
+            <Grid x:Name="LoadingOverlay"
+                  Background="{DynamicResource ApplicationBackgroundBrush}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <ui:ProgressRing IsIndeterminate="True"
+                                     HorizontalAlignment="Center"
+                                     Margin="{StaticResource MarginMedium}" />
+                    <TextBlock Text="{x:Static resources:Strings.LoadingRoblox}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Grid>
             <ProgressBar x:Name="LoadingProgress"
                          IsIndeterminate="True"
                          VerticalAlignment="Top"

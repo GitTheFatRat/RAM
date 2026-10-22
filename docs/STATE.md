@@ -15,3 +15,4 @@
 - M11: done (783cfb8) - smart ram cleaner for background processes
 - M12: done (1d71723) - smart server hopping on auto-rejoin
 - M13: done (7b3a93d) - ghost disconnect detection via log tailing
+- M14: done (9eea527) - UI/UX polish and contrast enhancement

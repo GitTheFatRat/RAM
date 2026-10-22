@@ -33,6 +33,7 @@ public partial class LoginWindow : FluentWindow, IDisposable
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         LoadingProgress.Visibility = Visibility.Visible;
+        LoadingOverlay.Visibility = Visibility.Visible;
 
         try
         {
@@ -40,6 +41,7 @@ public partial class LoginWindow : FluentWindow, IDisposable
             await WebViewControl.EnsureCoreWebView2Async(environment);
 
             WebViewControl.CoreWebView2.NavigationStarting += OnNavigationStarting;
+            WebViewControl.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
             WebViewControl.CoreWebView2.Navigate("https://www.roblox.com/login");
 
             _pollingCts = new CancellationTokenSource();
@@ -47,6 +49,9 @@ public partial class LoginWindow : FluentWindow, IDisposable
         }
         catch (WebView2RuntimeNotFoundException)
         {
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+            LoadingProgress.Visibility = Visibility.Collapsed;
+
             System.Windows.MessageBox.Show(
                 Strings.WebView2Missing,
                 Strings.ErrorTitle,
@@ -58,6 +63,9 @@ public partial class LoginWindow : FluentWindow, IDisposable
         }
         catch (Exception ex)
         {
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+            LoadingProgress.Visibility = Visibility.Collapsed;
+
             System.Windows.MessageBox.Show(
                 ex.Message,
                 Strings.ErrorTitle,
@@ -67,10 +75,12 @@ public partial class LoginWindow : FluentWindow, IDisposable
             DialogResult = false;
             Close();
         }
-        finally
-        {
-            LoadingProgress.Visibility = Visibility.Collapsed;
-        }
+    }
+
+    private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+    {
+        LoadingOverlay.Visibility = Visibility.Collapsed;
+        LoadingProgress.Visibility = Visibility.Collapsed;
     }
 
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)

@@ -11,6 +11,7 @@
                   MinHeight="600"
                   Icon="Assets/app.ico"
                   WindowStartupLocation="CenterScreen"
+                  Background="{DynamicResource ApplicationBackgroundBrush}"
                   PreviewKeyDown="OnMainWindowPreviewKeyDown">
     <Grid>
         <Grid.RowDefinitions>

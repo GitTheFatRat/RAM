@@ -667,4 +667,7 @@
   <data name="EnableGhostDisconnectDetectionDescription" xml:space="preserve">
     <value>Tails local Roblox logs to detect in-game freezes or network disconnects (e.g. Error 277) and terminates frozen processes so auto-rejoin can trigger.</value>
   </data>
+  <data name="LoadingRoblox" xml:space="preserve">
+    <value>Loading Roblox...</value>
+  </data>
 </root>

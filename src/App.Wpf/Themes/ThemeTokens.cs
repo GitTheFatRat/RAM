@@ -11,6 +11,15 @@ public static class ThemeTokens
         ResourceDictionary resources = Application.Current.Resources;
         bool isLight = theme == ApplicationTheme.Light;
 
+        SetBrush(resources, "ApplicationBackgroundBrush", isLight ? "ApplicationBackgroundLightColor" : "ApplicationBackgroundDarkColor");
+        SetBrush(resources, "CardBackgroundBrush", isLight ? "CardBackgroundLightColor" : "CardBackgroundDarkColor");
+        SetBrush(resources, "CardBackgroundFillColorDefaultBrush", isLight ? "CardBackgroundLightColor" : "CardBackgroundDarkColor");
+        SetBrush(resources, "ControlFillColorDefaultBrush", isLight ? "ControlFillColorDefaultLightColor" : "ControlFillColorDefaultDarkColor");
+        SetBrush(resources, "TextFillColorPrimaryBrush", isLight ? "TextFillColorPrimaryLightColor" : "TextFillColorPrimaryDarkColor");
+        SetBrush(resources, "TextFillColorSecondaryBrush", isLight ? "TextFillColorSecondaryLightColor" : "TextFillColorSecondaryDarkColor");
+        SetBrush(resources, "DataGridRowAlternatingBrush", isLight ? "DataGridRowAlternatingLightColor" : "DataGridRowAlternatingDarkColor");
+        SetBrush(resources, "DataGridHeaderBorderBrush", isLight ? "DataGridHeaderBorderLightColor" : "DataGridHeaderBorderDarkColor");
+
         SetBrush(resources, "StatusValidForegroundBrush", isLight ? "StatusValidForegroundLightColor" : "StatusValidForegroundDarkColor");
         SetBrush(resources, "StatusValidBackgroundBrush", isLight ? "StatusValidBackgroundLightColor" : "StatusValidBackgroundDarkColor");
         SetBrush(resources, "StatusValidBorderBrush", isLight ? "StatusValidBorderLightColor" : "StatusValidBorderDarkColor");

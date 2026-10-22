@@ -667,4 +667,7 @@
   <data name="EnableGhostDisconnectDetectionDescription" xml:space="preserve">
     <value>Đọc tệp nhật ký Roblox cục bộ để phát hiện đơ mạng hoặc lỗi mất kết nối (như lỗi 277) và tắt tiến trình để kích hoạt vào lại.</value>
   </data>
+  <data name="LoadingRoblox" xml:space="preserve">
+    <value>Đang tải Roblox...</value>
+  </data>
 </root>

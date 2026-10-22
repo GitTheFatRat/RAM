@@ -75,6 +75,8 @@
                          SelectionMode="Single"
                          GridLinesVisibility="None"
                          RowHeight="36"
+                         AlternatingRowBackground="{DynamicResource DataGridRowAlternatingBrush}"
+                         ColumnHeaderStyle="{StaticResource HighContrastColumnHeaderStyle}"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling"
                          VirtualizingPanel.ScrollUnit="Pixel"

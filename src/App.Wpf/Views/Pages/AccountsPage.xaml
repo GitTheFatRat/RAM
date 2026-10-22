@@ -246,6 +246,8 @@
                          SelectionMode="Single"
                          GridLinesVisibility="None"
                          RowHeight="36"
+                         AlternatingRowBackground="{DynamicResource DataGridRowAlternatingBrush}"
+                         ColumnHeaderStyle="{StaticResource HighContrastColumnHeaderStyle}"
                          Sorting="OnDataGridSorting"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling"
