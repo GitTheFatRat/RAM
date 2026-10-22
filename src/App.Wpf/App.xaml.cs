@@ -75,27 +75,31 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
         {
             Exception? ex = e.ExceptionObject as Exception;
-            Log.Error("AppDomain unhandled exception of type {ExceptionType}. IsTerminating: {IsTerminating}.",
-                ex?.GetType().FullName ?? "Unknown", e.IsTerminating);
+            Log.Error(ex, "AppDomain unhandled exception: {Message}. IsTerminating: {IsTerminating}.",
+                ex?.Message, e.IsTerminating);
         };
 
         TaskScheduler.UnobservedTaskException += (s, e) =>
         {
-            Log.Error("Unobserved task exception of type {ExceptionType}.",
-                e.Exception?.InnerException?.GetType().FullName ?? e.Exception?.GetType().FullName ?? "Unknown");
+            Log.Error(e.Exception, "Unobserved task exception: {Message}.",
+                e.Exception?.Message);
             e.SetObserved();
         };
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        Log.Error("Dispatcher unhandled exception of type {ExceptionType}.", e.Exception.GetType().FullName);
+        Log.Error(e.Exception, "Dispatcher unhandled exception: {Message}.", e.Exception.Message);
+        if (e.Exception.InnerException != null)
+        {
+            Log.Error(e.Exception.InnerException, "Inner exception: {Message}", e.Exception.InnerException.Message);
+        }
         e.Handled = true;
 
         try
         {
             MessageBox.Show(
-                "Đã xảy ra lỗi không mong muốn trong ứng dụng.",
+                $"Đã xảy ra lỗi không mong muốn trong ứng dụng:\n\n{e.Exception.Message}",
                 "RbxManager",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

@@ -134,7 +134,7 @@
                                       Command="{Binding RenameGroupCommand}"
                                       IsEnabled="{Binding IsRenameGroupVisible}">
                                 <MenuItem.Icon>
-                                    <ui:SymbolIcon Symbol="FolderEdit24" />
+                                    <ui:SymbolIcon Symbol="Rename24" />
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator />
@@ -204,11 +204,11 @@
                         Orientation="Horizontal"
                         Margin="{StaticResource MarginMedium}">
                 <ui:Button Content="{x:Static resources:Strings.LaunchSelected}"
-                           Icon="{ui:SymbolIcon PlayMultiple24}"
+                           Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchSelectedAccountsCommand}" />
                 <ui:Button Content="{x:Static resources:Strings.LaunchGroup}"
-                           Icon="{ui:SymbolIcon PlayMultiple24}"
+                           Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchGroupAccountsCommand}"
                            Visibility="{Binding IsLaunchGroupVisible, Converter={StaticResource BoolToVis}}" />
