@@ -235,27 +235,39 @@
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         </Grid>
 
-        <!-- Main Content Area: High-Density Virtualized DataGrid -->
-        <Grid Grid.Row="4">
-            <ui:DataGrid x:Name="AccountsDataGrid"
-                         ItemsSource="{Binding FilteredAccounts}"
-                         SelectedItem="{Binding SelectedAccount}"
-                         AutoGenerateColumns="False"
-                         CanUserAddRows="False"
-                         IsReadOnly="True"
-                         SelectionMode="Single"
-                         GridLinesVisibility="None"
-                         RowHeight="36"
-                         AlternatingRowBackground="{DynamicResource DataGridRowAlternatingBrush}"
-                         ColumnHeaderStyle="{StaticResource HighContrastColumnHeaderStyle}"
-                         Sorting="OnDataGridSorting"
-                         VirtualizingPanel.IsVirtualizing="True"
-                         VirtualizingPanel.VirtualizationMode="Recycling"
-                         VirtualizingPanel.ScrollUnit="Pixel"
-                         ScrollViewer.CanContentScroll="True">
-                <ui:DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
-                        <Setter Property="ContextMenu">
+        <!-- Main Content Area: High-Density Virtualized DataGrid Elevated Card -->
+        <Border Grid.Row="4"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMedium}"
+                Margin="{StaticResource MarginBase}"
+                ClipToBounds="True">
+            <Grid>
+                <ui:DataGrid x:Name="AccountsDataGrid"
+                             ItemsSource="{Binding FilteredAccounts}"
+                             SelectedItem="{Binding SelectedAccount}"
+                             AutoGenerateColumns="False"
+                             CanUserAddRows="False"
+                             IsReadOnly="True"
+                             SelectionMode="Single"
+                             GridLinesVisibility="None"
+                             RowHeight="36"
+                             Background="{DynamicResource CardBackgroundBrush}"
+                             RowBackground="{DynamicResource ControlFillColorDefaultBrush}"
+                             AlternatingRowBackground="{DynamicResource ControlFillColorSecondaryBrush}"
+                             AlternationCount="2"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                             ColumnHeaderStyle="{StaticResource HighContrastColumnHeaderStyle}"
+                             CellStyle="{StaticResource HighContrastDataGridCellStyle}"
+                             Sorting="OnDataGridSorting"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             VirtualizingPanel.ScrollUnit="Pixel"
+                             ScrollViewer.CanContentScroll="True">
+                    <ui:DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow" BasedOn="{StaticResource HighContrastDataGridRowStyle}">
+                            <Setter Property="ContextMenu">
                             <Setter.Value>
                                 <ContextMenu>
                                     <MenuItem Header="{x:Static resources:Strings.Launch}"
@@ -489,5 +501,6 @@
                            Command="{Binding ClearSearchCommand}" />
             </StackPanel>
         </Grid>
-    </Grid>
+    </Border>
+</Grid>
 </Page>

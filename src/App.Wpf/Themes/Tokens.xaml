@@ -38,10 +38,13 @@
     <Color x:Key="ApplicationBackgroundDarkColor">#111111</Color>
     <Color x:Key="CardBackgroundDarkColor">#2D2D2D</Color>
     <Color x:Key="ControlFillColorDefaultDarkColor">#2D2D2D</Color>
+    <Color x:Key="ControlFillColorSecondaryDarkColor">#363636</Color>
+    <Color x:Key="ControlFillColorTertiaryDarkColor">#444444</Color>
     <Color x:Key="TextFillColorPrimaryDarkColor">#FFFFFF</Color>
     <Color x:Key="TextFillColorSecondaryDarkColor">#CCCCCC</Color>
-    <Color x:Key="DataGridRowAlternatingDarkColor">#181818</Color>
-    <Color x:Key="DataGridHeaderBorderDarkColor">#3E3E3E</Color>
+    <Color x:Key="DataGridRowAlternatingDarkColor">#222222</Color>
+    <Color x:Key="DataGridHeaderBorderDarkColor">#383838</Color>
+    <Color x:Key="DividerStrokeColorDefaultDarkColor">#383838</Color>
 
     <!-- Status Colors (Dark Palette: High Contrast) -->
     <Color x:Key="StatusValidForegroundDarkColor">#FFFFFF</Color>
@@ -68,10 +71,13 @@
     <Color x:Key="ApplicationBackgroundLightColor">#F4F4F4</Color>
     <Color x:Key="CardBackgroundLightColor">#FFFFFF</Color>
     <Color x:Key="ControlFillColorDefaultLightColor">#FFFFFF</Color>
+    <Color x:Key="ControlFillColorSecondaryLightColor">#E8E8E8</Color>
+    <Color x:Key="ControlFillColorTertiaryLightColor">#DCDCDC</Color>
     <Color x:Key="TextFillColorPrimaryLightColor">#161616</Color>
     <Color x:Key="TextFillColorSecondaryLightColor">#5C5C5C</Color>
     <Color x:Key="DataGridRowAlternatingLightColor">#FAFAFA</Color>
     <Color x:Key="DataGridHeaderBorderLightColor">#D0D0D0</Color>
+    <Color x:Key="DividerStrokeColorDefaultLightColor">#E0E0E0</Color>
 
     <!-- Status Colors (Light Palette) -->
     <Color x:Key="StatusValidForegroundLightColor">#1B5E20</Color>
@@ -99,10 +105,13 @@
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundDarkColor}" />
     <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="{StaticResource CardBackgroundDarkColor}" />
     <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="{StaticResource ControlFillColorDefaultDarkColor}" />
+    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="{StaticResource ControlFillColorSecondaryDarkColor}" />
+    <SolidColorBrush x:Key="ControlFillColorTertiaryBrush" Color="{StaticResource ControlFillColorTertiaryDarkColor}" />
     <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="{StaticResource TextFillColorPrimaryDarkColor}" />
     <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="{StaticResource TextFillColorSecondaryDarkColor}" />
     <SolidColorBrush x:Key="DataGridRowAlternatingBrush" Color="{StaticResource DataGridRowAlternatingDarkColor}" />
     <SolidColorBrush x:Key="DataGridHeaderBorderBrush" Color="{StaticResource DataGridHeaderBorderDarkColor}" />
+    <SolidColorBrush x:Key="DividerStrokeColorDefaultBrush" Color="{StaticResource DividerStrokeColorDefaultDarkColor}" />
 
     <SolidColorBrush x:Key="StatusValidForegroundBrush" Color="{StaticResource StatusValidForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusValidBackgroundBrush" Color="{StaticResource StatusValidBackgroundDarkColor}" />
@@ -128,11 +137,50 @@
     <Style x:Key="HighContrastColumnHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-        <Setter Property="BorderThickness" Value="0,0,0,2" />
-        <Setter Property="BorderBrush" Value="{DynamicResource DataGridHeaderBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
         <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Typography.Capitals" Value="AllSmallCaps" />
     </Style>
 
     <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HighContrastColumnHeaderStyle}" />
+
+    <!-- DataGrid Row Style: Force Dark Elevated Background & High Legibility Foreground -->
+    <Style x:Key="HighContrastDataGridRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Style.Triggers>
+            <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="DataGridRow" BasedOn="{StaticResource HighContrastDataGridRowStyle}" />
+
+    <!-- DataGrid Cell Style: Ensure Text Color is Always Primary White on Dark -->
+    <Style x:Key="HighContrastDataGridCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="Background" Value="Transparent" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="DataGridCell" BasedOn="{StaticResource HighContrastDataGridCellStyle}" />
 
 </ResourceDictionary>

@@ -13,7 +13,7 @@
                   WindowStartupLocation="CenterScreen"
                   Background="{DynamicResource ApplicationBackgroundBrush}"
                   PreviewKeyDown="OnMainWindowPreviewKeyDown">
-    <Grid>
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />

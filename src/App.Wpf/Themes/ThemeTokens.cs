@@ -15,10 +15,13 @@ public static class ThemeTokens
         SetBrush(resources, "CardBackgroundBrush", isLight ? "CardBackgroundLightColor" : "CardBackgroundDarkColor");
         SetBrush(resources, "CardBackgroundFillColorDefaultBrush", isLight ? "CardBackgroundLightColor" : "CardBackgroundDarkColor");
         SetBrush(resources, "ControlFillColorDefaultBrush", isLight ? "ControlFillColorDefaultLightColor" : "ControlFillColorDefaultDarkColor");
+        SetBrush(resources, "ControlFillColorSecondaryBrush", isLight ? "ControlFillColorSecondaryLightColor" : "ControlFillColorSecondaryDarkColor");
+        SetBrush(resources, "ControlFillColorTertiaryBrush", isLight ? "ControlFillColorTertiaryLightColor" : "ControlFillColorTertiaryDarkColor");
         SetBrush(resources, "TextFillColorPrimaryBrush", isLight ? "TextFillColorPrimaryLightColor" : "TextFillColorPrimaryDarkColor");
         SetBrush(resources, "TextFillColorSecondaryBrush", isLight ? "TextFillColorSecondaryLightColor" : "TextFillColorSecondaryDarkColor");
         SetBrush(resources, "DataGridRowAlternatingBrush", isLight ? "DataGridRowAlternatingLightColor" : "DataGridRowAlternatingDarkColor");
         SetBrush(resources, "DataGridHeaderBorderBrush", isLight ? "DataGridHeaderBorderLightColor" : "DataGridHeaderBorderDarkColor");
+        SetBrush(resources, "DividerStrokeColorDefaultBrush", isLight ? "DividerStrokeColorDefaultLightColor" : "DividerStrokeColorDefaultDarkColor");
 
         SetBrush(resources, "StatusValidForegroundBrush", isLight ? "StatusValidForegroundLightColor" : "StatusValidForegroundDarkColor");
         SetBrush(resources, "StatusValidBackgroundBrush", isLight ? "StatusValidBackgroundLightColor" : "StatusValidBackgroundDarkColor");

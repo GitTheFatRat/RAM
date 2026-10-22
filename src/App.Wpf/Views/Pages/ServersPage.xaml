@@ -66,21 +66,34 @@
                        IsEnabled="{Binding HasNextPage}" />
         </Grid>
 
-        <!-- Data Grid Area -->
-        <Grid Grid.Row="2">
-            <ui:DataGrid ItemsSource="{Binding Servers}"
-                         AutoGenerateColumns="False"
-                         CanUserAddRows="False"
-                         IsReadOnly="True"
-                         SelectionMode="Single"
-                         GridLinesVisibility="None"
-                         RowHeight="36"
-                         AlternatingRowBackground="{DynamicResource DataGridRowAlternatingBrush}"
-                         ColumnHeaderStyle="{StaticResource HighContrastColumnHeaderStyle}"
-                         VirtualizingPanel.IsVirtualizing="True"
-                         VirtualizingPanel.VirtualizationMode="Recycling"
-                         VirtualizingPanel.ScrollUnit="Pixel"
-                         ScrollViewer.CanContentScroll="True">
+        <!-- Data Grid Area: Elevated Container -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMedium}"
+                Margin="{StaticResource MarginBase}"
+                ClipToBounds="True">
+            <Grid>
+                <ui:DataGrid ItemsSource="{Binding Servers}"
+                             AutoGenerateColumns="False"
+                             CanUserAddRows="False"
+                             IsReadOnly="True"
+                             SelectionMode="Single"
+                             GridLinesVisibility="None"
+                             RowHeight="36"
+                             Background="{DynamicResource CardBackgroundBrush}"
+                             RowBackground="{DynamicResource ControlFillColorDefaultBrush}"
+                             AlternatingRowBackground="{DynamicResource ControlFillColorSecondaryBrush}"
+                             AlternationCount="2"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                             ColumnHeaderStyle="{StaticResource HighContrastColumnHeaderStyle}"
+                             RowStyle="{StaticResource HighContrastDataGridRowStyle}"
+                             CellStyle="{StaticResource HighContrastDataGridCellStyle}"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             VirtualizingPanel.ScrollUnit="Pixel"
+                             ScrollViewer.CanContentScroll="True">
                 <ui:DataGrid.Columns>
                     <!-- Server ID (Monospace) -->
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnServerId}"
@@ -189,5 +202,6 @@
                            Command="{Binding RefreshCommand}" />
             </StackPanel>
         </Grid>
-    </Grid>
+    </Border>
+</Grid>
 </Page>
