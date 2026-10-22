@@ -30,13 +30,13 @@ public sealed class RobloxLauncherDryRunTests
         public int TicketCallCount { get; private set; }
         public int ValidateCallCount { get; private set; }
 
-        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default)
+        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
         {
             ValidateCallCount++;
             return Task.FromResult(Result.Success(new RobloxUser(1, "Test", "Test")));
         }
 
-        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
+        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
         {
             TicketCallCount++;
             return Task.FromResult(Result.Success(SecretValue.FromString("ticket")));

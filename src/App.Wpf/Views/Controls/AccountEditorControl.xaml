@@ -8,43 +8,93 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             MinWidth="420">
+             MinWidth="460">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </UserControl.Resources>
 
     <StackPanel Margin="0,8,0,0">
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4"
-                       Text="{x:Static resources:Strings.FieldAlias}"
-                       FontWeight="SemiBold" />
-            <ui:TextBox Text="{Binding Alias, UpdateSourceTrigger=PropertyChanged}"
-                        MaxLength="50" />
-        </StackPanel>
+        <TabControl Margin="0,0,0,12">
+            <!-- General Tab -->
+            <TabItem Header="{x:Static resources:Strings.TabGeneral}">
+                <StackPanel Margin="0,12,0,0">
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.FieldAlias}"
+                                   FontWeight="SemiBold" />
+                        <ui:TextBox Text="{Binding Alias, UpdateSourceTrigger=PropertyChanged}"
+                                    MaxLength="50" />
+                    </StackPanel>
 
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4"
-                       Text="{x:Static resources:Strings.FieldGroup}"
-                       FontWeight="SemiBold" />
-            <ComboBox Text="{Binding Group, UpdateSourceTrigger=PropertyChanged}"
-                      ItemsSource="{Binding AvailableGroups}"
-                      IsEditable="True" />
-        </StackPanel>
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.FieldGroup}"
+                                   FontWeight="SemiBold" />
+                        <ComboBox Text="{Binding Group, UpdateSourceTrigger=PropertyChanged}"
+                                  ItemsSource="{Binding AvailableGroups}"
+                                  IsEditable="True" />
+                    </StackPanel>
 
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4"
-                       Text="{x:Static resources:Strings.FieldNote}"
-                       FontWeight="SemiBold" />
-            <ui:TextBox Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
-                        MaxLength="200" />
-        </StackPanel>
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.FieldNote}"
+                                   FontWeight="SemiBold" />
+                        <ui:TextBox Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
+                                    MaxLength="200" />
+                    </StackPanel>
 
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4"
-                       Text="{x:Static resources:Strings.FieldCookie}"
-                       FontWeight="SemiBold" />
-            <ui:PasswordBox x:Name="CookieBox" />
-        </StackPanel>
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.FieldCookie}"
+                                   FontWeight="SemiBold" />
+                        <ui:PasswordBox x:Name="CookieBox" />
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+
+            <!-- Proxy Tab -->
+            <TabItem Header="{x:Static resources:Strings.TabProxy}">
+                <StackPanel Margin="0,12,0,0">
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.ProxyType}"
+                                   FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding AvailableProxyTypes}"
+                                  SelectedItem="{Binding SelectedProxyType}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.ProxyHost}"
+                                   FontWeight="SemiBold" />
+                        <ui:TextBox Text="{Binding ProxyHost, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="127.0.0.1 or proxy.example.com" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.ProxyPort}"
+                                   FontWeight="SemiBold" />
+                        <ui:TextBox Text="{Binding ProxyPort, UpdateSourceTrigger=PropertyChanged}"
+                                    MaxLength="5" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.ProxyUsername}"
+                                   FontWeight="SemiBold" />
+                        <ui:TextBox Text="{Binding ProxyUsername, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Margin="0,0,0,4"
+                                   Text="{x:Static resources:Strings.ProxyPassword}"
+                                   FontWeight="SemiBold" />
+                        <ui:PasswordBox x:Name="ProxyPasswordBox" />
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
 
         <TextBlock Text="{Binding ErrorMessage}"
                    Foreground="{DynamicResource SystemFillColorCriticalBrush}"

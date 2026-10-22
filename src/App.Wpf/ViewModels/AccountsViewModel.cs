@@ -279,13 +279,23 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             {
                 string rawCookie = editorControl.ReadPassword();
                 using SecretValue testCookie = SecretValue.FromString(rawCookie);
+                using ProxyConfig? testProxy = !string.IsNullOrWhiteSpace(editorViewModel.ProxyHost)
+                    ? new ProxyConfig(
+                        editorViewModel.ProxyHost.Trim(),
+                        editorViewModel.ProxyPort,
+                        string.IsNullOrWhiteSpace(editorViewModel.ProxyUsername) ? null : editorViewModel.ProxyUsername.Trim(),
+                        null,
+                        editorViewModel.SelectedProxyType)
+                    : null;
+
                 Account testAccount = new(
                     Id: new AccountId(0),
                     Alias: editorViewModel.Alias,
                     Group: editorViewModel.Group,
                     Note: editorViewModel.Note,
                     Cookie: testCookie,
-                    CreatedAt: DateTimeOffset.UtcNow);
+                    CreatedAt: DateTimeOffset.UtcNow,
+                    Proxy: testProxy);
 
                 Result validation = AccountValidator.Validate(testAccount, _allAccounts.Select(a => a.Account));
                 if (!validation.IsSuccess)
@@ -311,6 +321,21 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             using SecretValue cookieSecret = SecretValue.FromString(rawCookie);
             editorControl.ClearPassword();
 
+            string rawProxyPassword = editorControl.ReadProxyPassword();
+            using SecretValue? proxyPasswordSecret = !string.IsNullOrWhiteSpace(rawProxyPassword)
+                ? SecretValue.FromString(rawProxyPassword)
+                : null;
+            editorControl.ClearProxyPassword();
+
+            using ProxyConfig? proxyConfig = !string.IsNullOrWhiteSpace(editorViewModel.ProxyHost)
+                ? new ProxyConfig(
+                    editorViewModel.ProxyHost.Trim(),
+                    editorViewModel.ProxyPort,
+                    string.IsNullOrWhiteSpace(editorViewModel.ProxyUsername) ? null : editorViewModel.ProxyUsername.Trim(),
+                    proxyPasswordSecret?.Clone(),
+                    editorViewModel.SelectedProxyType)
+                : null;
+
             long nextId = _allAccounts.Count > 0 ? _allAccounts.Max(a => a.Id.Value) + 1 : 1;
             Account newAccount = new(
                 Id: new AccountId(nextId),
@@ -318,7 +343,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 Group: string.IsNullOrWhiteSpace(editorViewModel.Group) ? null : editorViewModel.Group.Trim(),
                 Note: string.IsNullOrWhiteSpace(editorViewModel.Note) ? null : editorViewModel.Note.Trim(),
                 Cookie: cookieSecret,
-                CreatedAt: DateTimeOffset.UtcNow);
+                CreatedAt: DateTimeOffset.UtcNow,
+                Proxy: proxyConfig);
 
             Result validation = AccountValidator.Validate(newAccount, _allAccounts.Select(a => a.Account));
             if (!validation.IsSuccess)
@@ -347,6 +373,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         else
         {
             editorControl.ClearPassword();
+            editorControl.ClearProxyPassword();
         }
     }
 
@@ -363,7 +390,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         {
             Alias = current.Alias,
             Group = current.Group ?? string.Empty,
-            Note = current.Note ?? string.Empty
+            Note = current.Note ?? string.Empty,
+            SelectedProxyType = current.Proxy?.Type ?? ProxyType.Http,
+            ProxyHost = current.Proxy?.Host ?? string.Empty,
+            ProxyPort = current.Proxy?.Port ?? 8080,
+            ProxyUsername = current.Proxy?.Username ?? string.Empty
         };
 
         foreach (string group in _allAccounts.Select(a => a.Group?.Trim()).Where(g => !string.IsNullOrEmpty(g)).Distinct()!)
@@ -394,6 +425,22 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
             editorControl.ClearPassword();
 
+            string newProxyPassword = editorControl.ReadProxyPassword();
+            SecretValue? proxyPasswordToUse = !string.IsNullOrWhiteSpace(newProxyPassword)
+                ? SecretValue.FromString(newProxyPassword)
+                : current.Proxy?.Password?.Clone();
+
+            editorControl.ClearProxyPassword();
+
+            ProxyConfig? proxyToUse = !string.IsNullOrWhiteSpace(editorViewModel.ProxyHost)
+                ? new ProxyConfig(
+                    editorViewModel.ProxyHost.Trim(),
+                    editorViewModel.ProxyPort,
+                    string.IsNullOrWhiteSpace(editorViewModel.ProxyUsername) ? null : editorViewModel.ProxyUsername.Trim(),
+                    proxyPasswordToUse,
+                    editorViewModel.SelectedProxyType)
+                : null;
+
             Account updatedAccount = new(
                 Id: current.Id,
                 Alias: editorViewModel.Alias.Trim(),
@@ -404,13 +451,15 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 Username: current.Username,
                 UserId: current.UserId,
                 Status: current.Status,
-                LastCheckedAt: current.LastCheckedAt);
+                LastCheckedAt: current.LastCheckedAt,
+                Proxy: proxyToUse);
 
             Result validation = AccountValidator.Validate(updatedAccount, _allAccounts.Select(a => a.Account));
             if (!validation.IsSuccess)
             {
                 _snackbarService.Show(Strings.ErrorTitle, validation.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
                 cookieToUse.Dispose();
+                proxyToUse?.Dispose();
                 return;
             }
 
@@ -434,11 +483,13 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             finally
             {
                 cookieToUse.Dispose();
+                proxyToUse?.Dispose();
             }
         }
         else
         {
             editorControl.ClearPassword();
+            editorControl.ClearProxyPassword();
         }
     }
 
@@ -635,7 +686,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     private async Task ValidateAndUpdateAccountAsync(Account account, CancellationToken ct = default)
     {
-        Result<RobloxUser> validation = await _authService.ValidateCookieAsync(account.Cookie, ct);
+        Result<RobloxUser> validation = await _authService.ValidateCookieAsync(account.Cookie, account.Proxy, ct);
 
         AccountStatus newStatus;
         string? username = account.Username;

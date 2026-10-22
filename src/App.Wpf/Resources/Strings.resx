@@ -547,4 +547,97 @@
   <data name="Retry" xml:space="preserve">
     <value>Retry</value>
   </data>
+  <data name="SecuritySectionTitle" xml:space="preserve">
+    <value>Security</value>
+  </data>
+  <data name="SecuritySectionSubtitle" xml:space="preserve">
+    <value>Vault encryption and master password</value>
+  </data>
+  <data name="ResourceOptimizationSectionTitle" xml:space="preserve">
+    <value>Performance &amp; Optimization</value>
+  </data>
+  <data name="ResourceOptimizationSectionSubtitle" xml:space="preserve">
+    <value>Background process resource saving</value>
+  </data>
+  <data name="MasterPasswordTitle" xml:space="preserve">
+    <value>Master Password</value>
+  </data>
+  <data name="MasterPasswordPrompt" xml:space="preserve">
+    <value>Enter master password to unlock application.</value>
+  </data>
+  <data name="MasterPasswordUnlockButton" xml:space="preserve">
+    <value>Unlock</value>
+  </data>
+  <data name="MasterPasswordExitButton" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="MasterPasswordInvalid" xml:space="preserve">
+    <value>Invalid master password.</value>
+  </data>
+  <data name="MasterPasswordRequired" xml:space="preserve">
+    <value>Master password is required.</value>
+  </data>
+  <data name="EnableMasterPassword" xml:space="preserve">
+    <value>Enable Master Password</value>
+  </data>
+  <data name="EnableMasterPasswordDescription" xml:space="preserve">
+    <value>Protect the vault with Argon2id encryption in addition to Windows DPAPI.</value>
+  </data>
+  <data name="SetupMasterPasswordTitle" xml:space="preserve">
+    <value>Set Master Password</value>
+  </data>
+  <data name="SetupMasterPasswordPrompt" xml:space="preserve">
+    <value>Enter a master password (minimum 12 characters):</value>
+  </data>
+  <data name="MasterPasswordConfirmPrompt" xml:space="preserve">
+    <value>Confirm master password:</value>
+  </data>
+  <data name="MasterPasswordMismatch" xml:space="preserve">
+    <value>Passwords do not match.</value>
+  </data>
+  <data name="MasterPasswordTooShort" xml:space="preserve">
+    <value>Master password must be at least 12 characters.</value>
+  </data>
+  <data name="MasterPasswordEnabledSuccess" xml:space="preserve">
+    <value>Master password enabled successfully.</value>
+  </data>
+  <data name="MasterPasswordDisabledSuccess" xml:space="preserve">
+    <value>Master password disabled successfully.</value>
+  </data>
+  <data name="DisableMasterPasswordTitle" xml:space="preserve">
+    <value>Disable Master Password</value>
+  </data>
+  <data name="DisableMasterPasswordMessage" xml:space="preserve">
+    <value>Are you sure you want to disable the master password? The vault will be protected by Windows DPAPI only.</value>
+  </data>
+  <data name="ThrottleBackgroundRoblox" xml:space="preserve">
+    <value>Throttle background Roblox instances</value>
+  </data>
+  <data name="ThrottleBackgroundRobloxDescription" xml:space="preserve">
+    <value>Minimizes non-foreground Roblox windows to drastically reduce CPU and GPU usage.</value>
+  </data>
+  <data name="TabGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="TabProxy" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="ProxyType" xml:space="preserve">
+    <value>Proxy Type</value>
+  </data>
+  <data name="ProxyHost" xml:space="preserve">
+    <value>Host</value>
+  </data>
+  <data name="ProxyPort" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="ProxyUsername" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="ProxyPassword" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="ProxyPasswordHint" xml:space="preserve">
+    <value>Leave empty to keep existing password</value>
+  </data>
 </root>

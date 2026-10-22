@@ -38,6 +38,15 @@ public static class AccountValidator
             return Result.Failure("Cookie must not be empty.");
         }
 
+        if (account.Proxy != null)
+        {
+            Result proxyValidation = ProxyConfigValidator.Validate(account.Proxy);
+            if (!proxyValidation.IsSuccess)
+            {
+                return proxyValidation;
+            }
+        }
+
         if (existingAccounts != null)
         {
             bool isDuplicate = existingAccounts.Any(existing =>

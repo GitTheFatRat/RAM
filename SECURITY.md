@@ -20,30 +20,49 @@
 
 ---
 
-## Vault Storage Security (Format v1)
+## Vault Storage Security (Format v2 & Format v1 Fallback)
 
-### Binary Layout
+### Binary Layout (Format v2)
 - `magic` (4 bytes ASCII: `RBXV`)
-- `version` (1 byte: `0x01`)
+- `version` (1 byte: `0x02`)
+- `kdfType` (1 byte: `0x00` for DPAPI only, `0x01` for Argon2id + DPAPI)
+- If `kdfType == 0x01`:
+  - `argonSalt` (16 bytes): cryptographically secure random bytes
+  - Associated Authenticated Data (AAD): 22 bytes (`RBXV\x02\x01` + 16-byte salt)
+- If `kdfType == 0x00`:
+  - Associated Authenticated Data (AAD): 6 bytes (`RBXV\x02\x00`)
 - `wrappedKeyLength` (2 bytes unsigned integer, Little-Endian)
 - `wrappedKey` (`wrappedKeyLength` bytes): 32-byte AES key wrapped with Windows DPAPI (`ProtectedData.Protect` with `DataProtectionScope.CurrentUser`)
 - `nonce` (12 bytes): cryptographically secure random bytes
 - `tag` (16 bytes): AES-GCM authentication tag
 - `ciphertext` (remaining bytes): AES-256-GCM encrypted JSON payload of internal account DTOs
-- Associated Authenticated Data (AAD): 5 bytes (`RBXV\x01`)
 
-### Threat Model
+### Legacy Fallback (Format v1)
+- `magic` (`RBXV`) | `version` (`0x01`) | `wrappedKeyLength` (2B) | `wrappedKey` | `nonce` (12B) | `tag` (16B) | `ciphertext`.
+- Loading Format v1 remains fully supported; any write or update automatically upgrades the storage layout to Format v2.
+
+### Cryptographic Parameters & Key Derivation (Argon2id)
+- **KDF**: `Argon2id` via `Konscious.Security.Cryptography.Argon2` (version 1.3.1).
+- **Memory Size**: 65,536 KB (64 MB).
+- **Iterations**: 3.
+- **Degree of Parallelism**: 4 lanes / threads.
+- **Salt Length**: 16 bytes.
+- **Output Key Size**: 256-bit (32 bytes).
+- **Double-Layer Wrapping**: When master password protection is enabled, the 256-bit AES data key is derived from the master password and salt, and is additionally wrapped with Windows DPAPI (`CurrentUser`). Decryption requires both the correct master password and the matching Windows user account context.
+
+### Threat Model & Defense-in-Depth
 - **Protected Against**:
   - Offline extraction of storage drives / unauthenticated physical disk access.
   - Access by other user accounts on the same Windows machine.
+  - Malware running as the same Windows user (when Master Password defense-in-depth is enabled via Argon2id).
   - Plaintext data leakage in logs or crash dumps via immediate zero-memory buffer wiping (`CryptographicOperations.ZeroMemory`).
   - Tampering or bit-flipping via AES-GCM AEAD authentication tag verification.
 
-- **Explicit Limitation**:
-  - Windows DPAPI (`DataProtectionScope.CurrentUser`) decrypts credentials using keys tied to the current Windows user login. It does **NOT** protect against malware, info-stealers, or malicious scripts executing within the same logged-in Windows user context.
-
-- **Planned Roadmap**:
-  - A user-supplied Master Password with modern memory-hard key derivation (Argon2id) is scheduled for the public release to provide defense-in-depth against same-user malware.
+### Per-Account Proxy Security
+- Proxy credentials (passwords) are treated as sensitive secrets:
+  - Stored inside the encrypted vault alongside cookies (`SecretValue`).
+  - Decrypted only via `Reveal()` inside `RobloxHttpClientFactory` to configure `NetworkCredential` and never logged or exposed.
+  - Memory buffers are zeroed on disposal.
 
 ---
 

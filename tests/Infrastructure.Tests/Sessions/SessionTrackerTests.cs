@@ -71,10 +71,10 @@ public sealed class SessionTrackerTests
     {
         public Result<RobloxUser> ValidateResult { get; set; } = Result.Success(new RobloxUser(123, "Test", "Test"));
 
-        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default) =>
+        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default) =>
             Task.FromResult(ValidateResult);
 
-        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default) =>
+        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default) =>
             Task.FromResult(Result.Success(SecretValue.FromString("ticket")));
     }
 

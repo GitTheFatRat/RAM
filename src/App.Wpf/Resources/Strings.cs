@@ -173,6 +173,37 @@ public static class Strings
     public static string AdvancedSectionTitle => GetString(nameof(AdvancedSectionTitle));
     public static string AdvancedSectionSubtitle => GetString(nameof(AdvancedSectionSubtitle));
     public static string Retry => GetString(nameof(Retry));
+    public static string SecuritySectionTitle => GetString(nameof(SecuritySectionTitle));
+    public static string SecuritySectionSubtitle => GetString(nameof(SecuritySectionSubtitle));
+    public static string ResourceOptimizationSectionTitle => GetString(nameof(ResourceOptimizationSectionTitle));
+    public static string ResourceOptimizationSectionSubtitle => GetString(nameof(ResourceOptimizationSectionSubtitle));
+    public static string MasterPasswordTitle => GetString(nameof(MasterPasswordTitle));
+    public static string MasterPasswordPrompt => GetString(nameof(MasterPasswordPrompt));
+    public static string MasterPasswordUnlockButton => GetString(nameof(MasterPasswordUnlockButton));
+    public static string MasterPasswordExitButton => GetString(nameof(MasterPasswordExitButton));
+    public static string MasterPasswordInvalid => GetString(nameof(MasterPasswordInvalid));
+    public static string MasterPasswordRequired => GetString(nameof(MasterPasswordRequired));
+    public static string EnableMasterPassword => GetString(nameof(EnableMasterPassword));
+    public static string EnableMasterPasswordDescription => GetString(nameof(EnableMasterPasswordDescription));
+    public static string SetupMasterPasswordTitle => GetString(nameof(SetupMasterPasswordTitle));
+    public static string SetupMasterPasswordPrompt => GetString(nameof(SetupMasterPasswordPrompt));
+    public static string MasterPasswordConfirmPrompt => GetString(nameof(MasterPasswordConfirmPrompt));
+    public static string MasterPasswordMismatch => GetString(nameof(MasterPasswordMismatch));
+    public static string MasterPasswordTooShort => GetString(nameof(MasterPasswordTooShort));
+    public static string MasterPasswordEnabledSuccess => GetString(nameof(MasterPasswordEnabledSuccess));
+    public static string MasterPasswordDisabledSuccess => GetString(nameof(MasterPasswordDisabledSuccess));
+    public static string DisableMasterPasswordTitle => GetString(nameof(DisableMasterPasswordTitle));
+    public static string DisableMasterPasswordMessage => GetString(nameof(DisableMasterPasswordMessage));
+    public static string ThrottleBackgroundRoblox => GetString(nameof(ThrottleBackgroundRoblox));
+    public static string ThrottleBackgroundRobloxDescription => GetString(nameof(ThrottleBackgroundRobloxDescription));
+    public static string TabGeneral => GetString(nameof(TabGeneral));
+    public static string TabProxy => GetString(nameof(TabProxy));
+    public static string ProxyType => GetString(nameof(ProxyType));
+    public static string ProxyHost => GetString(nameof(ProxyHost));
+    public static string ProxyPort => GetString(nameof(ProxyPort));
+    public static string ProxyUsername => GetString(nameof(ProxyUsername));
+    public static string ProxyPassword => GetString(nameof(ProxyPassword));
+    public static string ProxyPasswordHint => GetString(nameof(ProxyPasswordHint));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

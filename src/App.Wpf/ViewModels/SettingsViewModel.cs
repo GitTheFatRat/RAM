@@ -28,6 +28,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly ISnackbarService _snackbarService;
     private readonly IAccountStore? _accountStore;
     private readonly Core.Backup.IBackupService? _backupService;
+    private readonly IVaultKeyProvider? _vaultKeyProvider;
 
     [ObservableProperty]
     private string _selectedLanguage = "vi";
@@ -57,6 +58,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _isMultiInstanceAvailable;
 
     [ObservableProperty]
+    private bool _isMasterPasswordEnabled;
+
+    [ObservableProperty]
+    private bool _throttleBackgroundRoblox;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -67,7 +74,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         IContentDialogService contentDialogService,
         ISnackbarService snackbarService,
         IAccountStore? accountStore = null,
-        Core.Backup.IBackupService? backupService = null)
+        Core.Backup.IBackupService? backupService = null,
+        IVaultKeyProvider? vaultKeyProvider = null)
     {
         _settingsService = settingsService;
         _instanceGate = instanceGate;
@@ -75,6 +83,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _snackbarService = snackbarService;
         _accountStore = accountStore;
         _backupService = backupService;
+        _vaultKeyProvider = vaultKeyProvider;
 
         IsMultiInstanceAvailable = _instanceGate.IsAvailable;
         LoadFromCurrentSettings();
@@ -90,6 +99,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         RejoinDelaySeconds = settings.RejoinDelaySeconds;
         RejoinMaxAttempts = settings.RejoinMaxAttempts;
         MultiInstanceEnabled = _instanceGate.IsMultiInstanceEnabled;
+        IsMasterPasswordEnabled = settings.IsMasterPasswordEnabled;
+        ThrottleBackgroundRoblox = settings.ThrottleBackgroundRoblox;
 
         string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
         LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -126,6 +137,8 @@ public sealed partial class SettingsViewModel : ObservableObject
                 RejoinMaxAttempts: RejoinMaxAttempts,
                 MultiInstanceEnabled: MultiInstanceEnabled,
                 MultiInstanceAcknowledged: current.MultiInstanceAcknowledged,
+                IsMasterPasswordEnabled: IsMasterPasswordEnabled,
+                ThrottleBackgroundRoblox: ThrottleBackgroundRoblox,
                 Advanced: current.Advanced);
 
             await _settingsService.SaveSettingsAsync(updated);
@@ -203,6 +216,108 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             _instanceGate.Disable();
             MultiInstanceEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnThrottleBackgroundRobloxToggledAsync(bool enabled)
+    {
+        ThrottleBackgroundRoblox = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { ThrottleBackgroundRoblox = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnMasterPasswordToggledAsync(bool enabled)
+    {
+        if (enabled)
+        {
+            MasterPasswordSetupControl setupControl = new();
+            ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+            {
+                Title = Strings.SetupMasterPasswordTitle,
+                Content = setupControl,
+                PrimaryButtonText = Strings.Save,
+                CloseButtonText = Strings.Cancel
+            });
+
+            if (result != ContentDialogResult.Primary)
+            {
+                IsMasterPasswordEnabled = false;
+                setupControl.ClearPasswords();
+                return;
+            }
+
+            string password = setupControl.ReadPassword();
+            string confirm = setupControl.ReadConfirmPassword();
+            setupControl.ClearPasswords();
+
+            if (password != confirm)
+            {
+                IsMasterPasswordEnabled = false;
+                _snackbarService.Show(Strings.ErrorTitle, Strings.MasterPasswordMismatch, ControlAppearance.Danger);
+                return;
+            }
+
+            Result policyResult = Core.Security.MasterPasswordPolicy.Validate(password);
+            if (!policyResult.IsSuccess)
+            {
+                IsMasterPasswordEnabled = false;
+                _snackbarService.Show(Strings.ErrorTitle, policyResult.Error ?? Strings.MasterPasswordTooShort, ControlAppearance.Danger);
+                return;
+            }
+
+            if (_vaultKeyProvider != null)
+            {
+                using SecretValue keySecret = SecretValue.FromString(password);
+                _vaultKeyProvider.SetKey(keySecret.Clone());
+            }
+
+            if (_accountStore != null)
+            {
+                IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
+                if (accounts.Count > 0)
+                {
+                    await _accountStore.UpdateAsync(accounts[0]);
+                }
+            }
+
+            AppSettings current = _settingsService.CurrentSettings;
+            await _settingsService.SaveSettingsAsync(current with { IsMasterPasswordEnabled = true });
+            IsMasterPasswordEnabled = true;
+            _snackbarService.Show(Strings.SuccessTitle, Strings.MasterPasswordEnabledSuccess, ControlAppearance.Success);
+        }
+        else
+        {
+            ContentDialogResult confirmResult = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+            {
+                Title = Strings.DisableMasterPasswordTitle,
+                Content = Strings.DisableMasterPasswordMessage,
+                PrimaryButtonText = Strings.Save,
+                CloseButtonText = Strings.Cancel
+            });
+
+            if (confirmResult != ContentDialogResult.Primary)
+            {
+                IsMasterPasswordEnabled = true;
+                return;
+            }
+
+            _vaultKeyProvider?.Clear();
+
+            if (_accountStore != null)
+            {
+                IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
+                if (accounts.Count > 0)
+                {
+                    await _accountStore.UpdateAsync(accounts[0]);
+                }
+            }
+
+            AppSettings current = _settingsService.CurrentSettings;
+            await _settingsService.SaveSettingsAsync(current with { IsMasterPasswordEnabled = false });
+            IsMasterPasswordEnabled = false;
+            _snackbarService.Show(Strings.SuccessTitle, Strings.MasterPasswordDisabledSuccess, ControlAppearance.Success);
         }
     }
 

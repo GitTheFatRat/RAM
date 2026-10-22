@@ -67,6 +67,8 @@ public sealed record AppSettings(
     int RejoinMaxAttempts = AppSettings.DefaultRejoinMaxAttempts,
     bool MultiInstanceEnabled = false,
     bool MultiInstanceAcknowledged = false,
+    bool IsMasterPasswordEnabled = false,
+    bool ThrottleBackgroundRoblox = false,
     AdvancedSettings? Advanced = null,
     UiStateSettings? UiState = null)
 {

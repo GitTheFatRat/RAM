@@ -7,9 +7,11 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Konscious.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using RbxManager.Core.Common;
 using RbxManager.Core.Exceptions;
@@ -21,8 +23,16 @@ using RbxManager.Core.Validation;
 public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
 {
     private static readonly byte[] MagicBytes = [0x52, 0x42, 0x58, 0x56]; // "RBXV"
-    private const byte VersionByte = 0x01;
-    private static readonly byte[] AadBytes = [0x52, 0x42, 0x58, 0x56, 0x01];
+    private const byte Version1Byte = 0x01;
+    private const byte Version2Byte = 0x02;
+    private const byte KdfTypeDpapi = 0x00;
+    private const byte KdfTypeArgon2idDpapi = 0x01;
+
+    public const int Argon2MemorySizeKb = 65536; // 64 MB
+    public const int Argon2Iterations = 3;
+    public const int Argon2Parallelism = 4;
+    public const int Argon2SaltLength = 16;
+    public const int DerivedKeyLength = 32;
 
     public static readonly string DefaultPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -30,15 +40,20 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         "vault.dat");
 
     private readonly string _filePath;
+    private readonly IVaultKeyProvider? _keyProvider;
     private readonly ILogger<EncryptedFileVault>? _logger;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private bool _disposed;
 
     public string VaultPath => _filePath;
 
-    public EncryptedFileVault(string? filePath = null, ILogger<EncryptedFileVault>? logger = null)
+    public EncryptedFileVault(
+        string? filePath = null,
+        IVaultKeyProvider? keyProvider = null,
+        ILogger<EncryptedFileVault>? logger = null)
     {
         _filePath = filePath ?? DefaultPath;
+        _keyProvider = keyProvider;
         _logger = logger;
     }
 
@@ -104,6 +119,11 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     {
                         loaded.Cookie.Dispose();
                     }
+
+                    if (loaded.Proxy?.Password != null && !ReferenceEquals(loaded.Proxy.Password, account.Proxy?.Password))
+                    {
+                        loaded.Proxy.Dispose();
+                    }
                 }
             }
             _semaphore.Release();
@@ -153,6 +173,11 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     {
                         loaded.Cookie.Dispose();
                     }
+
+                    if (loaded.Proxy?.Password != null && !ReferenceEquals(loaded.Proxy.Password, account.Proxy?.Password))
+                    {
+                        loaded.Proxy.Dispose();
+                    }
                 }
             }
             _semaphore.Release();
@@ -184,9 +209,34 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 foreach (Account loaded in loadedAccounts)
                 {
                     loaded.Cookie.Dispose();
+                    loaded.Proxy?.Dispose();
                 }
             }
             _semaphore.Release();
+        }
+    }
+
+    public static byte[] DeriveKey(SecretValue password, byte[] salt)
+    {
+        ArgumentNullException.ThrowIfNull(password);
+        ArgumentNullException.ThrowIfNull(salt);
+
+        string revealed = password.Reveal();
+        byte[] passwordBytes = Encoding.UTF8.GetBytes(revealed);
+        try
+        {
+            using Argon2id argon2 = new(passwordBytes)
+            {
+                Salt = salt,
+                DegreeOfParallelism = Argon2Parallelism,
+                MemorySize = Argon2MemorySizeKb,
+                Iterations = Argon2Iterations
+            };
+            return argon2.GetBytes(DerivedKeyLength);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(passwordBytes);
         }
     }
 
@@ -210,52 +260,20 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             throw new VaultCorruptedException("Vault header magic mismatch.");
         }
 
-        if (fileBytes[4] != VersionByte)
+        byte version = fileBytes[4];
+        if (version != Version1Byte && version != Version2Byte)
         {
-            throw new VaultCorruptedException($"Unsupported vault version '{fileBytes[4]}'.");
+            throw new VaultCorruptedException($"Unsupported vault version '{version}'.");
         }
 
-        ushort wrappedKeyLength = BinaryPrimitives.ReadUInt16LittleEndian(fileBytes.AsSpan(5, 2));
-        if (7 + wrappedKeyLength + 12 + 16 > fileBytes.Length)
+        byte[] plaintextBytes;
+        if (version == Version1Byte)
         {
-            throw new VaultCorruptedException("Vault file is truncated or corrupted.");
+            plaintextBytes = LoadVersion1(fileBytes);
         }
-
-        int offset = 7;
-        byte[] wrappedKey = fileBytes.AsSpan(offset, wrappedKeyLength).ToArray();
-        offset += wrappedKeyLength;
-
-        ReadOnlySpan<byte> nonce = fileBytes.AsSpan(offset, 12);
-        offset += 12;
-
-        ReadOnlySpan<byte> tag = fileBytes.AsSpan(offset, 16);
-        offset += 16;
-
-        ReadOnlySpan<byte> ciphertext = fileBytes.AsSpan(offset);
-
-        byte[] dataKey;
-        try
+        else
         {
-            dataKey = ProtectedData.Unprotect(wrappedKey, null, DataProtectionScope.CurrentUser);
-        }
-        catch (CryptographicException ex)
-        {
-            throw new VaultCorruptedException("Failed to unwrap encryption key via DPAPI.", ex);
-        }
-
-        byte[] plaintextBytes = new byte[ciphertext.Length];
-        try
-        {
-            using AesGcm aesGcm = new(dataKey, 16);
-            aesGcm.Decrypt(nonce, ciphertext, tag, plaintextBytes, AadBytes);
-        }
-        catch (CryptographicException ex)
-        {
-            throw new VaultCorruptedException("Vault authentication tag verification failed. Data is corrupted or tampered.", ex);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(dataKey);
+            plaintextBytes = LoadVersion2(fileBytes);
         }
 
         List<AccountDto>? dtos;
@@ -281,6 +299,21 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     ? (AccountStatus)dto.Status
                     : AccountStatus.Unknown;
 
+                ProxyConfig? proxy = null;
+                if (dto.Proxy != null)
+                {
+                    ProxyType proxyType = Enum.IsDefined(typeof(ProxyType), dto.Proxy.Type)
+                        ? (ProxyType)dto.Proxy.Type
+                        : ProxyType.Http;
+
+                    proxy = new ProxyConfig(
+                        Host: dto.Proxy.Host,
+                        Port: dto.Proxy.Port,
+                        Username: dto.Proxy.Username,
+                        Password: dto.Proxy.Password != null ? SecretValue.FromString(dto.Proxy.Password) : null,
+                        Type: proxyType);
+                }
+
                 accounts.Add(new Account(
                     Id: new AccountId(dto.Id),
                     Alias: dto.Alias,
@@ -291,11 +324,195 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     Username: dto.Username,
                     UserId: dto.UserId,
                     Status: status,
-                    LastCheckedAt: dto.LastCheckedAt));
+                    LastCheckedAt: dto.LastCheckedAt,
+                    Proxy: proxy));
             }
         }
 
         return accounts;
+    }
+
+    private static byte[] LoadVersion1(byte[] fileBytes)
+    {
+        ushort wrappedKeyLength = BinaryPrimitives.ReadUInt16LittleEndian(fileBytes.AsSpan(5, 2));
+        if (7 + wrappedKeyLength + 12 + 16 > fileBytes.Length)
+        {
+            throw new VaultCorruptedException("Vault file is truncated or corrupted.");
+        }
+
+        int offset = 7;
+        byte[] wrappedKey = fileBytes.AsSpan(offset, wrappedKeyLength).ToArray();
+        offset += wrappedKeyLength;
+
+        ReadOnlySpan<byte> nonce = fileBytes.AsSpan(offset, 12);
+        offset += 12;
+
+        ReadOnlySpan<byte> tag = fileBytes.AsSpan(offset, 16);
+        offset += 16;
+
+        ReadOnlySpan<byte> ciphertext = fileBytes.AsSpan(offset);
+        byte[] aad = [0x52, 0x42, 0x58, 0x56, 0x01];
+
+        byte[] dataKey;
+        try
+        {
+            dataKey = ProtectedData.Unprotect(wrappedKey, null, DataProtectionScope.CurrentUser);
+        }
+        catch (CryptographicException ex)
+        {
+            throw new VaultCorruptedException("Failed to unwrap encryption key via DPAPI.", ex);
+        }
+
+        byte[] plaintextBytes = new byte[ciphertext.Length];
+        try
+        {
+            using AesGcm aesGcm = new(dataKey, 16);
+            aesGcm.Decrypt(nonce, ciphertext, tag, plaintextBytes, aad);
+            return plaintextBytes;
+        }
+        catch (CryptographicException ex)
+        {
+            throw new VaultCorruptedException("Vault authentication tag verification failed. Data is corrupted or tampered.", ex);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(dataKey);
+        }
+    }
+
+    private byte[] LoadVersion2(byte[] fileBytes)
+    {
+        if (fileBytes.Length < 8)
+        {
+            throw new VaultCorruptedException("Vault file is too short to contain a valid header.");
+        }
+
+        byte kdfType = fileBytes[5];
+        if (kdfType == KdfTypeDpapi)
+        {
+            ushort wrappedKeyLength = BinaryPrimitives.ReadUInt16LittleEndian(fileBytes.AsSpan(6, 2));
+            if (8 + wrappedKeyLength + 12 + 16 > fileBytes.Length)
+            {
+                throw new VaultCorruptedException("Vault file is truncated or corrupted.");
+            }
+
+            int offset = 8;
+            byte[] wrappedKey = fileBytes.AsSpan(offset, wrappedKeyLength).ToArray();
+            offset += wrappedKeyLength;
+
+            ReadOnlySpan<byte> nonce = fileBytes.AsSpan(offset, 12);
+            offset += 12;
+
+            ReadOnlySpan<byte> tag = fileBytes.AsSpan(offset, 16);
+            offset += 16;
+
+            ReadOnlySpan<byte> ciphertext = fileBytes.AsSpan(offset);
+            byte[] aad = [0x52, 0x42, 0x58, 0x56, 0x02, 0x00];
+
+            byte[] dataKey;
+            try
+            {
+                dataKey = ProtectedData.Unprotect(wrappedKey, null, DataProtectionScope.CurrentUser);
+            }
+            catch (CryptographicException ex)
+            {
+                throw new VaultCorruptedException("Failed to unwrap encryption key via DPAPI.", ex);
+            }
+
+            byte[] plaintextBytes = new byte[ciphertext.Length];
+            try
+            {
+                using AesGcm aesGcm = new(dataKey, 16);
+                aesGcm.Decrypt(nonce, ciphertext, tag, plaintextBytes, aad);
+                return plaintextBytes;
+            }
+            catch (CryptographicException ex)
+            {
+                throw new VaultCorruptedException("Vault authentication tag verification failed. Data is corrupted or tampered.", ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(dataKey);
+            }
+        }
+        else if (kdfType == KdfTypeArgon2idDpapi)
+        {
+            if (fileBytes.Length < 24)
+            {
+                throw new VaultCorruptedException("Vault file is too short to contain a valid header.");
+            }
+
+            byte[] argonSalt = fileBytes.AsSpan(6, Argon2SaltLength).ToArray();
+            ushort wrappedKeyLength = BinaryPrimitives.ReadUInt16LittleEndian(fileBytes.AsSpan(22, 2));
+            if (24 + wrappedKeyLength + 12 + 16 > fileBytes.Length)
+            {
+                throw new VaultCorruptedException("Vault file is truncated or corrupted.");
+            }
+
+            int offset = 24;
+            byte[] wrappedKey = fileBytes.AsSpan(offset, wrappedKeyLength).ToArray();
+            offset += wrappedKeyLength;
+
+            ReadOnlySpan<byte> nonce = fileBytes.AsSpan(offset, 12);
+            offset += 12;
+
+            ReadOnlySpan<byte> tag = fileBytes.AsSpan(offset, 16);
+            offset += 16;
+
+            ReadOnlySpan<byte> ciphertext = fileBytes.AsSpan(offset);
+            byte[] aad = fileBytes.AsSpan(0, 22).ToArray();
+
+            if (_keyProvider == null || !_keyProvider.HasKey)
+            {
+                throw new VaultCorruptedException("Master password is required to unlock this vault.");
+            }
+
+            SecretValue? masterPassword = _keyProvider.GetKey();
+            if (masterPassword == null || !masterPassword.HasContent)
+            {
+                throw new VaultCorruptedException("Master password is required to unlock this vault.");
+            }
+
+            byte[] argonKey = DeriveKey(masterPassword, argonSalt);
+            byte[] dpapiUnwrapped;
+            try
+            {
+                dpapiUnwrapped = ProtectedData.Unprotect(wrappedKey, null, DataProtectionScope.CurrentUser);
+            }
+            catch (CryptographicException ex)
+            {
+                CryptographicOperations.ZeroMemory(argonKey);
+                throw new VaultCorruptedException("Failed to unwrap encryption key via DPAPI.", ex);
+            }
+
+            if (!CryptographicOperations.FixedTimeEquals(dpapiUnwrapped, argonKey))
+            {
+                CryptographicOperations.ZeroMemory(dpapiUnwrapped);
+                CryptographicOperations.ZeroMemory(argonKey);
+                throw new VaultCorruptedException("Invalid master password.");
+            }
+
+            byte[] plaintextBytes = new byte[ciphertext.Length];
+            try
+            {
+                using AesGcm aesGcm = new(argonKey, 16);
+                aesGcm.Decrypt(nonce, ciphertext, tag, plaintextBytes, aad);
+                return plaintextBytes;
+            }
+            catch (CryptographicException ex)
+            {
+                throw new VaultCorruptedException("Vault authentication tag verification failed. Data is corrupted or tampered.", ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(dpapiUnwrapped);
+                CryptographicOperations.ZeroMemory(argonKey);
+            }
+        }
+        else
+        {
+            throw new VaultCorruptedException($"Unsupported vault KDF type '{kdfType}'.");
+        }
     }
 
     private async Task SaveInternalAsync(List<Account> accounts, CancellationToken ct = default)
@@ -303,6 +520,19 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         List<AccountDto> dtos = new(accounts.Count);
         foreach (Account account in accounts)
         {
+            ProxyDto? proxyDto = null;
+            if (account.Proxy != null)
+            {
+                proxyDto = new ProxyDto
+                {
+                    Host = account.Proxy.Host,
+                    Port = account.Proxy.Port,
+                    Username = account.Proxy.Username,
+                    Password = account.Proxy.Password?.Reveal(),
+                    Type = (int)account.Proxy.Type
+                };
+            }
+
             dtos.Add(new AccountDto
             {
                 Id = account.Id.Value,
@@ -314,13 +544,38 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 Username = account.Username,
                 UserId = account.UserId,
                 Status = (int)account.Status,
-                LastCheckedAt = account.LastCheckedAt
+                LastCheckedAt = account.LastCheckedAt,
+                Proxy = proxyDto
             });
         }
 
         byte[] plaintextBytes = JsonSerializer.SerializeToUtf8Bytes(dtos);
 
-        byte[] dataKey = RandomNumberGenerator.GetBytes(32);
+        bool useArgon2 = _keyProvider != null && _keyProvider.HasKey;
+        byte kdfType = useArgon2 ? KdfTypeArgon2idDpapi : KdfTypeDpapi;
+
+        byte[] dataKey;
+        byte[]? argonSalt = null;
+        byte[] aad;
+
+        if (useArgon2)
+        {
+            argonSalt = RandomNumberGenerator.GetBytes(Argon2SaltLength);
+            SecretValue secret = _keyProvider!.GetKey()!;
+            dataKey = DeriveKey(secret, argonSalt);
+
+            aad = new byte[22];
+            MagicBytes.CopyTo(aad.AsSpan(0, 4));
+            aad[4] = Version2Byte;
+            aad[5] = kdfType;
+            argonSalt.CopyTo(aad.AsSpan(6, Argon2SaltLength));
+        }
+        else
+        {
+            dataKey = RandomNumberGenerator.GetBytes(32);
+            aad = [MagicBytes[0], MagicBytes[1], MagicBytes[2], MagicBytes[3], Version2Byte, kdfType];
+        }
+
         byte[] nonce = RandomNumberGenerator.GetBytes(12);
         byte[] tag = new byte[16];
         byte[] ciphertext = new byte[plaintextBytes.Length];
@@ -328,7 +583,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         try
         {
             using AesGcm aesGcm = new(dataKey, 16);
-            aesGcm.Encrypt(nonce, plaintextBytes, ciphertext, tag, AadBytes);
+            aesGcm.Encrypt(nonce, plaintextBytes, ciphertext, tag, aad);
         }
         finally
         {
@@ -344,15 +599,27 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
 
         ushort wrappedKeyLength = (ushort)wrappedKey.Length;
-        int totalLength = 4 + 1 + 2 + wrappedKey.Length + 12 + 16 + ciphertext.Length;
+        int headerPrefixLength = useArgon2 ? 24 : 8; // (4B magic + 1B ver + 1B kdf + [16B salt] + 2B keyLen)
+        int totalLength = headerPrefixLength + wrappedKey.Length + 12 + 16 + ciphertext.Length;
         byte[] outputBuffer = new byte[totalLength];
 
         MagicBytes.CopyTo(outputBuffer.AsSpan(0, 4));
-        outputBuffer[4] = VersionByte;
-        BinaryPrimitives.WriteUInt16LittleEndian(outputBuffer.AsSpan(5, 2), wrappedKeyLength);
-        wrappedKey.CopyTo(outputBuffer.AsSpan(7, wrappedKey.Length));
+        outputBuffer[4] = Version2Byte;
+        outputBuffer[5] = kdfType;
 
-        int currentOffset = 7 + wrappedKey.Length;
+        int currentOffset = 6;
+        if (useArgon2 && argonSalt != null)
+        {
+            argonSalt.CopyTo(outputBuffer.AsSpan(currentOffset, Argon2SaltLength));
+            currentOffset += Argon2SaltLength;
+        }
+
+        BinaryPrimitives.WriteUInt16LittleEndian(outputBuffer.AsSpan(currentOffset, 2), wrappedKeyLength);
+        currentOffset += 2;
+
+        wrappedKey.CopyTo(outputBuffer.AsSpan(currentOffset, wrappedKey.Length));
+        currentOffset += wrappedKey.Length;
+
         nonce.CopyTo(outputBuffer.AsSpan(currentOffset, 12));
         currentOffset += 12;
 

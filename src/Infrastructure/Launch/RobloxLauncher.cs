@@ -98,7 +98,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
 
                 LogRequestingTicketForLaunch(account.Id.Value);
 
-                Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, ct).ConfigureAwait(false);
+                Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, account.Proxy, ct).ConfigureAwait(false);
                 if (!ticketResult.IsSuccess)
                 {
                     LogLaunchFailed(ticketResult.ErrorCode ?? "TicketFailed");

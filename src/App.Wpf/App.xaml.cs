@@ -183,6 +183,20 @@ public partial class App : Application
         Core.Settings.AppSettings settings = await settingsService.LoadSettingsAsync();
         ApplyTheme(settings.Theme);
 
+        if (settings.IsMasterPasswordEnabled)
+        {
+            Core.Storage.IVaultKeyProvider keyProvider = _host.Services.GetRequiredService<Core.Storage.IVaultKeyProvider>();
+            Core.Storage.IAccountStore accountStore = _host.Services.GetRequiredService<Core.Storage.IAccountStore>();
+
+            Views.Windows.MasterPasswordWindow masterPasswordWindow = new(keyProvider, accountStore);
+            bool? unlocked = masterPasswordWindow.ShowDialog();
+            if (unlocked != true)
+            {
+                Shutdown();
+                return;
+            }
+        }
+
         MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }

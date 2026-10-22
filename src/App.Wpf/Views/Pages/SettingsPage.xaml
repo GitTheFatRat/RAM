@@ -160,7 +160,67 @@
                 </StackPanel>
             </Border>
 
-            <!-- Card 5: Backup & Restore -->
+            <!-- Card: Security -->
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
+                <StackPanel>
+                    <TextBlock Text="{x:Static resources:Strings.SecuritySectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.SecuritySectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginMedium}" />
+
+                    <CheckBox Content="{x:Static resources:Strings.EnableMasterPassword}"
+                              IsChecked="{Binding IsMasterPasswordEnabled, Mode=OneWay}"
+                              Command="{Binding MasterPasswordToggledCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                              Margin="{StaticResource MarginTight}" />
+
+                    <TextBlock Text="{x:Static resources:Strings.EnableMasterPasswordDescription}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginTight}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <!-- Card: Performance & Optimization -->
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
+                <StackPanel>
+                    <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginMedium}" />
+
+                    <CheckBox Content="{x:Static resources:Strings.ThrottleBackgroundRoblox}"
+                              IsChecked="{Binding ThrottleBackgroundRoblox, Mode=OneWay}"
+                              Command="{Binding ThrottleBackgroundRobloxToggledCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                              Margin="{StaticResource MarginTight}" />
+
+                    <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRobloxDescription}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginTight}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <!-- Card: Backup & Restore -->
             <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="{StaticResource RadiusMedium}"

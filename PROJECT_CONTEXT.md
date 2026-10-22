@@ -15,6 +15,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M7**: Diagnostics page, redacted report generator, customizable launch templates, code health pass. (Completed)
 - **M8**: UI/UX polish, design tokens, virtualized high-density DataGrid, relative time formatting, UiState persistence, localization diacritics audit. (Completed)
 - **M9**: Code-review closure: tracked backup sources/tests, clean clone verification, detailed auth diagnostics, redaction hardening, HTTP redirect safety, cookie memory hygiene, login cleanup, i18n decoupling. (Completed)
+- **M10**: Master password defense-in-depth (Argon2id Format v2), per-account HTTP/SOCKS5 proxy, background Roblox process resource optimization. (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).
@@ -45,3 +46,5 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 1. **KISS & YAGNI**: No speculative abstractions, dead code, or placeholder/TODO comments.
 2. **Strict Nullable**: Nullable reference types enabled with warnings treated as errors.
 3. **Clean Code**: Descriptive naming, file-scoped namespaces, and 4-space indentation.
+
+When unsure about a .NET, WPF, WebView2 or cryptography API, query the Microsoft Learn MCP before writing code. For third-party libraries (WPF-UI, CommunityToolkit.Mvvm, Polly, Serilog) use Context7. If an MCP is unavailable, continue without it and never guess silently.

@@ -547,4 +547,97 @@
   <data name="Retry" xml:space="preserve">
     <value>Thử lại</value>
   </data>
+  <data name="SecuritySectionTitle" xml:space="preserve">
+    <value>Bảo mật</value>
+  </data>
+  <data name="SecuritySectionSubtitle" xml:space="preserve">
+    <value>Mã hóa kho lưu trữ và mật khẩu chính</value>
+  </data>
+  <data name="ResourceOptimizationSectionTitle" xml:space="preserve">
+    <value>Hiệu năng &amp; Tối ưu</value>
+  </data>
+  <data name="ResourceOptimizationSectionSubtitle" xml:space="preserve">
+    <value>Tiết kiệm tài nguyên cho các tiến trình chạy nền</value>
+  </data>
+  <data name="MasterPasswordTitle" xml:space="preserve">
+    <value>Mật khẩu chính</value>
+  </data>
+  <data name="MasterPasswordPrompt" xml:space="preserve">
+    <value>Nhập mật khẩu chính để mở khóa ứng dụng.</value>
+  </data>
+  <data name="MasterPasswordUnlockButton" xml:space="preserve">
+    <value>Mở khóa</value>
+  </data>
+  <data name="MasterPasswordExitButton" xml:space="preserve">
+    <value>Thoát</value>
+  </data>
+  <data name="MasterPasswordInvalid" xml:space="preserve">
+    <value>Mật khẩu chính không chính xác.</value>
+  </data>
+  <data name="MasterPasswordRequired" xml:space="preserve">
+    <value>Vui lòng nhập mật khẩu chính.</value>
+  </data>
+  <data name="EnableMasterPassword" xml:space="preserve">
+    <value>Bật mật khẩu chính</value>
+  </data>
+  <data name="EnableMasterPasswordDescription" xml:space="preserve">
+    <value>Bảo vệ kho lưu trữ bằng mã hóa Argon2id kết hợp Windows DPAPI.</value>
+  </data>
+  <data name="SetupMasterPasswordTitle" xml:space="preserve">
+    <value>Thiết lập mật khẩu chính</value>
+  </data>
+  <data name="SetupMasterPasswordPrompt" xml:space="preserve">
+    <value>Nhập mật khẩu chính (tối thiểu 12 ký tự):</value>
+  </data>
+  <data name="MasterPasswordConfirmPrompt" xml:space="preserve">
+    <value>Xác nhận mật khẩu chính:</value>
+  </data>
+  <data name="MasterPasswordMismatch" xml:space="preserve">
+    <value>Mật khẩu xác nhận không khớp.</value>
+  </data>
+  <data name="MasterPasswordTooShort" xml:space="preserve">
+    <value>Mật khẩu chính phải có ít nhất 12 ký tự.</value>
+  </data>
+  <data name="MasterPasswordEnabledSuccess" xml:space="preserve">
+    <value>Đã bật mật khẩu chính thành công.</value>
+  </data>
+  <data name="MasterPasswordDisabledSuccess" xml:space="preserve">
+    <value>Đã tắt mật khẩu chính thành công.</value>
+  </data>
+  <data name="DisableMasterPasswordTitle" xml:space="preserve">
+    <value>Tắt mật khẩu chính</value>
+  </data>
+  <data name="DisableMasterPasswordMessage" xml:space="preserve">
+    <value>Bạn có chắc chắn muốn tắt mật khẩu chính? Kho lưu trữ sẽ chỉ được bảo vệ bởi Windows DPAPI.</value>
+  </data>
+  <data name="ThrottleBackgroundRoblox" xml:space="preserve">
+    <value>Tối ưu tài nguyên Roblox chạy nền</value>
+  </data>
+  <data name="ThrottleBackgroundRobloxDescription" xml:space="preserve">
+    <value>Thu nhỏ các cửa sổ Roblox chạy nền để giảm tối đa mức sử dụng CPU và GPU.</value>
+  </data>
+  <data name="TabGeneral" xml:space="preserve">
+    <value>Chung</value>
+  </data>
+  <data name="TabProxy" xml:space="preserve">
+    <value>Cấu hình Proxy</value>
+  </data>
+  <data name="ProxyType" xml:space="preserve">
+    <value>Loại Proxy</value>
+  </data>
+  <data name="ProxyHost" xml:space="preserve">
+    <value>Máy chủ</value>
+  </data>
+  <data name="ProxyPort" xml:space="preserve">
+    <value>Cổng</value>
+  </data>
+  <data name="ProxyUsername" xml:space="preserve">
+    <value>Tên đăng nhập</value>
+  </data>
+  <data name="ProxyPassword" xml:space="preserve">
+    <value>Mật khẩu</value>
+  </data>
+  <data name="ProxyPasswordHint" xml:space="preserve">
+    <value>Để trống để giữ nguyên mật khẩu cũ</value>
+  </data>
 </root>

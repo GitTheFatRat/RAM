@@ -24,6 +24,8 @@ public sealed class LogLeakTests
     private const string FakeCookie = "_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_FAKE0123456789ABCDEFSECRETTAIL";
     private const string FakeTicket = "FAKE_TICKET_FOR_TESTS_456";
     private const string FakePassword = "FAKE_PASSWORD_FOR_TESTS_1234!";
+    private const string FakeMasterPassword = "FAKE_MASTER_PASSWORD_987654!";
+    private const string FakeProxyPassword = "FAKE_PROXY_PASSWORD_SECRET_321!";
 
     private sealed class InMemoryLogSink
     {
@@ -125,11 +127,19 @@ public sealed class LogLeakTests
         using TempDirectory tempDir = new();
         string vaultPath = tempDir.CreateFilePath();
 
-        // 1. Vault operations (Add, Update, Remove)
-        using (EncryptedFileVault vault = new(vaultPath, vaultLogger))
+        // 1. Vault operations (Add, Update, Remove) with Master Password and Proxy
+        using VaultKeyProvider keyProvider = new();
+        using (SecretValue masterPw = SecretValue.FromString(FakeMasterPassword))
+        {
+            keyProvider.SetKey(masterPw.Clone());
+        }
+
+        using (EncryptedFileVault vault = new(vaultPath, keyProvider: keyProvider, logger: vaultLogger))
         {
             using SecretValue cookie = SecretValue.FromString(FakeCookie);
-            Account account = new(new AccountId(1), "SecurityAccount", null, null, cookie, DateTimeOffset.UtcNow);
+            using SecretValue proxyPw = SecretValue.FromString(FakeProxyPassword);
+            using ProxyConfig proxy = new("127.0.0.1", 8080, "puser", proxyPw, ProxyType.Http);
+            Account account = new(new AccountId(1), "SecurityAccount", null, null, cookie, DateTimeOffset.UtcNow, Proxy: proxy);
 
             Result addResult = await vault.AddAsync(account);
             Assert.True(addResult.IsSuccess);
@@ -184,7 +194,7 @@ public sealed class LogLeakTests
             resp.Headers.Add("rbx-authentication-ticket", FakeTicket);
             return resp;
         })))
-        using (EncryptedFileVault vault = new(vaultPath))
+        using (EncryptedFileVault vault = new(vaultPath, keyProvider))
         {
             RobloxAuthService authService = new(launchHttp, authLogger);
             using RobloxLauncher launcher = new(vault, authService, processStarter, new FakeProcessProvider(), new RbxManager.Core.Instance.DefaultInstanceGate(), launcherLogger);
@@ -214,7 +224,7 @@ public sealed class LogLeakTests
         ILogger<RbxManager.Infrastructure.Sessions.SessionTracker> trackerLogger =
             factory.CreateLogger<RbxManager.Infrastructure.Sessions.SessionTracker>();
         using (HttpClient failHttp = new(new SimpleMockHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized))))
-        using (EncryptedFileVault trackerVault = new(vaultPath))
+        using (EncryptedFileVault trackerVault = new(vaultPath, keyProvider))
         {
             RobloxAuthService authService = new(failHttp, authLogger);
             using RobloxLauncher launcher = new(trackerVault, authService, processStarter, new FakeProcessProvider(), new RbxManager.Core.Instance.DefaultInstanceGate(), launcherLogger);
@@ -237,7 +247,7 @@ public sealed class LogLeakTests
         ILogger<RbxManager.Infrastructure.Backup.EncryptedBackupService> backupLogger =
             factory.CreateLogger<RbxManager.Infrastructure.Backup.EncryptedBackupService>();
         string backupFile = tempDir.CreateFilePath("backup.rbxbackup");
-        using (EncryptedFileVault backupVault = new(vaultPath))
+        using (EncryptedFileVault backupVault = new(vaultPath, keyProvider))
         {
             RbxManager.Infrastructure.Backup.EncryptedBackupService backupService = new(backupVault, backupLogger);
             await backupService.ExportAsync(backupFile, FakePassword);
@@ -259,6 +269,8 @@ public sealed class LogLeakTests
             Assert.DoesNotContain("FAKE0123456789ABCDEFSECRETTAIL", logMessage, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(FakeTicket, logMessage, StringComparison.Ordinal);
             Assert.DoesNotContain(FakePassword, logMessage, StringComparison.Ordinal);
+            Assert.DoesNotContain(FakeMasterPassword, logMessage, StringComparison.Ordinal);
+            Assert.DoesNotContain(FakeProxyPassword, logMessage, StringComparison.Ordinal);
         }
     }
 }

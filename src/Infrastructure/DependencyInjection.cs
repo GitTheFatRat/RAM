@@ -40,12 +40,18 @@ public static class InfrastructureServiceExtensions
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
         services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddSingleton<IAccountStore, EncryptedFileVault>();
+        services.AddSingleton<IVaultKeyProvider, VaultKeyProvider>();
+        services.AddSingleton<IAccountStore>(sp => new EncryptedFileVault(
+            null,
+            sp.GetRequiredService<IVaultKeyProvider>(),
+            sp.GetService<ILogger<EncryptedFileVault>>()));
         services.AddSingleton<IProcessStarter, WindowsProcessStarter>();
         services.AddSingleton<IProcessProvider, SystemProcessProvider>();
+        services.AddSingleton<IWindowController, WindowController>();
         services.AddSingleton<IInstanceGate, NamedMutexInstanceGate>();
         services.AddSingleton<ILauncher, RobloxLauncher>();
         services.AddTransient<IBackupService, EncryptedBackupService>();
+        services.AddSingleton<IRobloxHttpClientFactory, RobloxHttpClientFactory>();
 
         services.AddTransient<RobloxHostGuardHandler>();
         services.AddTransient<RobloxCsrfHandler>();
@@ -63,10 +69,9 @@ public static class InfrastructureServiceExtensions
 
         services.AddTransient<IRobloxAuthService>(sp =>
         {
-            IHttpClientFactory factory = sp.GetRequiredService<IHttpClientFactory>();
-            HttpClient httpClient = factory.CreateClient(RobloxHttpClientName);
+            IRobloxHttpClientFactory factory = sp.GetRequiredService<IRobloxHttpClientFactory>();
             ILogger<RobloxAuthService>? logger = sp.GetService<ILogger<RobloxAuthService>>();
-            return new RobloxAuthService(httpClient, logger);
+            return new RobloxAuthService(factory, logger);
         });
 
         services.AddTransient<IServerBrowserService>(sp =>
@@ -92,6 +97,7 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<SessionTracker>();
         services.AddSingleton<ISessionTracker>(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService(sp => sp.GetRequiredService<SessionTracker>());
+        services.AddHostedService<BackgroundWindowThrottler>();
 
         return services;
     }

@@ -16,7 +16,8 @@ public sealed class LocalizationAuditTests
         "Ping",
         "PID",
         "WebView2",
-        "JSON"
+        "JSON",
+        "Proxy"
     };
 
     private static string FindRepoRoot()

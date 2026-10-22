@@ -177,7 +177,7 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
             sb.AppendLine(CultureInfo.InvariantCulture, $"[Account Check: {targetAccount.Alias}]");
 
             // Cookie validation
-            Result<RobloxUser> cookieResult = await _authService.ValidateCookieAsync(targetAccount.Cookie, ct).ConfigureAwait(false);
+            Result<RobloxUser> cookieResult = await _authService.ValidateCookieAsync(targetAccount.Cookie, targetAccount.Proxy, ct).ConfigureAwait(false);
             if (cookieResult.IsSuccess)
             {
                 sb.AppendLine(CultureInfo.InvariantCulture, $"CookieValidation: Success (UserId={cookieResult.Value!.Id}, Username={cookieResult.Value.Name})");
@@ -192,7 +192,7 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
             }
 
             // Auth Ticket & CSRF
-            Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(targetAccount.Cookie, ct).ConfigureAwait(false);
+            Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(targetAccount.Cookie, targetAccount.Proxy, ct).ConfigureAwait(false);
             bool ticketObtained = ticketResult.IsSuccess;
             if (ticketResult.IsSuccess && ticketResult.Value != null)
             {

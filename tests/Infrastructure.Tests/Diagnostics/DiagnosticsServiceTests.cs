@@ -71,7 +71,7 @@ public sealed class DiagnosticsServiceTests
 
     private sealed class FakeAuthService : IRobloxAuthService
     {
-        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default)
+        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
         {
             AuthFailureDetails details = new(
                 Stage: "Validate",
@@ -88,7 +88,7 @@ public sealed class DiagnosticsServiceTests
                 details));
         }
 
-        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
+        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
         {
             AuthFailureDetails details = new(
                 Stage: "Ticket",

@@ -21,6 +21,7 @@
     <PackageReference Include="Polly" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
   </ItemGroup>
 
 </Project>

@@ -21,25 +21,56 @@ using RbxManager.Infrastructure.Http;
 
 public sealed partial class RobloxAuthService : IRobloxAuthService
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient? _defaultHttpClient;
+    private readonly IRobloxHttpClientFactory? _clientFactory;
     private readonly ILogger<RobloxAuthService> _logger;
 
-    public RobloxAuthService(HttpClient httpClient, ILogger<RobloxAuthService>? logger = null)
+    public RobloxAuthService(IRobloxHttpClientFactory clientFactory, ILogger<RobloxAuthService>? logger = null)
     {
-        _httpClient = httpClient;
+        _clientFactory = clientFactory;
         _logger = logger ?? NullLogger<RobloxAuthService>.Instance;
     }
 
-    public async Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default)
+    public RobloxAuthService(HttpClient httpClient, ILogger<RobloxAuthService>? logger = null)
+    {
+        _defaultHttpClient = httpClient;
+        _logger = logger ?? NullLogger<RobloxAuthService>.Instance;
+    }
+
+    private HttpClient ResolveClient(ProxyConfig? proxy, out bool shouldDispose)
+    {
+        if (proxy != null && _clientFactory != null)
+        {
+            shouldDispose = true;
+            return _clientFactory.CreateClient(proxy);
+        }
+
+        if (_defaultHttpClient != null)
+        {
+            shouldDispose = false;
+            return _defaultHttpClient;
+        }
+
+        if (_clientFactory != null)
+        {
+            shouldDispose = true;
+            return _clientFactory.CreateClient(null);
+        }
+
+        throw new InvalidOperationException("No HttpClient or IRobloxHttpClientFactory configured.");
+    }
+
+    public async Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
     {
         LogValidatingCookie();
 
+        HttpClient client = ResolveClient(proxy, out bool shouldDispose);
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Get, "https://users.roblox.com/v1/users/authenticated");
             request.Headers.Add("Cookie", $".ROBLOSECURITY={cookie.Reveal()}");
 
-            using HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -146,12 +177,20 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
             LogValidateError(ex.GetType().Name);
             return Result.Failure<RobloxUser>("Error validating account cookie.", AuthErrorCodes.Unexpected, details);
         }
+        finally
+        {
+            if (shouldDispose)
+            {
+                client.Dispose();
+            }
+        }
     }
 
-    public async Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
+    public async Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
     {
         LogRequestingTicket();
 
+        HttpClient client = ResolveClient(proxy, out bool shouldDispose);
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Post, "https://auth.roblox.com/v1/authentication-ticket");
@@ -159,7 +198,7 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
             request.Headers.Add("Referer", "https://www.roblox.com/");
             request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
 
-            using HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -267,6 +306,13 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
 
             LogTicketError(ex.GetType().Name);
             return Result.Failure<SecretValue>("Error requesting authentication ticket.", AuthErrorCodes.Unexpected, details);
+        }
+        finally
+        {
+            if (shouldDispose)
+            {
+                client.Dispose();
+            }
         }
     }
 
