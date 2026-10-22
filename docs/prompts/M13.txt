@@ -1,0 +1,42 @@
+# M13: Ghost Disconnect Detector (Log Watcher)
+
+Follow docs/prompts/RUNBOOK.md (rules, gates, token budget, security, autonomy). First add M13 to docs/STATE.md as pending. Batch file writes; do not narrate.
+
+## SCOPE
+In: Detecting "ghost disconnects" (in-game network freezes, Error 277/268, timeouts) where the Roblox process does not exit, by tailing Roblox log files.
+Out: Reading process memory (strictly forbidden).
+
+## CORE
+1. `AppSettings` gains: `bool EnableGhostDisconnectDetection` (default: true).
+2. Keywords to trigger a kill: `Connection lost`, `DisconnectReason`, `Error 277`, `Error 268`.
+
+## INFRASTRUCTURE
+3. `RobloxLogWatcher` (New component):
+   - Needs to map a running Roblox PID to its log file in `%LOCALAPPDATA%\Roblox\logs`. (Hint: Roblox log files usually print the PID in the first few lines, or can be mapped by checking file creation time vs process start time).
+   - Use a non-blocking `FileStream` (with `FileShare.ReadWrite`) to tail the log file of active sessions.
+   - If a monitored log writes a line containing any of the kill keywords, it emits an event or directly signals the tracker.
+4. `SessionTracker` updates:
+   - When a new session is bound to a PID, start monitoring its log via `RobloxLogWatcher`.
+   - If the log watcher detects a ghost disconnect keyword AND `AppSettings.EnableGhostDisconnectDetection` is true, immediately call `IProcessProvider.Kill(pid)`.
+   - Once killed, the standard `SessionEnded` flow will naturally take over and trigger the Auto-Rejoin / Smart Server Hopping logic.
+   - Ensure the log reader stops and disposes of the file lock when the session ends.
+
+## APP.WPF
+5. `SettingsPage` & `SettingsViewModel`:
+   - Add a ToggleSwitch for "Enable Ghost Disconnect Detection (Read Logs)".
+   - Update localization in `Strings.resx` and `Strings.vi.resx`.
+
+## TESTS
+- `RobloxLogWatcherTests`: 
+  - Create a fake log file in a temp directory.
+  - Start watching it. Append normal lines (nothing happens).
+  - Append a line with "Connection lost". Assert that the kill signal/event is raised.
+- `SessionTrackerTests`: 
+  - Verify that when the log watcher raises a disconnect event, `IProcessProvider.Kill` is called.
+
+## DOCS
+Update `ARCHITECTURE.md` to document the `RobloxLogWatcher` and how it adheres to the security policy by only reading log files on disk, not memory.
+
+## FINISH
+RUNBOOK gates pass. Generate report `docs/reports/M13.md`.
+Commit "feat: M13 ghost disconnect detection via log tailing".

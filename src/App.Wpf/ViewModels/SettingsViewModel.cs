@@ -75,6 +75,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         string.Format(CultureInfo.CurrentCulture, CompositeFormat.Parse(Strings.RamCleanerIntervalFormat), RamCleanerIntervalMinutes);
 
     [ObservableProperty]
+    private bool _enableSmartServerHopping = true;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -114,6 +117,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         ThrottleBackgroundRoblox = settings.ThrottleBackgroundRoblox;
         EnableRamCleaner = settings.EnableRamCleaner;
         RamCleanerIntervalMinutes = settings.RamCleanerIntervalMinutes;
+        EnableSmartServerHopping = settings.EnableSmartServerHopping;
 
         string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
         LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -154,6 +158,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 ThrottleBackgroundRoblox: ThrottleBackgroundRoblox,
                 EnableRamCleaner: EnableRamCleaner,
                 RamCleanerIntervalMinutes: RamCleanerIntervalMinutes,
+                EnableSmartServerHopping: EnableSmartServerHopping,
                 Advanced: current.Advanced);
 
             await _settingsService.SaveSettingsAsync(updated);
@@ -248,6 +253,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableRamCleaner = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { EnableRamCleaner = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableSmartServerHoppingToggledAsync(bool enabled)
+    {
+        EnableSmartServerHopping = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { EnableSmartServerHopping = enabled });
     }
 
     [RelayCommand]

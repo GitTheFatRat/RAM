@@ -12,4 +12,6 @@
 - M8: done (8f023e5) - ui polish and localization audit
 - M9: done (a51faad) - close code-review findings (repo integrity, diagnostics details, redaction token fix, http hardening, cookie memory hygiene, login cleanup, i18n decoupling)
 - M10: done (fde0b9d) - master password (Argon2id Format v2), per-account proxy, resource optimization
-- M11: done (f0ce0c1) - smart ram cleaner for background processes
+- M11: done (783cfb8) - smart ram cleaner for background processes
+- M12: done (1d71723) - smart server hopping on auto-rejoin
+- M13: pending

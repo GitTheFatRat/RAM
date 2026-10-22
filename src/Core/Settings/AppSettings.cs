@@ -71,6 +71,7 @@ public sealed record AppSettings(
     bool ThrottleBackgroundRoblox = false,
     bool EnableRamCleaner = false,
     int RamCleanerIntervalMinutes = AppSettings.DefaultRamCleanerIntervalMinutes,
+    bool EnableSmartServerHopping = true,
     AdvancedSettings? Advanced = null,
     UiStateSettings? UiState = null)
 {

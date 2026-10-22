@@ -121,6 +121,19 @@
                              Width="280"
                              HorizontalAlignment="Left"
                              Margin="{StaticResource MarginTight}" />
+
+                    <!-- Smart Server Hopping -->
+                    <ui:ToggleSwitch Content="{x:Static resources:Strings.EnableSmartServerHopping}"
+                                     IsChecked="{Binding EnableSmartServerHopping, Mode=OneWay}"
+                                     Command="{Binding EnableSmartServerHoppingToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     Margin="{StaticResource MarginBase}" />
+
+                    <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHoppingDescription}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginTight}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
 

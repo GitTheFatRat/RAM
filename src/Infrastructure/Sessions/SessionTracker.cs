@@ -14,6 +14,7 @@ using RbxManager.Core.Common;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
+using RbxManager.Core.Servers;
 using RbxManager.Core.Sessions;
 using RbxManager.Core.Storage;
 
@@ -23,6 +24,8 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     private readonly IAccountStore _accountStore;
     private readonly IRobloxAuthService _authService;
     private readonly ILauncher _launcher;
+    private readonly IServerBrowserService? _serverBrowserService;
+    private readonly Core.Settings.ISettingsService? _settingsService;
     private readonly ILogger<SessionTracker> _logger;
 
     private readonly ConcurrentDictionary<int, RunningSession> _activeSessions = new();
@@ -46,11 +49,26 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         ILogger<SessionTracker>? logger = null,
         Func<RejoinPolicy>? policyFactory = null,
         Core.Settings.ISettingsService? settingsService = null)
+        : this(processProvider, accountStore, authService, launcher, null, settingsService, logger, policyFactory)
+    {
+    }
+
+    public SessionTracker(
+        IProcessProvider processProvider,
+        IAccountStore accountStore,
+        IRobloxAuthService authService,
+        ILauncher launcher,
+        IServerBrowserService? serverBrowserService,
+        Core.Settings.ISettingsService? settingsService,
+        ILogger<SessionTracker>? logger = null,
+        Func<RejoinPolicy>? policyFactory = null)
     {
         _processProvider = processProvider;
         _accountStore = accountStore;
         _authService = authService;
         _launcher = launcher;
+        _serverBrowserService = serverBrowserService;
+        _settingsService = settingsService;
         _logger = logger ?? NullLogger<SessionTracker>.Instance;
         _policyFactory = policyFactory ?? (() =>
         {
@@ -243,7 +261,46 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             return;
         }
 
-        await TrackLaunchAsync(session.AccountId, session.Request, () => _launcher.LaunchAsync(session.Request)).ConfigureAwait(false);
+        LaunchRequest launchRequest = session.Request;
+        bool smartHopping = _settingsService?.CurrentSettings.EnableSmartServerHopping ?? true;
+        if (smartHopping && _serverBrowserService != null)
+        {
+            try
+            {
+                Result<ServerPage> serverResult = await _serverBrowserService
+                    .GetServersAsync(session.Request.PlaceId, ServerSort.Ascending, null, CancellationToken.None)
+                    .ConfigureAwait(false);
+
+                if (serverResult.IsSuccess && serverResult.Value != null)
+                {
+                    ServerInfo? candidate = serverResult.Value.Servers
+                        .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.Id) && s.Playing < s.MaxPlayers);
+
+                    if (candidate != null)
+                    {
+                        launchRequest = session.Request with { JobId = candidate.Id };
+                        LogServerHopped(session.AccountId.Value, candidate.Id);
+                    }
+                    else
+                    {
+                        launchRequest = session.Request;
+                        LogServerHopFallback(session.AccountId.Value);
+                    }
+                }
+                else
+                {
+                    launchRequest = session.Request;
+                    LogServerHopFallback(session.AccountId.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogServerHopError(session.AccountId.Value, ex.Message);
+                launchRequest = session.Request;
+            }
+        }
+
+        await TrackLaunchAsync(session.AccountId, launchRequest, () => _launcher.LaunchAsync(launchRequest)).ConfigureAwait(false);
     }
 
     [LoggerMessage(EventId = 501, Level = LogLevel.Information, Message = "Bound account {AccountId} to new Roblox PID {Pid}.")]
@@ -269,4 +326,13 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     [LoggerMessage(EventId = 508, Level = LogLevel.Error, Message = "Exception in process monitor loop: {ExceptionType}.")]
     private partial void LogPollError(string exceptionType);
+
+    [LoggerMessage(EventId = 509, Level = LogLevel.Information, Message = "Smart server hop for account {AccountId}: selected server {JobId}.")]
+    private partial void LogServerHopped(long accountId, string jobId);
+
+    [LoggerMessage(EventId = 510, Level = LogLevel.Warning, Message = "Smart server hop for account {AccountId} found no available server; falling back to original request.")]
+    private partial void LogServerHopFallback(long accountId);
+
+    [LoggerMessage(EventId = 511, Level = LogLevel.Warning, Message = "Smart server hop for account {AccountId} failed ({Error}); falling back to original request.")]
+    private partial void LogServerHopError(long accountId, string error);
 }

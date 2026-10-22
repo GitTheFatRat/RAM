@@ -1,0 +1,42 @@
+# M12: Smart Auto-Rejoin (Server Hopping on Crash)
+
+Follow docs/prompts/RUNBOOK.md (rules, gates, token budget, security, autonomy). First add M12 to docs/STATE.md as pending. Batch file writes; do not narrate.
+
+## SCOPE
+In: Upgrading the auto-rejoin mechanism to intelligently hop to a new, available public server when a session crashes, instead of retrying the potentially dead/full original JobId.
+Out: Auto-executing scripts (handled later/out of scope), private server hopping (applies to public servers only).
+
+## CORE
+1. `AppSettings` gains: `bool EnableSmartServerHopping` (default: true). Update `ISettingsService` and validation logic.
+2. `RejoinPolicy` or `SessionTracker` needs to indicate that a fresh `JobId` should be fetched.
+
+## INFRASTRUCTURE
+3. `SessionTracker` updates:
+   - When preparing to relaunch an unexpectedly closed session, check `AppSettings.EnableSmartServerHopping`.
+   - If enabled: Inject and call `IServerBrowserService.GetServersAsync(request.PlaceId, ServerSort.Ascending, null, ct)`.
+   - Filter the returned `ServerPage.Servers` to find a server that is NOT full (`Playing < MaxPlayers`) and has a valid `Id`.
+   - Pick the first available server from the list.
+   - Clone the original `LaunchRequest` but replace its `JobId` with the newly found server's `Id`.
+   - If the fetch fails (e.g., rate limited) or no server is found, gracefully fall back to launching without a `JobId` (letting Roblox auto-match) or reuse the old one.
+4. Concurrency & Safety:
+   - Ensure the `IServerBrowserService` call is wrapped in a try-catch to prevent a transient network error from crashing the background tracker. 
+
+## APP.WPF
+5. `SettingsPage` & `SettingsViewModel`:
+   - Add a ToggleSwitch for "Enable Smart Server Hopping on Rejoin".
+   - Place it under the "Rejoin" or "Automation" section.
+   - Update localization in `Strings.resx` and `Strings.vi.resx`.
+
+## TESTS
+- `SessionTrackerTests`: 
+  - Mock `IServerBrowserService`. 
+  - Test that when a session crashes and Smart Hopping is ON, the tracker fetches a new server and launches with the new `JobId`.
+  - Test the fallback mechanism: if `GetServersAsync` throws or returns empty, the tracker still attempts a rejoin using the original request.
+- `AppSettingsTests`: Verify defaults and clamping for the new setting.
+
+## DOCS
+Update `ARCHITECTURE.md` and `PROJECT_CONTEXT.md` to mention Smart Server Hopping in the automation pipeline.
+
+## FINISH
+RUNBOOK gates pass. Generate report `docs/reports/M12.md`.
+Commit "feat: M12 smart server hopping on auto-rejoin".

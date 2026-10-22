@@ -10,6 +10,7 @@ using RbxManager.Core.Common;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
+using RbxManager.Core.Servers;
 using RbxManager.Core.Sessions;
 using RbxManager.Core.Storage;
 using RbxManager.Infrastructure.Sessions;
@@ -325,5 +326,212 @@ public sealed class SessionTrackerTests
         await tracker.PollProcessesAsync();
 
         Assert.True(tracker.IsRejoinGaveUp(account.Id));
+    }
+
+    private sealed class FakeServerBrowserService : IServerBrowserService
+    {
+        public Result<ServerPage> ServerResult { get; set; } = Core.Common.Result.Success(new ServerPage([], null));
+        public bool ShouldThrow { get; set; }
+        public int CallCount { get; private set; }
+
+        public Task<Result<ServerPage>> GetServersAsync(
+            long placeId,
+            ServerSort sort = ServerSort.Descending,
+            string? cursor = null,
+            CancellationToken ct = default)
+        {
+            CallCount++;
+            if (ShouldThrow)
+            {
+                throw new InvalidOperationException("Simulated network timeout");
+            }
+            return Task.FromResult(ServerResult);
+        }
+    }
+
+    private sealed class FakeSettingsService : Core.Settings.ISettingsService
+    {
+        public Core.Settings.AppSettings CurrentSettings { get; set; } = Core.Settings.AppSettings.Default;
+        public event Action<Core.Settings.AppSettings>? SettingsChanged;
+        public Task<Core.Settings.AppSettings> LoadSettingsAsync(CancellationToken ct = default) => Task.FromResult(CurrentSettings);
+        public Task SaveSettingsAsync(Core.Settings.AppSettings settings, CancellationToken ct = default)
+        {
+            CurrentSettings = settings;
+            SettingsChanged?.Invoke(settings);
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task AutoRejoin_SmartHoppingEnabled_FetchesNewServerAndLaunchesWithNewJobId()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        FakeAccountStore store = new(account);
+        FakeAuthService auth = new();
+        FakeLauncher launcher = new();
+        launcher.OnLaunch = _ => provider.Processes.Add(new ProcessSnapshot(401, DateTimeOffset.UtcNow, 50000));
+
+        FakeServerBrowserService serverBrowser = new()
+        {
+            ServerResult = Core.Common.Result.Success(new ServerPage(
+            [
+                new ServerInfo("full-server-1", 20, 20, null, null),
+                new ServerInfo("candidate-server-2", 12, 20, null, null)
+            ], null))
+        };
+        FakeSettingsService settingsService = new()
+        {
+            CurrentSettings = Core.Settings.AppSettings.Default with { EnableSmartServerHopping = true }
+        };
+
+        using SessionTracker tracker = new(
+            provider,
+            store,
+            auth,
+            launcher,
+            serverBrowser,
+            settingsService,
+            policyFactory: () => new RejoinPolicy(initialDelay: TimeSpan.Zero, maxAttempts: 3));
+
+        tracker.SetAutoRejoin(account.Id, true);
+
+        LaunchRequest originalReq = new(account.Id, 1818, "original-job-id");
+        RunningSession session = new(account.Id, originalReq, 301, DateTimeOffset.UtcNow);
+        tracker.RegisterSession(session);
+
+        await tracker.PollProcessesAsync();
+
+        Assert.Equal(1, serverBrowser.CallCount);
+        Assert.Single(launcher.Launches);
+        Assert.Equal("candidate-server-2", launcher.Launches[0].JobId);
+        Assert.Equal(1818, launcher.Launches[0].PlaceId);
+    }
+
+    [Fact]
+    public async Task AutoRejoin_SmartHoppingThrows_FallsBackToOriginalRequest()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        FakeAccountStore store = new(account);
+        FakeAuthService auth = new();
+        FakeLauncher launcher = new();
+        launcher.OnLaunch = _ => provider.Processes.Add(new ProcessSnapshot(402, DateTimeOffset.UtcNow, 50000));
+
+        FakeServerBrowserService serverBrowser = new()
+        {
+            ShouldThrow = true
+        };
+        FakeSettingsService settingsService = new()
+        {
+            CurrentSettings = Core.Settings.AppSettings.Default with { EnableSmartServerHopping = true }
+        };
+
+        using SessionTracker tracker = new(
+            provider,
+            store,
+            auth,
+            launcher,
+            serverBrowser,
+            settingsService,
+            policyFactory: () => new RejoinPolicy(initialDelay: TimeSpan.Zero, maxAttempts: 3));
+
+        tracker.SetAutoRejoin(account.Id, true);
+
+        LaunchRequest originalReq = new(account.Id, 1818, "original-job-id");
+        RunningSession session = new(account.Id, originalReq, 302, DateTimeOffset.UtcNow);
+        tracker.RegisterSession(session);
+
+        await tracker.PollProcessesAsync();
+
+        Assert.Equal(1, serverBrowser.CallCount);
+        Assert.Single(launcher.Launches);
+        Assert.Equal("original-job-id", launcher.Launches[0].JobId);
+    }
+
+    [Fact]
+    public async Task AutoRejoin_SmartHoppingReturnsEmpty_FallsBackToOriginalRequest()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        FakeAccountStore store = new(account);
+        FakeAuthService auth = new();
+        FakeLauncher launcher = new();
+        launcher.OnLaunch = _ => provider.Processes.Add(new ProcessSnapshot(403, DateTimeOffset.UtcNow, 50000));
+
+        FakeServerBrowserService serverBrowser = new()
+        {
+            ServerResult = Core.Common.Result.Success(new ServerPage([], null))
+        };
+        FakeSettingsService settingsService = new()
+        {
+            CurrentSettings = Core.Settings.AppSettings.Default with { EnableSmartServerHopping = true }
+        };
+
+        using SessionTracker tracker = new(
+            provider,
+            store,
+            auth,
+            launcher,
+            serverBrowser,
+            settingsService,
+            policyFactory: () => new RejoinPolicy(initialDelay: TimeSpan.Zero, maxAttempts: 3));
+
+        tracker.SetAutoRejoin(account.Id, true);
+
+        LaunchRequest originalReq = new(account.Id, 1818, "original-job-id");
+        RunningSession session = new(account.Id, originalReq, 303, DateTimeOffset.UtcNow);
+        tracker.RegisterSession(session);
+
+        await tracker.PollProcessesAsync();
+
+        Assert.Equal(1, serverBrowser.CallCount);
+        Assert.Single(launcher.Launches);
+        Assert.Equal("original-job-id", launcher.Launches[0].JobId);
+    }
+
+    [Fact]
+    public async Task AutoRejoin_SmartHoppingDisabled_DoesNotQueryServerBrowser()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        FakeAccountStore store = new(account);
+        FakeAuthService auth = new();
+        FakeLauncher launcher = new();
+        launcher.OnLaunch = _ => provider.Processes.Add(new ProcessSnapshot(404, DateTimeOffset.UtcNow, 50000));
+
+        FakeServerBrowserService serverBrowser = new()
+        {
+            ServerResult = Core.Common.Result.Success(new ServerPage([new ServerInfo("hop-job", 1, 10, null, null)], null))
+        };
+        FakeSettingsService settingsService = new()
+        {
+            CurrentSettings = Core.Settings.AppSettings.Default with { EnableSmartServerHopping = false }
+        };
+
+        using SessionTracker tracker = new(
+            provider,
+            store,
+            auth,
+            launcher,
+            serverBrowser,
+            settingsService,
+            policyFactory: () => new RejoinPolicy(initialDelay: TimeSpan.Zero, maxAttempts: 3));
+
+        tracker.SetAutoRejoin(account.Id, true);
+
+        LaunchRequest originalReq = new(account.Id, 1818, "original-job-id");
+        RunningSession session = new(account.Id, originalReq, 304, DateTimeOffset.UtcNow);
+        tracker.RegisterSession(session);
+
+        await tracker.PollProcessesAsync();
+
+        Assert.Equal(0, serverBrowser.CallCount);
+        Assert.Single(launcher.Launches);
+        Assert.Equal("original-job-id", launcher.Launches[0].JobId);
     }
 }

@@ -655,4 +655,10 @@
   <data name="RamCleanerIntervalFormat" xml:space="preserve">
     <value>{0} min</value>
   </data>
+  <data name="EnableSmartServerHopping" xml:space="preserve">
+    <value>Enable Smart Server Hopping on Rejoin</value>
+  </data>
+  <data name="EnableSmartServerHoppingDescription" xml:space="preserve">
+    <value>Automatically hops to a new available public server when a session crashes instead of retrying the old server.</value>
+  </data>
 </root>

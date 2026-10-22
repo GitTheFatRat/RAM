@@ -95,7 +95,14 @@ public static class InfrastructureServiceExtensions
             return new Diagnostics.DiagnosticsService(registryProvider, processProvider, instanceGate, settingsService, authService, httpClient);
         });
 
-        services.AddSingleton<SessionTracker>();
+        services.AddSingleton<SessionTracker>(sp => new SessionTracker(
+            sp.GetRequiredService<IProcessProvider>(),
+            sp.GetRequiredService<IAccountStore>(),
+            sp.GetRequiredService<IRobloxAuthService>(),
+            sp.GetRequiredService<ILauncher>(),
+            sp.GetRequiredService<IServerBrowserService>(),
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetService<ILogger<SessionTracker>>()));
         services.AddSingleton<ISessionTracker>(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService<BackgroundWindowThrottler>();

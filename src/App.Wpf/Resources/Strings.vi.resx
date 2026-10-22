@@ -655,4 +655,10 @@
   <data name="RamCleanerIntervalFormat" xml:space="preserve">
     <value>{0} phút</value>
   </data>
+  <data name="EnableSmartServerHopping" xml:space="preserve">
+    <value>Tự động đổi máy chủ khi vào lại</value>
+  </data>
+  <data name="EnableSmartServerHoppingDescription" xml:space="preserve">
+    <value>Tự động tìm và chuyển sang máy chủ công khai còn chỗ mới khi trò chơi bị đóng thay vì vào lại máy chủ cũ.</value>
+  </data>
 </root>

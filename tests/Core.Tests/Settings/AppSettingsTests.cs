@@ -18,6 +18,7 @@ public sealed class AppSettingsTests
         Assert.False(settings.MultiInstanceAcknowledged);
         Assert.False(settings.EnableRamCleaner);
         Assert.Equal(15, settings.RamCleanerIntervalMinutes);
+        Assert.True(settings.EnableSmartServerHopping);
     }
 
     [Fact]
@@ -64,7 +65,8 @@ public sealed class AppSettingsTests
             MultiInstanceEnabled: true,
             MultiInstanceAcknowledged: true,
             EnableRamCleaner: true,
-            RamCleanerIntervalMinutes: 45);
+            RamCleanerIntervalMinutes: 45,
+            EnableSmartServerHopping: false);
 
         AppSettings clamped = valid.Clamp();
 
@@ -77,5 +79,6 @@ public sealed class AppSettingsTests
         Assert.True(clamped.MultiInstanceAcknowledged);
         Assert.True(clamped.EnableRamCleaner);
         Assert.Equal(45, clamped.RamCleanerIntervalMinutes);
+        Assert.False(clamped.EnableSmartServerHopping);
     }
 }
