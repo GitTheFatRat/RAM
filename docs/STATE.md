@@ -9,4 +9,4 @@
 - M5: done (7029aa9) - hardening, packaging, docs, quality guards
 - M6: done (1c716e9) - multi-instance gate, reveal surface, report fixes
 - M7: done (979fbeb) - diagnostics, launch templates, code health
-- M8: done - ui polish and localization audit
+- M8: done (8f023e5) - ui polish and localization audit
