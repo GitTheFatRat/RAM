@@ -212,13 +212,15 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         bool? result = loginWindow.ShowDialog();
         if (result != true || loginWindow.CapturedCookie == null)
         {
+            loginWindow.UsedProxy?.Dispose();
             return;
         }
 
         using SecretValue cookie = loginWindow.CapturedCookie;
+        using ProxyConfig? usedProxy = loginWindow.UsedProxy;
         _snackbarService.Show(Strings.SuccessTitle, Strings.LoginSuccessValidating, ControlAppearance.Info);
 
-        Result<RobloxUser> validationResult = await _authService.ValidateCookieAsync(cookie);
+        Result<RobloxUser> validationResult = await _authService.ValidateCookieAsync(cookie, usedProxy);
         if (!validationResult.IsSuccess || validationResult.Value == null)
         {
             _snackbarService.Show(Strings.ErrorTitle, validationResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
@@ -238,7 +240,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             Username: user.Name,
             UserId: user.Id,
             Status: AccountStatus.Valid,
-            LastCheckedAt: DateTimeOffset.UtcNow);
+            LastCheckedAt: DateTimeOffset.UtcNow,
+            Proxy: usedProxy?.DeepClone());
 
         Result addResult = await _accountStore.AddAsync(newAccount);
         if (addResult.IsSuccess)

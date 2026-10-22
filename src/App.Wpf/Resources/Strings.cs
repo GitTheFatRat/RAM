@@ -214,6 +214,17 @@ public static class Strings
     public static string EnableGhostDisconnectDetection => GetString(nameof(EnableGhostDisconnectDetection));
     public static string EnableGhostDisconnectDetectionDescription => GetString(nameof(EnableGhostDisconnectDetectionDescription));
     public static string LoadingRoblox => GetString(nameof(LoadingRoblox));
+    public static string ProxyTypeNone => GetString(nameof(ProxyTypeNone));
+    public static string ProxyTypeHttp => GetString(nameof(ProxyTypeHttp));
+    public static string ProxyTypeSocks5 => GetString(nameof(ProxyTypeSocks5));
+    public static string TestProxy => GetString(nameof(TestProxy));
+    public static string StartBrowser => GetString(nameof(StartBrowser));
+    public static string ChangeProxy => GetString(nameof(ChangeProxy));
+    public static string TestingProxy => GetString(nameof(TestingProxy));
+    public static string ProxyTestSuccess => GetString(nameof(ProxyTestSuccess));
+    public static string ProxyTestFailed => GetString(nameof(ProxyTestFailed));
+    public static string ProxyScopeNote => GetString(nameof(ProxyScopeNote));
+    public static string ProxyNavigationFailed => GetString(nameof(ProxyNavigationFailed));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

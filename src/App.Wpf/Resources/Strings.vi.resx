@@ -670,4 +670,37 @@
   <data name="LoadingRoblox" xml:space="preserve">
     <value>Đang tải Roblox...</value>
   </data>
+  <data name="ProxyTypeNone" xml:space="preserve">
+    <value>Không dùng (Kết nối trực tiếp)</value>
+  </data>
+  <data name="ProxyTypeHttp" xml:space="preserve">
+    <value>HTTP</value>
+  </data>
+  <data name="ProxyTypeSocks5" xml:space="preserve">
+    <value>SOCKS5</value>
+  </data>
+  <data name="TestProxy" xml:space="preserve">
+    <value>Kiểm tra Proxy</value>
+  </data>
+  <data name="StartBrowser" xml:space="preserve">
+    <value>Khởi động Trình duyệt</value>
+  </data>
+  <data name="ChangeProxy" xml:space="preserve">
+    <value>Thay đổi Proxy</value>
+  </data>
+  <data name="TestingProxy" xml:space="preserve">
+    <value>Đang kiểm tra kết nối proxy...</value>
+  </data>
+  <data name="ProxyTestSuccess" xml:space="preserve">
+    <value>Kết nối proxy thành công (HTTP {0})</value>
+  </data>
+  <data name="ProxyTestFailed" xml:space="preserve">
+    <value>Kết nối proxy thất bại: {0}</value>
+  </data>
+  <data name="ProxyScopeNote" xml:space="preserve">
+    <value>Proxy chỉ áp dụng cho trình duyệt đăng nhập và các yêu cầu HTTP nội bộ của công cụ. Client game Roblox kết nối trực tiếp và không đi qua proxy này.</value>
+  </data>
+  <data name="ProxyNavigationFailed" xml:space="preserve">
+    <value>Không thể tải trang đăng nhập qua proxy đã cấu hình. Vui lòng kiểm tra lại cài đặt proxy hoặc kết nối mạng.</value>
+  </data>
 </root>

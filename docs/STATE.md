@@ -18,4 +18,6 @@
 - M14: done (e3ea5a0) - UI/UX polish and contrast enhancement
 - M14.1: done (a1aa558) - resolve illegal Binding on ConverterParameter in ServersPage
 - M14.2: done (f003548) - robust check for Roblox Player installation across multiple registry hives
-- M14.3: done (5400f81) - overhaul DataGrid styles and force dark theme contrast
+- M14.3: done (56b65b6) - overhaul DataGrid styles and force dark theme contrast
+- M14.4: done (2b03ab9) - webview2 login through account proxy
+- M15: pending - Tech Lead takeover audit, safety guards, launch precheck, UI defects, XAML smoke tests

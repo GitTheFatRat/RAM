@@ -115,6 +115,72 @@ public sealed class ProxyConfigValidatorTests
         Assert.True(cloned.Password.HasContent);
     }
 
+    [Theory]
+    [InlineData("1.2.3.4 --disable-web-security")]
+    [InlineData("host\nx")]
+    [InlineData("a;b")]
+    [InlineData("a b")]
+    [InlineData("http://x")]
+    [InlineData("user@host")]
+    [InlineData("-evil")]
+    [InlineData("host/path")]
+    [InlineData("host\\path")]
+    [InlineData("host'quote")]
+    [InlineData("host\"quote")]
+    [InlineData("host=value")]
+    [InlineData("host,comma")]
+    public void ValidateStrict_InjectionAndInvalidCharacters_ReturnsFailure(string invalidHost)
+    {
+        Result result = ProxyConfigValidator.ValidateStrict(invalidHost, 8080);
+        Assert.False(result.IsSuccess);
+    }
+
+    [Theory]
+    [InlineData("2001:db8::1")]
+    [InlineData("[2001:db8::1]")]
+    [InlineData("::1")]
+    [InlineData("[::1]")]
+    public void ValidateStrict_ValidIpv6Literals_ReturnsSuccess(string ipv6Host)
+    {
+        Result result = ProxyConfigValidator.ValidateStrict(ipv6Host, 8080);
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public void ValidateStrict_HostExceeding253Chars_ReturnsFailure()
+    {
+        string longHost = new string('a', 250) + ".com"; // 254 chars
+        Result result = ProxyConfigValidator.ValidateStrict(longHost, 8080);
+        Assert.False(result.IsSuccess);
+        Assert.Contains("253 characters", result.Error ?? string.Empty);
+    }
+
+    [Fact]
+    public void ValidateStrict_UsernameOrPasswordExceedingLimits_ReturnsFailure()
+    {
+        string longUser = new string('u', 129);
+        Result resultUser = ProxyConfigValidator.ValidateStrict("127.0.0.1", 8080, username: longUser);
+        Assert.False(resultUser.IsSuccess);
+        Assert.Contains("128 characters", resultUser.Error ?? string.Empty);
+
+        string longPass = new string('p', 257);
+        Result resultPass = ProxyConfigValidator.ValidateStrict("127.0.0.1", 8080, password: longPass);
+        Assert.False(resultPass.IsSuccess);
+        Assert.Contains("256 characters", resultPass.Error ?? string.Empty);
+    }
+
+    [Fact]
+    public void ValidateStrict_ControlCharactersInCredentials_ReturnsFailure()
+    {
+        Result resultUser = ProxyConfigValidator.ValidateStrict("127.0.0.1", 8080, username: "user\nname");
+        Assert.False(resultUser.IsSuccess);
+        Assert.Contains("control characters", resultUser.Error ?? string.Empty);
+
+        Result resultPass = ProxyConfigValidator.ValidateStrict("127.0.0.1", 8080, password: "pass\tword");
+        Assert.False(resultPass.IsSuccess);
+        Assert.Contains("control characters", resultPass.Error ?? string.Empty);
+    }
+
     [Fact]
     public void MasterPasswordPolicy_ValidationRules()
     {

@@ -670,4 +670,37 @@
   <data name="LoadingRoblox" xml:space="preserve">
     <value>Loading Roblox...</value>
   </data>
+  <data name="ProxyTypeNone" xml:space="preserve">
+    <value>None (Direct Connection)</value>
+  </data>
+  <data name="ProxyTypeHttp" xml:space="preserve">
+    <value>HTTP</value>
+  </data>
+  <data name="ProxyTypeSocks5" xml:space="preserve">
+    <value>SOCKS5</value>
+  </data>
+  <data name="TestProxy" xml:space="preserve">
+    <value>Test Proxy</value>
+  </data>
+  <data name="StartBrowser" xml:space="preserve">
+    <value>Start Browser</value>
+  </data>
+  <data name="ChangeProxy" xml:space="preserve">
+    <value>Change Proxy</value>
+  </data>
+  <data name="TestingProxy" xml:space="preserve">
+    <value>Testing proxy connection...</value>
+  </data>
+  <data name="ProxyTestSuccess" xml:space="preserve">
+    <value>Proxy connection successful (HTTP {0})</value>
+  </data>
+  <data name="ProxyTestFailed" xml:space="preserve">
+    <value>Proxy connection failed: {0}</value>
+  </data>
+  <data name="ProxyScopeNote" xml:space="preserve">
+    <value>The proxy covers the login browser and the tool's own HTTP requests. The Roblox game client connects directly and does not use this proxy.</value>
+  </data>
+  <data name="ProxyNavigationFailed" xml:space="preserve">
+    <value>Unable to load login page through the configured proxy. Please check your proxy settings or connection.</value>
+  </data>
 </root>

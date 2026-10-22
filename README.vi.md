@@ -58,6 +58,13 @@ Có 2 phương thức để thêm tài khoản vào RbxManager:
 - Ứng dụng sẽ tự động yêu cầu Roblox cấp Auth Ticket một lần và kích hoạt tiến trình Roblox Player.
 
 ### 4.3. Duyệt danh sách máy chủ (Server Browser)
+
+### 4.4. Sử dụng Proxy cho tài khoản (M10, M14.4)
+- **Phạm vi hoạt động của Proxy**:
+  - Proxy chỉ áp dụng cho trình duyệt đăng nhập WebView2 và các yêu cầu HTTP nội bộ của RbxManager (xác thực cookie, lấy Auth Ticket, tải danh sách máy chủ).
+  - Client game Roblox (`RobloxPlayerBeta.exe`) được hệ điều hành Windows khởi chạy trực tiếp qua giao thức `roblox-player:` và **KHÔNG** đi qua proxy này. Công cụ không can thiệp hay bẻ hướng lưu lượng mạng trong game.
+  - Người dùng muốn toàn bộ lưu lượng game đi qua địa chỉ IP khác cần cấu hình ở cấp độ hệ thống bên ngoài (ví dụ dùng VPN toàn hệ thống hoặc proxifier bên thứ ba).
+  - Công cụ **không** cam kết hay tuyên bố rằng việc dùng proxy sẽ ngăn chặn bị khóa tài khoản hoặc lỗi mạng cụ thể của Roblox.
 - Chuyển sang trang **Máy chủ**.
 - Nhập **Place ID** và nhấn **Tìm kiếm**.
 - Danh sách các server công khai đang chạy sẽ hiển thị kèm số lượng người chơi (Playing / Max Players), Ping và FPS.

@@ -14,7 +14,8 @@ public sealed class ArchitectureTests
         "src/Infrastructure/Auth/RobloxAuthService.cs",
         "src/Infrastructure/Launch/RobloxLauncher.cs",
         "src/Infrastructure/Backup/EncryptedBackupService.cs",
-        "src/Infrastructure/Http/RobloxHttpClientFactory.cs"
+        "src/Infrastructure/Http/RobloxHttpClientFactory.cs",
+        "src/App.Wpf/Services/WebViewProxyAuthHandler.cs"
     };
 
     [Fact]
