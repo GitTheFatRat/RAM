@@ -16,6 +16,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M8**: UI/UX polish, design tokens, virtualized high-density DataGrid, relative time formatting, UiState persistence, localization diacritics audit. (Completed)
 - **M9**: Code-review closure: tracked backup sources/tests, clean clone verification, detailed auth diagnostics, redaction hardening, HTTP redirect safety, cookie memory hygiene, login cleanup, i18n decoupling. (Completed)
 - **M10**: Master password defense-in-depth (Argon2id Format v2), per-account HTTP/SOCKS5 proxy, background Roblox process resource optimization. (Completed)
+- **M11**: Smart RAM cleaner (background working set memory optimization via `SetProcessWorkingSetSize`, periodic `RamCleanerService`, UI toggle & interval slider). (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

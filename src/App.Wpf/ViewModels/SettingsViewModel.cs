@@ -64,6 +64,17 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _throttleBackgroundRoblox;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RamCleanerIntervalDisplay))]
+    private bool _enableRamCleaner;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RamCleanerIntervalDisplay))]
+    private int _ramCleanerIntervalMinutes = 15;
+
+    public string RamCleanerIntervalDisplay =>
+        string.Format(CultureInfo.CurrentCulture, CompositeFormat.Parse(Strings.RamCleanerIntervalFormat), RamCleanerIntervalMinutes);
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -101,6 +112,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         MultiInstanceEnabled = _instanceGate.IsMultiInstanceEnabled;
         IsMasterPasswordEnabled = settings.IsMasterPasswordEnabled;
         ThrottleBackgroundRoblox = settings.ThrottleBackgroundRoblox;
+        EnableRamCleaner = settings.EnableRamCleaner;
+        RamCleanerIntervalMinutes = settings.RamCleanerIntervalMinutes;
 
         string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
         LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -139,6 +152,8 @@ public sealed partial class SettingsViewModel : ObservableObject
                 MultiInstanceAcknowledged: current.MultiInstanceAcknowledged,
                 IsMasterPasswordEnabled: IsMasterPasswordEnabled,
                 ThrottleBackgroundRoblox: ThrottleBackgroundRoblox,
+                EnableRamCleaner: EnableRamCleaner,
+                RamCleanerIntervalMinutes: RamCleanerIntervalMinutes,
                 Advanced: current.Advanced);
 
             await _settingsService.SaveSettingsAsync(updated);
@@ -225,6 +240,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         ThrottleBackgroundRoblox = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { ThrottleBackgroundRoblox = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableRamCleanerToggledAsync(bool enabled)
+    {
+        EnableRamCleaner = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { EnableRamCleaner = enabled });
     }
 
     [RelayCommand]

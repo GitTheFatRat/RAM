@@ -48,6 +48,7 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<IProcessStarter, WindowsProcessStarter>();
         services.AddSingleton<IProcessProvider, SystemProcessProvider>();
         services.AddSingleton<IWindowController, WindowController>();
+        services.AddSingleton<IMemoryOptimizer, WindowsMemoryOptimizer>();
         services.AddSingleton<IInstanceGate, NamedMutexInstanceGate>();
         services.AddSingleton<ILauncher, RobloxLauncher>();
         services.AddTransient<IBackupService, EncryptedBackupService>();
@@ -98,6 +99,7 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<ISessionTracker>(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService<BackgroundWindowThrottler>();
+        services.AddHostedService<RamCleanerService>();
 
         return services;
     }

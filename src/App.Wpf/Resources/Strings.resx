@@ -640,4 +640,19 @@
   <data name="ProxyPasswordHint" xml:space="preserve">
     <value>Leave empty to keep existing password</value>
   </data>
+  <data name="EnableRamCleaner" xml:space="preserve">
+    <value>Enable Smart RAM Cleaner</value>
+  </data>
+  <data name="EnableRamCleanerDescription" xml:space="preserve">
+    <value>Periodically trims idle memory pages of running Roblox processes to reduce RAM consumption.</value>
+  </data>
+  <data name="RamCleanerInterval" xml:space="preserve">
+    <value>Trim Interval</value>
+  </data>
+  <data name="RamCleanerIntervalDescription" xml:space="preserve">
+    <value>How often to optimize memory (5 to 120 minutes).</value>
+  </data>
+  <data name="RamCleanerIntervalFormat" xml:space="preserve">
+    <value>{0} min</value>
+  </data>
 </root>

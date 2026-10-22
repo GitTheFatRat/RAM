@@ -16,6 +16,8 @@ public sealed class AppSettingsTests
         Assert.Equal(5, settings.RejoinMaxAttempts);
         Assert.False(settings.MultiInstanceEnabled);
         Assert.False(settings.MultiInstanceAcknowledged);
+        Assert.False(settings.EnableRamCleaner);
+        Assert.Equal(15, settings.RamCleanerIntervalMinutes);
     }
 
     [Fact]
@@ -26,7 +28,8 @@ public sealed class AppSettingsTests
             Theme: "NeonPink",
             LaunchDelayMs: 200,
             RejoinDelaySeconds: 0,
-            RejoinMaxAttempts: -1);
+            RejoinMaxAttempts: -1,
+            RamCleanerIntervalMinutes: 2);
 
         AppSettings clamped = invalid.Clamp();
 
@@ -35,6 +38,18 @@ public sealed class AppSettingsTests
         Assert.Equal(1000, clamped.LaunchDelayMs);
         Assert.Equal(1, clamped.RejoinDelaySeconds);
         Assert.Equal(1, clamped.RejoinMaxAttempts);
+        Assert.Equal(5, clamped.RamCleanerIntervalMinutes);
+    }
+
+    [Fact]
+    public void AppSettings_Clamp_ClampsUpperLimits()
+    {
+        AppSettings invalid = new(
+            RamCleanerIntervalMinutes: 500);
+
+        AppSettings clamped = invalid.Clamp();
+
+        Assert.Equal(120, clamped.RamCleanerIntervalMinutes);
     }
 
     [Fact]
@@ -47,7 +62,9 @@ public sealed class AppSettingsTests
             RejoinDelaySeconds: 15,
             RejoinMaxAttempts: 10,
             MultiInstanceEnabled: true,
-            MultiInstanceAcknowledged: true);
+            MultiInstanceAcknowledged: true,
+            EnableRamCleaner: true,
+            RamCleanerIntervalMinutes: 45);
 
         AppSettings clamped = valid.Clamp();
 
@@ -58,5 +75,7 @@ public sealed class AppSettingsTests
         Assert.Equal(10, clamped.RejoinMaxAttempts);
         Assert.True(clamped.MultiInstanceEnabled);
         Assert.True(clamped.MultiInstanceAcknowledged);
+        Assert.True(clamped.EnableRamCleaner);
+        Assert.Equal(45, clamped.RamCleanerIntervalMinutes);
     }
 }

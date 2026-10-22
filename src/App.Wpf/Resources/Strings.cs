@@ -204,6 +204,11 @@ public static class Strings
     public static string ProxyUsername => GetString(nameof(ProxyUsername));
     public static string ProxyPassword => GetString(nameof(ProxyPassword));
     public static string ProxyPasswordHint => GetString(nameof(ProxyPasswordHint));
+    public static string EnableRamCleaner => GetString(nameof(EnableRamCleaner));
+    public static string EnableRamCleanerDescription => GetString(nameof(EnableRamCleanerDescription));
+    public static string RamCleanerInterval => GetString(nameof(RamCleanerInterval));
+    public static string RamCleanerIntervalDescription => GetString(nameof(RamCleanerIntervalDescription));
+    public static string RamCleanerIntervalFormat => GetString(nameof(RamCleanerIntervalFormat));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

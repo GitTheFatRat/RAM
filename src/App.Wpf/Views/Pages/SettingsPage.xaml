@@ -217,6 +217,44 @@
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="{StaticResource MarginTight}"
                                TextWrapping="Wrap" />
+
+                    <!-- Smart RAM Cleaner -->
+                    <ui:ToggleSwitch Content="{x:Static resources:Strings.EnableRamCleaner}"
+                                     IsChecked="{Binding EnableRamCleaner, Mode=OneWay}"
+                                     Command="{Binding EnableRamCleanerToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     Margin="{StaticResource MarginBase}" />
+
+                    <TextBlock Text="{x:Static resources:Strings.EnableRamCleanerDescription}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginTight}"
+                               TextWrapping="Wrap" />
+
+                    <TextBlock Text="{x:Static resources:Strings.RamCleanerInterval}"
+                               FontWeight="Medium"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginBase}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource MarginTight}">
+                        <Slider Width="240"
+                                Minimum="5"
+                                Maximum="120"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True"
+                                Value="{Binding RamCleanerIntervalMinutes, Mode=TwoWay}"
+                                IsEnabled="{Binding EnableRamCleaner}"
+                                VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding RamCleanerIntervalDisplay}"
+                                   VerticalAlignment="Center"
+                                   Margin="{StaticResource MarginTight}" />
+                    </StackPanel>
+
+                    <TextBlock Text="{x:Static resources:Strings.RamCleanerIntervalDescription}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginTight}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
 

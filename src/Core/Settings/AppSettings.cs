@@ -69,6 +69,8 @@ public sealed record AppSettings(
     bool MultiInstanceAcknowledged = false,
     bool IsMasterPasswordEnabled = false,
     bool ThrottleBackgroundRoblox = false,
+    bool EnableRamCleaner = false,
+    int RamCleanerIntervalMinutes = AppSettings.DefaultRamCleanerIntervalMinutes,
     AdvancedSettings? Advanced = null,
     UiStateSettings? UiState = null)
 {
@@ -80,6 +82,9 @@ public sealed record AppSettings(
     public const int MinimumRejoinDelaySeconds = 1;
     public const int DefaultRejoinMaxAttempts = 5;
     public const int MinimumRejoinMaxAttempts = 1;
+    public const int DefaultRamCleanerIntervalMinutes = 15;
+    public const int MinimumRamCleanerIntervalMinutes = 5;
+    public const int MaximumRamCleanerIntervalMinutes = 120;
 
     public static AppSettings Default => new();
 
@@ -96,6 +101,7 @@ public sealed record AppSettings(
         int launchDelay = Math.Max(MinimumLaunchDelayMs, LaunchDelayMs);
         int rejoinDelay = Math.Max(MinimumRejoinDelaySeconds, RejoinDelaySeconds);
         int rejoinMax = Math.Max(MinimumRejoinMaxAttempts, RejoinMaxAttempts);
+        int ramInterval = Math.Clamp(RamCleanerIntervalMinutes, MinimumRamCleanerIntervalMinutes, MaximumRamCleanerIntervalMinutes);
 
         return this with
         {
@@ -103,7 +109,8 @@ public sealed record AppSettings(
             Theme = theme,
             LaunchDelayMs = launchDelay,
             RejoinDelaySeconds = rejoinDelay,
-            RejoinMaxAttempts = rejoinMax
+            RejoinMaxAttempts = rejoinMax,
+            RamCleanerIntervalMinutes = ramInterval
         };
     }
 }

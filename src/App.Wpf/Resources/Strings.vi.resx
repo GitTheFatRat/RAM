@@ -640,4 +640,19 @@
   <data name="ProxyPasswordHint" xml:space="preserve">
     <value>Để trống để giữ nguyên mật khẩu cũ</value>
   </data>
+  <data name="EnableRamCleaner" xml:space="preserve">
+    <value>Bật tối ưu RAM tự động</value>
+  </data>
+  <data name="EnableRamCleanerDescription" xml:space="preserve">
+    <value>Định kỳ giải phóng bộ nhớ đệm của các tiến trình Roblox đang chạy để giảm tiêu thụ RAM.</value>
+  </data>
+  <data name="RamCleanerInterval" xml:space="preserve">
+    <value>Chu kỳ giải phóng RAM</value>
+  </data>
+  <data name="RamCleanerIntervalDescription" xml:space="preserve">
+    <value>Tần suất tối ưu hóa bộ nhớ (từ 5 đến 120 phút).</value>
+  </data>
+  <data name="RamCleanerIntervalFormat" xml:space="preserve">
+    <value>{0} phút</value>
+  </data>
 </root>
