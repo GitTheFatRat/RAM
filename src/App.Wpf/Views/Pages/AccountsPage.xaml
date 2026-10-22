@@ -17,44 +17,40 @@
 
     <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
+            <!-- Row 0: Top Header & Primary Actions -->
             <RowDefinition Height="Auto" />
+            <!-- Row 1: Filter & Search Bar -->
             <RowDefinition Height="Auto" />
+            <!-- Row 2: Progress indicator for Check All (when active) -->
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <!-- Row 3: DataGrid Content Area -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Page Header -->
-        <TextBlock Grid.Row="0"
-                   Text="{x:Static resources:Strings.AccountsPageTitle}"
-                   Style="{StaticResource PageTitleStyle}"
-                   Margin="{StaticResource MarginBottomMedium}" />
-
-        <!-- Controls Bar 1: Search + Primary & More Toolbar -->
-        <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
+        <!-- ══════════════════════════════════════════════════════════════════
+             ROW 0: Page Header & Primary Action Toolbar
+             ══════════════════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="0" Margin="{StaticResource MarginBottomMedium}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <!-- Search box -->
-            <ui:TextBox x:Name="SearchBox"
-                        AutomationProperties.AutomationId="Accounts_SearchBox"
-                        Grid.Column="0"
-                        PlaceholderText="{x:Static resources:Strings.SearchPlaceholder}"
-                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                        Icon="{ui:SymbolIcon Search24}"
-                        MaxWidth="320"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Left" />
+            <!-- Page Title -->
+            <TextBlock Grid.Column="0"
+                       Text="{x:Static resources:Strings.AccountsPageTitle}"
+                       Style="{StaticResource PageTitleStyle}"
+                       VerticalAlignment="Center" />
 
-            <!-- Toolbar Actions -->
+            <!-- Primary Actions Toolbar -->
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
                         VerticalAlignment="Center">
-                <!-- Primary Action: Launch (Accent) -->
+
+                <!-- Primary Action: Launch Account -->
                 <ui:Button Content="{x:Static resources:Strings.Launch}"
                            AutomationProperties.AutomationId="Accounts_LaunchButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.Launch}"
                            Icon="{ui:SymbolIcon Play24}"
                            Appearance="Primary"
                            Margin="{StaticResource MarginTight}"
@@ -63,49 +59,74 @@
 
                 <Border Style="{StaticResource ToolbarSeparatorStyle}" />
 
-                <!-- Add Split Button (Add via Login default + Options) -->
-                <Grid Margin="{StaticResource MarginTight}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:Button Grid.Column="0"
-                               AutomationProperties.AutomationId="Accounts_AddViaLoginButton"
-                               Content="{x:Static resources:Strings.AddViaLogin}"
-                               Icon="{ui:SymbolIcon PersonAdd24}"
-                               Command="{Binding AddViaLoginCommand}"
-                               ToolTip="Ctrl+N" />
-                    <ui:Button Grid.Column="1"
-                               AutomationProperties.AutomationId="Accounts_AddSplitButton"
-                               Icon="{ui:SymbolIcon ChevronDown24}"
-                               Click="OnAddSplitMenuClick"
-                               AutomationProperties.Name="{x:Static resources:Strings.AddAccountDialogTitle}">
-                        <ui:Button.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="{x:Static resources:Strings.AddViaLogin}"
-                                          AutomationProperties.AutomationId="Accounts_AddViaLoginMenuItem"
-                                          Command="{Binding AddViaLoginCommand}">
-                                    <MenuItem.Icon>
-                                        <ui:SymbolIcon Symbol="PersonAdd24" />
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="{x:Static resources:Strings.AddViaCookie}"
-                                          AutomationProperties.AutomationId="Accounts_AddViaCookieMenuItem"
-                                          Command="{Binding AddAccountCommand}">
-                                    <MenuItem.Icon>
-                                        <ui:SymbolIcon Symbol="Key24" />
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                            </ContextMenu>
-                        </ui:Button.ContextMenu>
-                    </ui:Button>
-                </Grid>
+                <!-- Seamless Fluent Split Button: Add via Login + Options -->
+                <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        Margin="{StaticResource MarginTight}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Add via Login Button -->
+                        <ui:Button Grid.Column="0"
+                                   AutomationProperties.AutomationId="Accounts_AddViaLoginButton"
+                                   AutomationProperties.Name="{x:Static resources:Strings.AddViaLogin}"
+                                   Content="{x:Static resources:Strings.AddViaLogin}"
+                                   Icon="{ui:SymbolIcon PersonAdd24}"
+                                   Command="{Binding AddViaLoginCommand}"
+                                   ToolTip="Ctrl+N"
+                                   BorderThickness="0"
+                                   Background="Transparent"
+                                   CornerRadius="6,0,0,6" />
+
+                        <!-- Split Divider -->
+                        <Rectangle Grid.Column="1"
+                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                   VerticalAlignment="Stretch" />
+
+                        <!-- Dropdown Trigger Button -->
+                        <ui:Button Grid.Column="2"
+                                   AutomationProperties.AutomationId="Accounts_AddSplitButton"
+                                   AutomationProperties.Name="{x:Static resources:Strings.AddAccountDialogTitle}"
+                                   Icon="{ui:SymbolIcon ChevronDown24}"
+                                   Click="OnAddSplitMenuClick"
+                                   BorderThickness="0"
+                                   Background="Transparent"
+                                   CornerRadius="0,6,6,0"
+                                   Padding="6,6">
+                            <ui:Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{x:Static resources:Strings.AddViaLogin}"
+                                              AutomationProperties.AutomationId="Accounts_AddViaLoginMenuItem"
+                                              Command="{Binding AddViaLoginCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:SymbolIcon Symbol="PersonAdd24" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{x:Static resources:Strings.AddViaCookie}"
+                                              AutomationProperties.AutomationId="Accounts_AddViaCookieMenuItem"
+                                              Command="{Binding AddAccountCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:SymbolIcon Symbol="Key24" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </ui:Button.ContextMenu>
+                        </ui:Button>
+                    </Grid>
+                </Border>
 
                 <Border Style="{StaticResource ToolbarSeparatorStyle}" />
 
                 <!-- More Actions Menu -->
                 <ui:Button Content="{x:Static resources:Strings.MoreActions}"
                            AutomationProperties.AutomationId="Accounts_MoreActionsButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.MoreActions}"
                            Icon="{ui:SymbolIcon MoreHorizontal24}"
                            Margin="{StaticResource MarginTight}"
                            Click="OnMoreButtonClick">
@@ -172,9 +193,10 @@
                     </ui:Button.ContextMenu>
                 </ui:Button>
 
-                <!-- Cancel button during CheckAll -->
+                <!-- Cancel Button during Check All -->
                 <ui:Button Content="{x:Static resources:Strings.Cancel}"
                            AutomationProperties.AutomationId="Accounts_CancelCheckAllButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.Cancel}"
                            Icon="{ui:SymbolIcon Dismiss24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding CancelCheckAllCommand}"
@@ -182,17 +204,33 @@
             </StackPanel>
         </Grid>
 
-        <!-- Controls Bar 2: Group Filter Chips + Bulk Actions -->
-        <Grid Grid.Row="2" Margin="{StaticResource MarginBase}">
+        <!-- ══════════════════════════════════════════════════════════════════
+             ROW 1: Search Box & Group Filters & Bulk Operations
+             ══════════════════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="1" Margin="{StaticResource MarginBottomMedium}">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
+            <!-- Search box -->
+            <ui:TextBox x:Name="SearchBox"
+                        AutomationProperties.AutomationId="Accounts_SearchBox"
+                        AutomationProperties.Name="{x:Static resources:Strings.SearchPlaceholder}"
+                        Grid.Column="0"
+                        PlaceholderText="{x:Static resources:Strings.SearchPlaceholder}"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                        Icon="{ui:SymbolIcon Search24}"
+                        Width="260"
+                        VerticalAlignment="Center"
+                        Margin="0,0,12,0" />
+
             <!-- Group Filter Chips -->
-            <ScrollViewer Grid.Column="0"
+            <ScrollViewer Grid.Column="1"
                           HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled">
+                          VerticalScrollBarVisibility="Disabled"
+                          VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <ItemsControl ItemsSource="{Binding Groups}">
                         <ItemsControl.ItemsPanel>
@@ -203,15 +241,17 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <ui:Button Content="{Binding}"
-                                           Margin="{StaticResource MarginTight}"
+                                           Style="{StaticResource FilterChipButtonStyle}"
                                            Command="{Binding DataContext.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                            CommandParameter="{Binding}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- Rename Group Action -->
                     <ui:Button Content="{x:Static resources:Strings.RenameGroup}"
                                AutomationProperties.AutomationId="Accounts_RenameGroupButton"
+                               AutomationProperties.Name="{x:Static resources:Strings.RenameGroup}"
                                Icon="{ui:SymbolIcon Edit24}"
                                Margin="{StaticResource MarginTight}"
                                Command="{Binding RenameGroupCommand}"
@@ -220,16 +260,18 @@
             </ScrollViewer>
 
             <!-- Bulk Launch Actions -->
-            <StackPanel Grid.Column="1"
+            <StackPanel Grid.Column="2"
                         Orientation="Horizontal"
                         VerticalAlignment="Center">
                 <ui:Button Content="{x:Static resources:Strings.LaunchSelected}"
                            AutomationProperties.AutomationId="Accounts_LaunchSelectedButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.LaunchSelected}"
                            Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchSelectedAccountsCommand}" />
                 <ui:Button Content="{x:Static resources:Strings.LaunchGroup}"
                            AutomationProperties.AutomationId="Accounts_LaunchGroupButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.LaunchGroup}"
                            Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchGroupAccountsCommand}"
@@ -237,9 +279,11 @@
             </StackPanel>
         </Grid>
 
-        <!-- Progress Indicator for Check All -->
-        <Grid Grid.Row="3"
-              Margin="{StaticResource MarginBase}"
+        <!-- ══════════════════════════════════════════════════════════════════
+             ROW 2: Progress Indicator for Check All
+             ══════════════════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="2"
+              Margin="{StaticResource MarginBottomMedium}"
               Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -249,7 +293,7 @@
                          IsIndeterminate="True"
                          Height="4"
                          VerticalAlignment="Center"
-                         Margin="{StaticResource MarginBase}" />
+                         Margin="0,0,12,0" />
             <TextBlock Grid.Column="1"
                        Text="{Binding CheckAllProgressText}"
                        FontSize="{StaticResource FontSizeCaption}"
@@ -257,11 +301,14 @@
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         </Grid>
 
-        <!-- Main Content Area: High-Density Virtualized DataGrid Elevated Card -->
-        <Border Grid.Row="4" Style="{StaticResource ElevatedContainerStyle}">
+        <!-- ══════════════════════════════════════════════════════════════════
+             ROW 3: High-Density Virtualized DataGrid Elevated Card
+             ══════════════════════════════════════════════════════════════════ -->
+        <Border Grid.Row="3" Style="{StaticResource ElevatedContainerStyle}">
             <Grid>
                 <ui:DataGrid x:Name="AccountsDataGrid"
                              AutomationProperties.AutomationId="Accounts_DataGrid"
+                             AutomationProperties.Name="{x:Static resources:Strings.AccountsPageTitle}"
                              ItemsSource="{Binding FilteredAccounts}"
                              SelectedItem="{Binding SelectedAccount}"
                              AutoGenerateColumns="False"
@@ -270,7 +317,7 @@
                              IsReadOnly="True"
                              SelectionMode="Single"
                              GridLinesVisibility="None"
-                             RowHeight="36"
+                             RowHeight="38"
                              Background="{DynamicResource CardBackgroundBrush}"
                              RowBackground="{DynamicResource ControlFillColorDefaultBrush}"
                              AlternatingRowBackground="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -286,177 +333,182 @@
                     <ui:DataGrid.RowStyle>
                         <Style TargetType="DataGridRow" BasedOn="{StaticResource HighContrastDataGridRowStyle}">
                             <Setter Property="ContextMenu">
-                            <Setter.Value>
-                                <ContextMenu>
-                                    <MenuItem Header="{x:Static resources:Strings.Launch}"
-                                              Command="{Binding DataContext.LaunchAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
-                                        <MenuItem.Icon>
-                                            <ui:SymbolIcon Symbol="Play24" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="{x:Static resources:Strings.Check}"
-                                              Command="{Binding DataContext.CheckAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
-                                        <MenuItem.Icon>
-                                            <ui:SymbolIcon Symbol="CheckmarkCircle24" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="{x:Static resources:Strings.EditAccount}"
-                                              Command="{Binding DataContext.EditAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
-                                        <MenuItem.Icon>
-                                            <ui:SymbolIcon Symbol="Edit24" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="{x:Static resources:Strings.DeleteAccount}"
-                                              Command="{Binding DataContext.DeleteAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
-                                        <MenuItem.Icon>
-                                            <ui:SymbolIcon Symbol="Delete24" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <Separator />
-                                    <MenuItem Header="{x:Static resources:Strings.CopyAlias}"
-                                              Command="{Binding DataContext.CopyAliasCommand, RelativeSource={RelativeSource AncestorType=Page}}">
-                                        <MenuItem.Icon>
-                                            <ui:SymbolIcon Symbol="Copy24" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                </ContextMenu>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </ui:DataGrid.RowStyle>
+                                <Setter.Value>
+                                    <ContextMenu>
+                                        <MenuItem Header="{x:Static resources:Strings.Launch}"
+                                                  Command="{Binding DataContext.LaunchAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="Play24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="{x:Static resources:Strings.Check}"
+                                                  Command="{Binding DataContext.CheckAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="CheckmarkCircle24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="{x:Static resources:Strings.EditAccount}"
+                                                  Command="{Binding DataContext.EditAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="Edit24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="{x:Static resources:Strings.DeleteAccount}"
+                                                  Command="{Binding DataContext.DeleteAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="Delete24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="{x:Static resources:Strings.CopyAlias}"
+                                                  Command="{Binding DataContext.CopyAliasCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="Copy24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ui:DataGrid.RowStyle>
 
-                <ui:DataGrid.Columns>
-                    <!-- Checkbox Selection Column -->
-                    <DataGridTemplateColumn Width="40" CanUserResize="False" CanUserSort="False">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          AutomationProperties.AutomationId="AccountSelectionCheckBox"
-                                          AutomationProperties.Name="{Binding Alias}"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                    <ui:DataGrid.Columns>
+                        <!-- Checkbox Selection Column -->
+                        <DataGridTemplateColumn Width="44" CanUserResize="False" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              AutomationProperties.AutomationId="AccountSelectionCheckBox"
+                                              AutomationProperties.Name="{Binding Alias}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                    <!-- Alias Column -->
-                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnAlias}"
-                                        Binding="{Binding Alias}"
-                                        SortMemberPath="Alias"
-                                        Width="160" />
+                        <!-- Alias Column -->
+                        <DataGridTextColumn Header="{x:Static resources:Strings.ColumnAlias}"
+                                            Binding="{Binding Alias}"
+                                            SortMemberPath="Alias"
+                                            Width="2*"
+                                            MinWidth="120" />
 
-                    <!-- Group Column -->
-                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnGroup}"
-                                        Binding="{Binding Group}"
-                                        SortMemberPath="Group"
-                                        Width="130" />
+                        <!-- Group Column -->
+                        <DataGridTextColumn Header="{x:Static resources:Strings.ColumnGroup}"
+                                            Binding="{Binding Group}"
+                                            SortMemberPath="Group"
+                                            Width="1.2*"
+                                            MinWidth="80" />
 
-                    <!-- Username Column -->
-                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnUsername}"
-                                        Binding="{Binding Username}"
-                                        SortMemberPath="Username"
-                                        Width="150" />
+                        <!-- Username Column -->
+                        <DataGridTextColumn Header="{x:Static resources:Strings.ColumnUsername}"
+                                            Binding="{Binding Username}"
+                                            SortMemberPath="Username"
+                                            Width="1.8*"
+                                            MinWidth="110" />
 
-                    <!-- Status Chip Column (Glyph + Text + Token-based Contrast) -->
-                    <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnStatus}"
-                                            SortMemberPath="Status"
-                                            Width="140">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border CornerRadius="{StaticResource RadiusSmall}"
-                                        Padding="8,3"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="BorderThickness" Value="1" />
-                                            <Setter Property="Background" Value="{DynamicResource StatusUnknownBackgroundBrush}" />
-                                            <Setter Property="BorderBrush" Value="{DynamicResource StatusUnknownBorderBrush}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Status}" Value="Valid">
-                                                    <Setter Property="Background" Value="{DynamicResource StatusValidBackgroundBrush}" />
-                                                    <Setter Property="BorderBrush" Value="{DynamicResource StatusValidBorderBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Status}" Value="Expired">
-                                                    <Setter Property="Background" Value="{DynamicResource StatusExpiredBackgroundBrush}" />
-                                                    <Setter Property="BorderBrush" Value="{DynamicResource StatusExpiredBorderBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Status}" Value="Error">
-                                                    <Setter Property="Background" Value="{DynamicResource StatusErrorBackgroundBrush}" />
-                                                    <Setter Property="BorderBrush" Value="{DynamicResource StatusErrorBorderBrush}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <ui:SymbolIcon Symbol="{Binding StatusGlyph}"
+                        <!-- Status Chip Column -->
+                        <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnStatus}"
+                                                SortMemberPath="Status"
+                                                Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="{StaticResource RadiusPill}"
+                                            Padding="10,3"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderThickness" Value="1" />
+                                                <Setter Property="Background" Value="{DynamicResource StatusUnknownBackgroundBrush}" />
+                                                <Setter Property="BorderBrush" Value="{DynamicResource StatusUnknownBorderBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Valid">
+                                                        <Setter Property="Background" Value="{DynamicResource StatusValidBackgroundBrush}" />
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource StatusValidBorderBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Expired">
+                                                        <Setter Property="Background" Value="{DynamicResource StatusExpiredBackgroundBrush}" />
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource StatusExpiredBorderBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                        <Setter Property="Background" Value="{DynamicResource StatusErrorBackgroundBrush}" />
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource StatusErrorBorderBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <ui:SymbolIcon Symbol="{Binding StatusGlyph}"
+                                                           FontSize="12"
+                                                           Margin="0,0,6,0">
+                                                <ui:SymbolIcon.Style>
+                                                    <Style TargetType="ui:SymbolIcon">
+                                                        <Setter Property="Foreground" Value="{DynamicResource StatusUnknownForegroundBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Valid">
+                                                                <Setter Property="Foreground" Value="{DynamicResource StatusValidForegroundBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Expired">
+                                                                <Setter Property="Foreground" Value="{DynamicResource StatusExpiredForegroundBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                                <Setter Property="Foreground" Value="{DynamicResource StatusErrorForegroundBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:SymbolIcon.Style>
+                                            </ui:SymbolIcon>
+                                            <TextBlock Text="{Binding StatusText}"
                                                        FontSize="{StaticResource FontSizeCaption}"
-                                                       Margin="{StaticResource MarginTight}">
-                                            <ui:SymbolIcon.Style>
-                                                <Style TargetType="ui:SymbolIcon">
-                                                    <Setter Property="Foreground" Value="{DynamicResource StatusUnknownForegroundBrush}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Valid">
-                                                            <Setter Property="Foreground" Value="{DynamicResource StatusValidForegroundBrush}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Expired">
-                                                            <Setter Property="Foreground" Value="{DynamicResource StatusExpiredForegroundBrush}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Error">
-                                                            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForegroundBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ui:SymbolIcon.Style>
-                                        </ui:SymbolIcon>
-                                        <TextBlock Text="{Binding StatusText}"
-                                                   FontSize="{StaticResource FontSizeCaption}"
-                                                   FontWeight="SemiBold"
-                                                   VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{DynamicResource StatusUnknownForegroundBrush}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Valid">
-                                                            <Setter Property="Foreground" Value="{DynamicResource StatusValidForegroundBrush}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Expired">
-                                                            <Setter Property="Foreground" Value="{DynamicResource StatusExpiredForegroundBrush}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Error">
-                                                            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForegroundBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                                                       FontWeight="SemiBold"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource StatusUnknownForegroundBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Valid">
+                                                                <Setter Property="Foreground" Value="{DynamicResource StatusValidForegroundBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Expired">
+                                                                <Setter Property="Foreground" Value="{DynamicResource StatusExpiredForegroundBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                                <Setter Property="Foreground" Value="{DynamicResource StatusErrorForegroundBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                    <!-- Last Checked Column (Relative time + Tooltip full timestamp) -->
-                    <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnLastChecked}"
-                                            SortMemberPath="LastChecked"
-                                            Width="160">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding LastCheckedRelative}"
-                                           ToolTip="{Binding LastCheckedTooltip}"
-                                           VerticalAlignment="Center"
-                                           FontSize="{StaticResource FontSizeBody}" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                        <!-- Last Checked Column -->
+                        <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnLastChecked}"
+                                                SortMemberPath="LastChecked"
+                                                Width="1.6*"
+                                                MinWidth="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding LastCheckedRelative}"
+                                               ToolTip="{Binding LastCheckedTooltip}"
+                                               VerticalAlignment="Center"
+                                               FontSize="{StaticResource FontSizeBody}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                    <!-- Created Column -->
-                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnCreated}"
-                                        Binding="{Binding CreatedFormatted}"
-                                        SortMemberPath="Created"
-                                        Width="160" />
-                </ui:DataGrid.Columns>
-            </ui:DataGrid>
+                        <!-- Created Column -->
+                        <DataGridTextColumn Header="{x:Static resources:Strings.ColumnCreated}"
+                                            Binding="{Binding CreatedFormatted}"
+                                            SortMemberPath="Created"
+                                            Width="1.4*"
+                                            MinWidth="90" />
+                    </ui:DataGrid.Columns>
+                </ui:DataGrid>
 
                 <!-- Empty State 1: No Accounts in Vault -->
                 <StackPanel HorizontalAlignment="Center"
@@ -477,12 +529,14 @@
                                 Margin="{StaticResource MarginBase}">
                         <ui:Button Content="{x:Static resources:Strings.AddViaLogin}"
                                    AutomationProperties.AutomationId="Accounts_EmptyAddViaLoginButton"
+                                   AutomationProperties.Name="{x:Static resources:Strings.AddViaLogin}"
                                    Icon="{ui:SymbolIcon PersonAdd24}"
                                    Appearance="Primary"
                                    Margin="{StaticResource MarginTight}"
                                    Command="{Binding AddViaLoginCommand}" />
                         <ui:Button Content="{x:Static resources:Strings.AddViaCookie}"
                                    AutomationProperties.AutomationId="Accounts_EmptyAddViaCookieButton"
+                                   AutomationProperties.Name="{x:Static resources:Strings.AddViaCookie}"
                                    Icon="{ui:SymbolIcon Key24}"
                                    Margin="{StaticResource MarginTight}"
                                    Command="{Binding AddAccountCommand}" />
@@ -505,12 +559,13 @@
                                Style="{StaticResource EmptyStateHintStyle}" />
                     <ui:Button Content="{x:Static resources:Strings.ClearSearch}"
                                AutomationProperties.AutomationId="Accounts_ClearSearchButton"
+                               AutomationProperties.Name="{x:Static resources:Strings.ClearSearch}"
                                Icon="{ui:SymbolIcon Dismiss24}"
                                HorizontalAlignment="Center"
                                Margin="{StaticResource MarginBase}"
                                Command="{Binding ClearSearchCommand}" />
                 </StackPanel>
-        </Grid>
-    </Border>
-</Grid>
+            </Grid>
+        </Border>
+    </Grid>
 </Page>
