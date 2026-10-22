@@ -35,6 +35,8 @@
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginTight}" />
                     <ComboBox SelectedValuePath="Tag"
+                              AutomationProperties.AutomationId="Settings_LanguageComboBox"
+                              AutomationProperties.Name="{x:Static resources:Strings.LanguageLabel}"
                               SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
                               Margin="{StaticResource MarginBase}"
                               Width="280"
@@ -49,6 +51,7 @@
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginTight}" />
                     <ComboBox SelectedValuePath="Tag"
+                              AutomationProperties.AutomationId="Settings_ThemeComboBox"
                               SelectedValue="{Binding SelectedTheme, Mode=TwoWay}"
                               Margin="{StaticResource MarginTight}"
                               Width="280"
@@ -82,7 +85,9 @@
                                FontWeight="Medium"
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginTight}" />
-                    <TextBox Text="{Binding LaunchDelayMs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox AutomationProperties.AutomationId="Settings_LaunchDelayTextBox"
+                             AutomationProperties.Name="{x:Static resources:Strings.LaunchDelayLabel}"
+                             Text="{Binding LaunchDelayMs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Width="280"
                              HorizontalAlignment="Left"
                              Margin="{StaticResource MarginTight}" />
@@ -111,7 +116,9 @@
                                FontWeight="Medium"
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginTight}" />
-                    <TextBox Text="{Binding RejoinDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox AutomationProperties.AutomationId="Settings_RejoinDelayTextBox"
+                             AutomationProperties.Name="{x:Static resources:Strings.RejoinDelayLabel}"
+                             Text="{Binding RejoinDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Width="280"
                              HorizontalAlignment="Left"
                              Margin="{StaticResource MarginBase}" />
@@ -121,13 +128,16 @@
                                FontWeight="Medium"
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginTight}" />
-                    <TextBox Text="{Binding RejoinMaxAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox AutomationProperties.AutomationId="Settings_RejoinMaxAttemptsTextBox"
+                             AutomationProperties.Name="{x:Static resources:Strings.RejoinMaxAttemptsLabel}"
+                             Text="{Binding RejoinMaxAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Width="280"
                              HorizontalAlignment="Left"
                              Margin="{StaticResource MarginTight}" />
 
                     <!-- Smart Server Hopping -->
                     <ui:ToggleSwitch Content="{x:Static resources:Strings.EnableSmartServerHopping}"
+                                     AutomationProperties.AutomationId="Settings_SmartServerHoppingToggle"
                                      IsChecked="{Binding EnableSmartServerHopping, Mode=OneWay}"
                                      Command="{Binding EnableSmartServerHoppingToggledCommand}"
                                      CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
@@ -145,6 +155,7 @@
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginBase}" />
                     <ComboBox SelectedValuePath="Tag"
+                              AutomationProperties.AutomationId="Settings_GhostDisconnectComboBox"
                               SelectedValue="{Binding SelectedGhostDisconnectMode, Mode=TwoWay}"
                               Margin="{StaticResource MarginTight}"
                               Width="280"
@@ -180,6 +191,7 @@
                                Margin="{StaticResource MarginMedium}" />
 
                     <CheckBox Content="{x:Static resources:Strings.MultiInstanceLabel}"
+                              AutomationProperties.AutomationId="Settings_MultiInstanceToggle"
                               IsChecked="{Binding MultiInstanceEnabled, Mode=TwoWay}"
                               IsEnabled="{Binding IsMultiInstanceAvailable}"
                               Margin="{StaticResource MarginBase}" />
@@ -217,6 +229,7 @@
                                Margin="{StaticResource MarginMedium}" />
 
                     <CheckBox Content="{x:Static resources:Strings.EnableMasterPassword}"
+                              AutomationProperties.AutomationId="Settings_MasterPasswordToggle"
                               IsChecked="{Binding IsMasterPasswordEnabled, Mode=OneWay}"
                               Command="{Binding MasterPasswordToggledCommand}"
                               CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
@@ -248,6 +261,7 @@
                                Margin="{StaticResource MarginMedium}" />
 
                     <CheckBox Content="{x:Static resources:Strings.ThrottleBackgroundRoblox}"
+                              AutomationProperties.AutomationId="Settings_ThrottleRobloxCheckbox"
                               IsChecked="{Binding ThrottleBackgroundRoblox, Mode=OneWay}"
                               Command="{Binding ThrottleBackgroundRobloxToggledCommand}"
                               CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
@@ -261,6 +275,7 @@
 
                     <!-- Smart RAM Cleaner -->
                     <ui:ToggleSwitch Content="{x:Static resources:Strings.EnableRamCleaner}"
+                                     AutomationProperties.AutomationId="Settings_RamCleanerToggle"
                                      IsChecked="{Binding EnableRamCleaner, Mode=OneWay}"
                                      Command="{Binding EnableRamCleanerToggledCommand}"
                                      CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
@@ -279,6 +294,7 @@
 
                     <StackPanel Orientation="Horizontal" Margin="{StaticResource MarginTight}">
                         <Slider Width="240"
+                                AutomationProperties.AutomationId="Settings_RamCleanerSlider"
                                 Minimum="5"
                                 Maximum="120"
                                 TickFrequency="5"
@@ -318,10 +334,12 @@
 
                     <StackPanel Orientation="Horizontal" Margin="{StaticResource MarginTight}">
                         <ui:Button Content="{x:Static resources:Strings.ExportBackup}"
+                                   AutomationProperties.AutomationId="Settings_ExportBackupButton"
                                    Icon="{ui:SymbolIcon ArrowUpload24}"
                                    Margin="{StaticResource MarginTight}"
                                    Command="{Binding ExportBackupCommand}" />
                         <ui:Button Content="{x:Static resources:Strings.ImportBackup}"
+                                   AutomationProperties.AutomationId="Settings_ImportBackupButton"
                                    Icon="{ui:SymbolIcon ArrowDownload24}"
                                    Margin="{StaticResource MarginTight}"
                                    Command="{Binding ImportBackupCommand}" />
@@ -370,6 +388,7 @@
 
             <!-- Save Action Button -->
             <ui:Button Appearance="Primary"
+                       AutomationProperties.AutomationId="Settings_SaveButton"
                        Content="{x:Static resources:Strings.Save}"
                        Command="{Binding SaveSettingsCommand}"
                        Width="140"

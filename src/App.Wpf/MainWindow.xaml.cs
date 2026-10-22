@@ -121,5 +121,33 @@ public partial class MainWindow : FluentWindow
                 RootNavigation.Navigate(typeof(AccountsPage));
             }
         }
+#if DEBUG
+        if (string.Equals(Environment.GetEnvironmentVariable("RBXMANAGER_UITEST"), "1", StringComparison.Ordinal))
+        {
+            switch (e.Key)
+            {
+                case Key.F1:
+                    RootNavigation.Navigate(typeof(AccountsPage));
+                    e.Handled = true;
+                    break;
+                case Key.F2:
+                    RootNavigation.Navigate(typeof(ServersPage));
+                    e.Handled = true;
+                    break;
+                case Key.F3:
+                    RootNavigation.Navigate(typeof(RunningPage));
+                    e.Handled = true;
+                    break;
+                case Key.F4:
+                    RootNavigation.Navigate(typeof(DiagnosticsPage));
+                    e.Handled = true;
+                    break;
+                case Key.F6:
+                    RootNavigation.Navigate(typeof(SettingsPage));
+                    e.Handled = true;
+                    break;
+            }
+        }
+#endif
     }
 }

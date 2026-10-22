@@ -11,13 +11,16 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using RbxManager.App.ViewModels;
 using RbxManager.App.Views.Pages;
 using RbxManager.Core.Instance;
 using RbxManager.Core.Storage;
 using RbxManager.Infrastructure;
 using RbxManager.Infrastructure.Logging;
+using RbxManager.Infrastructure.Settings;
 using RbxManager.Infrastructure.Storage;
 using Serilog;
 using Wpf.Ui;
@@ -59,11 +62,20 @@ public partial class App : Application
 
     private static void ConfigureLogging()
     {
+        string logPath = "logs/app-.log";
+#if DEBUG
+        string? dataDir = Environment.GetEnvironmentVariable("RBXMANAGER_DATA_DIR");
+        if (!string.IsNullOrWhiteSpace(dataDir))
+        {
+            logPath = Path.Combine(dataDir, "logs", "app-.log");
+        }
+#endif
+
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .Enrich.With<RobloxSecretRedactionEnricher>()
             .WriteTo.File(
-                path: "logs/app-.log",
+                path: logPath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
                 formatProvider: CultureInfo.InvariantCulture)
@@ -145,6 +157,31 @@ public partial class App : Application
         // Core & Infrastructure
         services.AddInfrastructureServices();
 
+#if DEBUG
+        string? dataDir = Environment.GetEnvironmentVariable("RBXMANAGER_DATA_DIR");
+        string? uiTest = Environment.GetEnvironmentVariable("RBXMANAGER_UITEST");
+
+        if (!string.IsNullOrWhiteSpace(dataDir))
+        {
+            string vaultPath = Path.Combine(dataDir, "vault.dat");
+            string settingsPath = Path.Combine(dataDir, "settings.json");
+
+            services.RemoveAll<Core.Settings.ISettingsService>();
+            services.AddSingleton<Core.Settings.ISettingsService>(sp => new SettingsService(settingsPath, sp.GetService<ILogger<SettingsService>>()));
+
+            services.RemoveAll<Core.Storage.IAccountStore>();
+            services.AddSingleton<Core.Storage.IAccountStore>(sp => new EncryptedFileVault(
+                vaultPath,
+                sp.GetRequiredService<IVaultKeyProvider>(),
+                sp.GetService<ILogger<EncryptedFileVault>>()));
+        }
+
+        if (uiTest == "1" && !string.IsNullOrWhiteSpace(dataDir))
+        {
+            UiTestHooks.ConfigureFakes(services, dataDir);
+        }
+#endif
+
         // UI Services
         services.AddSingleton<Core.Diagnostics.IRegistryProvider, Services.WindowsRegistryProvider>();
         services.AddSingleton<IContentDialogService, ContentDialogService>();
@@ -169,9 +206,45 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+#if DEBUG
+        string? uiTestEnv = Environment.GetEnvironmentVariable("RBXMANAGER_UITEST");
+        string? dataDirEnv = Environment.GetEnvironmentVariable("RBXMANAGER_DATA_DIR");
+        if (uiTestEnv == "1")
+        {
+            // Force software rendering in UI test mode so GDI PrintWindow (PW_RENDERFULLCONTENT) can capture the surface
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+
+            if (string.IsNullOrWhiteSpace(dataDirEnv))
+            {
+                Log.Fatal("RBXMANAGER_UITEST is set, but RBXMANAGER_DATA_DIR is missing.");
+                Shutdown(1);
+                return;
+            }
+
+            string realAppData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RbxManager");
+            string fullDataDir = Path.GetFullPath(dataDirEnv);
+            string fullRealAppData = Path.GetFullPath(realAppData);
+            if (fullDataDir.Equals(fullRealAppData, StringComparison.OrdinalIgnoreCase) ||
+                fullDataDir.StartsWith(fullRealAppData + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Fatal("RBXMANAGER_DATA_DIR resolves inside real LocalAppData directory: {DataDir}", fullDataDir);
+                Shutdown(1);
+                return;
+            }
+        }
+#endif
+
         CleanupLeftoverLoginFolders();
 
-        _appSingleInstanceMutex = new Mutex(true, AppMutexName, out bool isNewInstance);
+        string mutexName = AppMutexName;
+#if DEBUG
+        if (Environment.GetEnvironmentVariable("RBXMANAGER_UITEST") == "1")
+        {
+            mutexName = @"Local\RbxManager_Application_UiTest_Mutex";
+        }
+#endif
+
+        _appSingleInstanceMutex = new Mutex(true, mutexName, out bool isNewInstance);
         if (!isNewInstance)
         {
             FocusExistingWindow();
@@ -182,6 +255,13 @@ public partial class App : Application
         Log.Information("RbxManager application starting up.");
 
         await _host.StartAsync();
+
+#if DEBUG
+        if (uiTestEnv == "1" && !string.IsNullOrWhiteSpace(dataDirEnv))
+        {
+            await UiTestHooks.EnsureSeededAsync(_host.Services, dataDirEnv);
+        }
+#endif
 
         Core.Settings.ISettingsService settingsService = _host.Services.GetRequiredService<Core.Settings.ISettingsService>();
         Core.Settings.AppSettings settings = await settingsService.LoadSettingsAsync();
@@ -210,6 +290,13 @@ public partial class App : Application
         try
         {
             string rbxTemp = Path.Combine(Path.GetTempPath(), "RbxManager");
+#if DEBUG
+            string? debugDataDir = Environment.GetEnvironmentVariable("RBXMANAGER_DATA_DIR");
+            if (!string.IsNullOrWhiteSpace(debugDataDir))
+            {
+                rbxTemp = Path.Combine(debugDataDir, "temp");
+            }
+#endif
             if (!Directory.Exists(rbxTemp))
             {
                 return;

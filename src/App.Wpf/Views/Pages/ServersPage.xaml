@@ -40,12 +40,14 @@
             </Grid.ColumnDefinitions>
 
             <ui:TextBox Grid.Column="0"
+                        AutomationProperties.AutomationId="Servers_PlaceIdBox"
                         Text="{Binding PlaceIdText, UpdateSourceTrigger=PropertyChanged}"
                         PlaceholderText="{x:Static res:Strings.PlaceIdLabel}"
                         Width="180"
                         Margin="{StaticResource MarginTight}" />
 
             <ComboBox Grid.Column="1"
+                      AutomationProperties.AutomationId="Servers_SortComboBox"
                       SelectedIndex="{Binding SelectedSortIndex}"
                       Width="200"
                       Margin="{StaticResource MarginTight}">
@@ -54,6 +56,7 @@
             </ComboBox>
 
             <ui:Button Grid.Column="2"
+                       AutomationProperties.AutomationId="Servers_RefreshButton"
                        Content="{x:Static res:Strings.Refresh}"
                        Icon="{ui:SymbolIcon ArrowSync24}"
                        Appearance="Primary"
@@ -61,6 +64,7 @@
                        Command="{Binding RefreshCommand}" />
 
             <ui:Button Grid.Column="4"
+                       AutomationProperties.AutomationId="Servers_LoadMoreButton"
                        Content="{x:Static res:Strings.LoadMore}"
                        Icon="{ui:SymbolIcon ArrowDown24}"
                        Command="{Binding LoadMoreCommand}"
@@ -77,6 +81,7 @@
                 ClipToBounds="True">
             <Grid>
                 <ui:DataGrid ItemsSource="{Binding Servers}"
+                             AutomationProperties.AutomationId="Servers_DataGrid"
                              AutoGenerateColumns="False"
                              CanUserAddRows="False"
                              CanUserDeleteRows="False"
@@ -202,6 +207,7 @@
                            HorizontalAlignment="Center"
                            Margin="{StaticResource MarginTight}" />
                 <ui:Button Content="{x:Static res:Strings.Retry}"
+                           AutomationProperties.AutomationId="Servers_RetryButton"
                            Icon="{ui:SymbolIcon ArrowSync24}"
                            Appearance="Primary"
                            HorizontalAlignment="Center"

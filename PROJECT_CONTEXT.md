@@ -19,6 +19,9 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M11**: Smart RAM cleaner (background working set memory optimization via `SetProcessWorkingSetSize`, periodic `RamCleanerService`, UI toggle & interval slider). (Completed)
 - **M12**: Smart auto-rejoin with intelligent server hopping on crash (`SessionTracker` + `IServerBrowserService`), failure fallback, and UI toggle. (Completed)
 - **M13**: Ghost disconnect detector (`RobloxLogWatcher` tailing on-disk logs for disconnection keywords, automatic termination of frozen processes, UI toggle). (Completed)
+- **M14**: UI/UX polish, contrast enhancement, DataGrid styling overhaul, and multi-version fixes. (Completed)
+- **M15**: Tech Lead audit, launch precheck, UI defect fixes, XAML smoke tests. (Completed)
+- **M16**: Sandboxed UI automation harness with window-only screenshots and UIA tree dumps. (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

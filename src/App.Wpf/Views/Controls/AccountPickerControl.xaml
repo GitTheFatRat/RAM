@@ -6,11 +6,14 @@
              MaxHeight="400">
     <Grid Margin="0,8,0,0">
         <ListView x:Name="AccountsListView"
+                  AutomationProperties.AutomationId="AccountPicker_ListView"
                   SelectionMode="Multiple"
                   ItemsSource="{Binding Accounts}">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <CheckBox IsChecked="{Binding IsSelected}"
+                              AutomationProperties.AutomationId="AccountPicker_ItemCheckBox"
+                              AutomationProperties.Name="{Binding Account.Alias}"
                               Margin="0,4">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Account.Alias}" FontWeight="SemiBold" Margin="0,0,8,0" />

@@ -41,6 +41,7 @@
 
             <!-- Search box -->
             <ui:TextBox x:Name="SearchBox"
+                        AutomationProperties.AutomationId="Accounts_SearchBox"
                         Grid.Column="0"
                         PlaceholderText="{x:Static resources:Strings.SearchPlaceholder}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -55,6 +56,7 @@
                         Margin="{StaticResource MarginMedium}">
                 <!-- Primary Action: Launch (Accent) -->
                 <ui:Button Content="{x:Static resources:Strings.Launch}"
+                           AutomationProperties.AutomationId="Accounts_LaunchButton"
                            Icon="{ui:SymbolIcon Play24}"
                            Appearance="Primary"
                            Margin="{StaticResource MarginTight}"
@@ -68,23 +70,27 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:Button Grid.Column="0"
+                               AutomationProperties.AutomationId="Accounts_AddViaLoginButton"
                                Content="{x:Static resources:Strings.AddViaLogin}"
                                Icon="{ui:SymbolIcon PersonAdd24}"
                                Command="{Binding AddViaLoginCommand}"
                                ToolTip="Ctrl+N" />
                     <ui:Button Grid.Column="1"
+                               AutomationProperties.AutomationId="Accounts_AddSplitButton"
                                Icon="{ui:SymbolIcon ChevronDown24}"
                                Click="OnAddSplitMenuClick"
                                AutomationProperties.Name="{x:Static resources:Strings.AddAccountDialogTitle}">
                         <ui:Button.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="{x:Static resources:Strings.AddViaLogin}"
+                                          AutomationProperties.AutomationId="Accounts_AddViaLoginMenuItem"
                                           Command="{Binding AddViaLoginCommand}">
                                     <MenuItem.Icon>
                                         <ui:SymbolIcon Symbol="PersonAdd24" />
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <MenuItem Header="{x:Static resources:Strings.AddViaCookie}"
+                                          AutomationProperties.AutomationId="Accounts_AddViaCookieMenuItem"
                                           Command="{Binding AddAccountCommand}">
                                     <MenuItem.Icon>
                                         <ui:SymbolIcon Symbol="Key24" />
@@ -97,12 +103,14 @@
 
                 <!-- More Actions Menu -->
                 <ui:Button Content="{x:Static resources:Strings.MoreActions}"
+                           AutomationProperties.AutomationId="Accounts_MoreActionsButton"
                            Icon="{ui:SymbolIcon MoreHorizontal24}"
                            Margin="{StaticResource MarginTight}"
                            Click="OnMoreButtonClick">
                     <ui:Button.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="{x:Static resources:Strings.Check}"
+                                      AutomationProperties.AutomationId="Accounts_CheckMenuItem"
                                       Command="{Binding CheckAccountCommand}"
                                       IsEnabled="{Binding IsAccountSelected}">
                                 <MenuItem.Icon>
@@ -110,6 +118,7 @@
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{x:Static resources:Strings.CheckAll}"
+                                      AutomationProperties.AutomationId="Accounts_CheckAllMenuItem"
                                       Command="{Binding CheckAllCommand}"
                                       IsEnabled="{Binding IsNotBusy}">
                                 <MenuItem.Icon>
@@ -118,6 +127,7 @@
                             </MenuItem>
                             <Separator />
                             <MenuItem Header="{x:Static resources:Strings.EditAccount}"
+                                      AutomationProperties.AutomationId="Accounts_EditMenuItem"
                                       Command="{Binding EditAccountCommand}"
                                       IsEnabled="{Binding IsAccountSelected}">
                                 <MenuItem.Icon>
@@ -125,6 +135,7 @@
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{x:Static resources:Strings.DeleteAccount}"
+                                      AutomationProperties.AutomationId="Accounts_DeleteMenuItem"
                                       Command="{Binding DeleteAccountCommand}"
                                       IsEnabled="{Binding IsAccountSelected}">
                                 <MenuItem.Icon>
@@ -133,6 +144,7 @@
                             </MenuItem>
                             <Separator />
                             <MenuItem Header="{x:Static resources:Strings.RenameGroup}"
+                                      AutomationProperties.AutomationId="Accounts_RenameGroupMenuItem"
                                       Command="{Binding RenameGroupCommand}"
                                       IsEnabled="{Binding IsRenameGroupVisible}">
                                 <MenuItem.Icon>
@@ -141,12 +153,14 @@
                             </MenuItem>
                             <Separator />
                             <MenuItem Header="{x:Static resources:Strings.ExportBackup}"
+                                      AutomationProperties.AutomationId="Accounts_ExportBackupMenuItem"
                                       Command="{Binding ExportBackupCommand}">
                                 <MenuItem.Icon>
                                     <ui:SymbolIcon Symbol="ArrowUpload24" />
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{x:Static resources:Strings.ImportBackup}"
+                                      AutomationProperties.AutomationId="Accounts_ImportBackupMenuItem"
                                       Command="{Binding ImportBackupCommand}">
                                 <MenuItem.Icon>
                                     <ui:SymbolIcon Symbol="ArrowDownload24" />
@@ -158,6 +172,7 @@
 
                 <!-- Cancel button during CheckAll -->
                 <ui:Button Content="{x:Static resources:Strings.Cancel}"
+                           AutomationProperties.AutomationId="Accounts_CancelCheckAllButton"
                            Icon="{ui:SymbolIcon Dismiss24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding CancelCheckAllCommand}"
@@ -194,6 +209,7 @@
                     </ItemsControl>
 
                     <ui:Button Content="{x:Static resources:Strings.RenameGroup}"
+                               AutomationProperties.AutomationId="Accounts_RenameGroupButton"
                                Icon="{ui:SymbolIcon Edit24}"
                                Margin="{StaticResource MarginTight}"
                                Command="{Binding RenameGroupCommand}"
@@ -206,10 +222,12 @@
                         Orientation="Horizontal"
                         Margin="{StaticResource MarginMedium}">
                 <ui:Button Content="{x:Static resources:Strings.LaunchSelected}"
+                           AutomationProperties.AutomationId="Accounts_LaunchSelectedButton"
                            Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchSelectedAccountsCommand}" />
                 <ui:Button Content="{x:Static resources:Strings.LaunchGroup}"
+                           AutomationProperties.AutomationId="Accounts_LaunchGroupButton"
                            Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchGroupAccountsCommand}"
@@ -247,6 +265,7 @@
                 ClipToBounds="True">
             <Grid>
                 <ui:DataGrid x:Name="AccountsDataGrid"
+                             AutomationProperties.AutomationId="Accounts_DataGrid"
                              ItemsSource="{Binding FilteredAccounts}"
                              SelectedItem="{Binding SelectedAccount}"
                              AutoGenerateColumns="False"
@@ -316,6 +335,8 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          AutomationProperties.AutomationId="AccountSelectionCheckBox"
+                                          AutomationProperties.Name="{Binding Alias}"
                                           HorizontalAlignment="Center"
                                           VerticalAlignment="Center" />
                             </DataTemplate>
@@ -466,11 +487,13 @@
                             HorizontalAlignment="Center"
                             Margin="{StaticResource MarginBase}">
                     <ui:Button Content="{x:Static resources:Strings.AddViaLogin}"
+                               AutomationProperties.AutomationId="Accounts_EmptyAddViaLoginButton"
                                Icon="{ui:SymbolIcon PersonAdd24}"
                                Appearance="Primary"
                                Margin="{StaticResource MarginTight}"
                                Command="{Binding AddViaLoginCommand}" />
                     <ui:Button Content="{x:Static resources:Strings.AddViaCookie}"
+                               AutomationProperties.AutomationId="Accounts_EmptyAddViaCookieButton"
                                Icon="{ui:SymbolIcon Key24}"
                                Margin="{StaticResource MarginTight}"
                                Command="{Binding AddAccountCommand}" />
@@ -498,6 +521,7 @@
                            HorizontalAlignment="Center"
                            Margin="{StaticResource MarginMedium}" />
                 <ui:Button Content="{x:Static resources:Strings.ClearSearch}"
+                           AutomationProperties.AutomationId="Accounts_ClearSearchButton"
                            Icon="{ui:SymbolIcon Dismiss24}"
                            HorizontalAlignment="Center"
                            Margin="{StaticResource MarginBase}"

@@ -209,4 +209,29 @@ To eliminate this single point of failure without exposing plaintext credentials
    - All communications with Roblox endpoints use end-to-end TLS (HTTPS). When routing through an HTTP or SOCKS5 proxy, the proxy operator can observe target destination hosts and connection timing, but cannot inspect or decrypt plaintext cookies, tokens, or response payloads.
    - The strict Roblox host guard handler (`RobloxHostGuardHandler`) applies to the target request URI host, ensuring outbound requests are dispatched only to official `roblox.com` or `*.roblox.com` endpoints regardless of proxy configuration.
 
+---
+
+## UI Test Sandbox Security (M16)
+
+1. **Strict Process & Isolation Boundaries**:
+   - The UI automation test harness (`App.UiTests`) interacts exclusively with the specific application instance process it launches.
+   - Screen capture is strictly confined to the application window using the Win32 `PrintWindow` API with `PW_RENDERFULLCONTENT` (0x02). The harness never captures the full desktop or any other application window, ensuring no ambient user data (passwords, personal workspaces, browser sessions) is ever captured or exposed.
+   - UI Automation tree inspection dumps omit text content for sensitive fields (`ui:PasswordBox` and text inputs), recording only presence (`hasTextValue: true`) and structural metadata.
+
+2. **Throwaway Sandbox Directory & Environment Isolation**:
+   - In Debug builds, `RBXMANAGER_DATA_DIR` allows pointing storage paths (vault, settings, logs) to a unique temporary directory created and destroyed per test run.
+   - The application enforces a strict safety check: if `RBXMANAGER_UITEST=1` is provided, the application verifies `RBXMANAGER_DATA_DIR` is set and does **NOT** resolve within the real user directory `%LOCALAPPDATA%\RbxManager`. Any violation immediately aborts execution.
+   - A dedicated test mutex (`Local\RbxManager_Application_UiTest_Mutex`) prevents collision with any real running RbxManager instance.
+
+3. **Offline Mock Pipeline**:
+   - When running under `RBXMANAGER_UITEST=1`, all real networking and execution services are replaced with offline DI fakes (`FakeRobloxAuthService`, `FakeServerBrowserService`, `FakeLauncher`, `FakeProcessProvider`, `FakeDiagnosticsService`, `FakeInstanceGate`).
+   - Canned test data uses synthetic cookie tokens (`FAKE_UI_COOKIE_*`) that do not trigger secret scanners or leak credentials.
+   - Zero real network calls to Roblox servers or local process launches (`RobloxPlayerBeta.exe`) can occur during UI tests.
+
+4. **Release Build Safety Enforcement**:
+   - All test hooks, fake services, and environment variable overrides (`RBXMANAGER_DATA_DIR`, `RBXMANAGER_UITEST`) are wrapped strictly within `#if DEBUG` preprocessor directives.
+   - In Release builds, these environment variables and hooks are completely omitted by the compiler.
+   - Verified by automated reflection tests (`ReleaseConfigurationSafetyTests`) that assert Release binaries contain zero test hook types or interfaces.
+
+
 

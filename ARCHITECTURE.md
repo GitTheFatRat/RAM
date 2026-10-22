@@ -39,6 +39,39 @@ graph TD
    - **Responsibility**: Integration and security tests verifying DPAPI wrapping, AES-GCM encryption round-trip, backup generation, tamper detection, HTTP handlers, Roblox authentication flows, URI construction, diagnostics report sanitization, server browser parsing and retry, session tracking and auto-rejoin lifecycle, settings persistence and clamping, named mutex instance gate, encrypted backup PBKDF2/AES-GCM export and import, log leak prevention (`LogLeakTests`), XAML scan tests (`XamlScanTests`), and localization audits (`LocalizationAuditTests`, `I18nParityTests`).
    - **Dependencies**: References `Core` and `Infrastructure`.
 
+6. **`tests/App.Wpf.Tests/`**
+   - **Responsibility**: WPF UI unit and safety tests, XAML accessibility scanning (`XamlAccessibilityTests`), and release configuration safety guards (`ReleaseConfigurationSafetyTests`) ensuring zero debug hooks leak into production assemblies.
+   - **Dependencies**: References `App.Wpf`, `Core`, and `Infrastructure`.
+
+7. **`tests/App.UiTests/`**
+   - **Responsibility**: End-to-end sandboxed UI automation harness (Category `UI`). Drives the application with throwaway directories, fake accounts, offline mocks, and window-only PNG capture (`PW_RENDERFULLCONTENT`). Validates visual bounds, element naming, contrast, and dumps UIA accessibility trees without taking whole desktop control.
+   - **Dependencies**: Built on .NET Windows Automation and Win32 interop. References `App.Wpf`, `Core`, and `Infrastructure`.
+
+---
+
+## Sandboxed UI Automation Harness (M16)
+
+```mermaid
+flowchart TD
+    Runner["run-ui-tests.ps1 / UiHarnessTests"] -->|Spawns with RBXMANAGER_UITEST=1 & Temp Dir| AppProc["App.Wpf Process (Debug)"]
+    AppProc -->|Replaces DI Services| Fakes["UiTestHooks (Fake Auth, Launcher, Browser)"]
+    Runner -->|Win32 PrintWindow PW_RENDERFULLCONTENT| Png["Window Screenshot (.png)"]
+    Runner -->|UI Automation Tree Walk| Json["Tree Dump (.uia.json)"]
+    Runner -->|Automated Visual Assertions| Checks["Contrast, Bounds, Naming & Liveness"]
+```
+
+### Debug-Only Hook Architecture
+1. **Compilation Guard**:
+   - All test hooks, mock services, and environment variable handlers (`RBXMANAGER_DATA_DIR`, `RBXMANAGER_UITEST`) are guarded by `#if DEBUG` directives in `App.xaml.cs`, `MainWindow.xaml.cs`, and `UiTestHooks.cs`.
+   - In `Release` builds, none of this code compiles into the binary. This is verified by `ReleaseConfigurationSafetyTests` inspecting PE metadata for forbidden keywords.
+2. **Directory & Process Isolation**:
+   - `RBXMANAGER_DATA_DIR` isolates storage, logs, and settings to a unique throwaway directory. A strict check aborts execution if `RBXMANAGER_DATA_DIR` points to or within `%LOCALAPPDATA%\RbxManager`.
+   - Uses test mutex `Local\RbxManager_Application_UiTest_Mutex` to ensure independence from running instances.
+3. **Window-Only Native Capture**:
+   - The harness invokes Win32 `PrintWindow` with `PW_RENDERFULLCONTENT` (0x02) targeted at the application HWND.
+   - In UI test mode, `RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;` is set so hardware-composed WPF surfaces render directly to GDI contexts without black-screen artifacts in headless or virtual environments.
+   - No whole-desktop capture or screen recording tools are ever used.
+
 ---
 
 ### Milestone Status
@@ -57,3 +90,10 @@ graph TD
 - **M11**: Smart RAM Cleaner (Background Working Set Memory Optimization via `SetProcessWorkingSetSize`, periodic `RamCleanerService`, UI toggle & interval slider). (Completed)
 - **M12**: Smart Auto-Rejoin (Intelligent public server hopping on crash via `IServerBrowserService`, fallback handling, UI toggle). (Completed)
 - **M13**: Ghost Disconnect Detector (`RobloxLogWatcher` tailing on-disk logs for disconnection keywords, automatic termination of frozen processes, UI toggle). (Completed)
+- **M14**: UI/UX polish, contrast enhancement, and multi-version fixes. (Completed)
+- **M14.1**: Resolve illegal Binding on ConverterParameter in ServersPage. (Completed)
+- **M14.2**: Robust Roblox Player installation check across multiple registry hives. (Completed)
+- **M14.3**: Overhaul DataGrid styles and force dark theme contrast. (Completed)
+- **M14.4**: WebView2 login routing through configured account proxy. (Completed)
+- **M15**: Tech Lead audit, launch precheck, UI defect fixes, XAML smoke tests. (Completed)
+- **M16**: Sandboxed UI automation test harness, window-only capture, UIA dump, visual assertions. (Completed)

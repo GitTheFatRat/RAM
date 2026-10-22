@@ -3,6 +3,7 @@
                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                   xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                   xmlns:pages="clr-namespace:RbxManager.App.Views.Pages"
+                  xmlns:controls="clr-namespace:RbxManager.App.Views.Controls"
                   xmlns:resources="clr-namespace:RbxManager.App.Resources"
                   Title="{x:Static resources:Strings.AppTitle}"
                   Height="700"
@@ -20,28 +21,35 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0"
+                     AutomationProperties.AutomationId="MainTitleBar"
                      Title="{x:Static resources:Strings.AppTitle}"
                      Icon="{ui:SymbolIcon AppGeneric24}" />
 
         <ui:NavigationView x:Name="RootNavigation"
+                           AutomationProperties.AutomationId="RootNavigation"
                            Grid.Row="1"
                            PaneDisplayMode="Left">
             <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavAccounts}"
-                                       Icon="{ui:SymbolIcon People24}"
-                                       TargetPageType="{x:Type pages:AccountsPage}" />
-                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavServers}"
-                                       Icon="{ui:SymbolIcon Server24}"
-                                       TargetPageType="{x:Type pages:ServersPage}" />
-                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavRunning}"
-                                       Icon="{ui:SymbolIcon Play24}"
-                                       TargetPageType="{x:Type pages:RunningPage}" />
-                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavDiagnostics}"
-                                       Icon="{ui:SymbolIcon Stethoscope24}"
-                                       TargetPageType="{x:Type pages:DiagnosticsPage}" />
-                <ui:NavigationViewItem Content="{x:Static resources:Strings.NavSettings}"
-                                       Icon="{ui:SymbolIcon Settings24}"
-                                       TargetPageType="{x:Type pages:SettingsPage}" />
+                <controls:NavViewItem Content="{x:Static resources:Strings.NavAccounts}"
+                                      AutomationProperties.AutomationId="NavItem_Accounts"
+                                      Icon="{ui:SymbolIcon People24}"
+                                      TargetPageType="{x:Type pages:AccountsPage}" />
+                <controls:NavViewItem Content="{x:Static resources:Strings.NavServers}"
+                                      AutomationProperties.AutomationId="NavItem_Servers"
+                                      Icon="{ui:SymbolIcon Server24}"
+                                      TargetPageType="{x:Type pages:ServersPage}" />
+                <controls:NavViewItem Content="{x:Static resources:Strings.NavRunning}"
+                                      AutomationProperties.AutomationId="NavItem_Running"
+                                      Icon="{ui:SymbolIcon Play24}"
+                                      TargetPageType="{x:Type pages:RunningPage}" />
+                <controls:NavViewItem Content="{x:Static resources:Strings.NavDiagnostics}"
+                                      AutomationProperties.AutomationId="NavItem_Diagnostics"
+                                      Icon="{ui:SymbolIcon Stethoscope24}"
+                                      TargetPageType="{x:Type pages:DiagnosticsPage}" />
+                <controls:NavViewItem Content="{x:Static resources:Strings.NavSettings}"
+                                      AutomationProperties.AutomationId="NavItem_Settings"
+                                      Icon="{ui:SymbolIcon Settings24}"
+                                      TargetPageType="{x:Type pages:SettingsPage}" />
             </ui:NavigationView.MenuItems>
         </ui:NavigationView>
 

@@ -22,7 +22,8 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.FieldAlias}"
                                    FontWeight="SemiBold" />
-                        <ui:TextBox Text="{Binding Alias, UpdateSourceTrigger=PropertyChanged}"
+                        <ui:TextBox AutomationProperties.AutomationId="AccountEditor_AliasBox"
+                                    Text="{Binding Alias, UpdateSourceTrigger=PropertyChanged}"
                                     MaxLength="50" />
                     </StackPanel>
 
@@ -30,7 +31,8 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.FieldGroup}"
                                    FontWeight="SemiBold" />
-                        <ComboBox Text="{Binding Group, UpdateSourceTrigger=PropertyChanged}"
+                        <ComboBox AutomationProperties.AutomationId="AccountEditor_GroupBox"
+                                  Text="{Binding Group, UpdateSourceTrigger=PropertyChanged}"
                                   ItemsSource="{Binding AvailableGroups}"
                                   IsEditable="True" />
                     </StackPanel>
@@ -39,7 +41,8 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.FieldNote}"
                                    FontWeight="SemiBold" />
-                        <ui:TextBox Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
+                        <ui:TextBox AutomationProperties.AutomationId="AccountEditor_NoteBox"
+                                    Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
                                     MaxLength="200" />
                     </StackPanel>
 
@@ -47,7 +50,8 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.FieldCookie}"
                                    FontWeight="SemiBold" />
-                        <ui:PasswordBox x:Name="CookieBox" />
+                        <ui:PasswordBox x:Name="CookieBox"
+                                        AutomationProperties.AutomationId="AccountEditor_CookieBox" />
                     </StackPanel>
                 </StackPanel>
             </TabItem>
@@ -59,7 +63,8 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.ProxyType}"
                                    FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding AvailableProxyTypes}"
+                        <ComboBox AutomationProperties.AutomationId="AccountEditor_ProxyTypeBox"
+                                  ItemsSource="{Binding AvailableProxyTypes}"
                                   SelectedItem="{Binding SelectedProxyType}" />
                     </StackPanel>
 
@@ -67,7 +72,8 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.ProxyHost}"
                                    FontWeight="SemiBold" />
-                        <ui:TextBox Text="{Binding ProxyHost, UpdateSourceTrigger=PropertyChanged}"
+                        <ui:TextBox AutomationProperties.AutomationId="AccountEditor_ProxyHostBox"
+                                    Text="{Binding ProxyHost, UpdateSourceTrigger=PropertyChanged}"
                                     PlaceholderText="127.0.0.1 or proxy.example.com" />
                     </StackPanel>
 
@@ -75,7 +81,8 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.ProxyPort}"
                                    FontWeight="SemiBold" />
-                        <ui:TextBox Text="{Binding ProxyPort, UpdateSourceTrigger=PropertyChanged}"
+                        <ui:TextBox AutomationProperties.AutomationId="AccountEditor_ProxyPortBox"
+                                    Text="{Binding ProxyPort, UpdateSourceTrigger=PropertyChanged}"
                                     MaxLength="5" />
                     </StackPanel>
 
@@ -83,14 +90,16 @@
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.ProxyUsername}"
                                    FontWeight="SemiBold" />
-                        <ui:TextBox Text="{Binding ProxyUsername, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:TextBox AutomationProperties.AutomationId="AccountEditor_ProxyUsernameBox"
+                                    Text="{Binding ProxyUsername, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
 
                     <StackPanel Margin="0,0,0,12">
                         <TextBlock Margin="0,0,0,4"
                                    Text="{x:Static resources:Strings.ProxyPassword}"
                                    FontWeight="SemiBold" />
-                        <ui:PasswordBox x:Name="ProxyPasswordBox" />
+                        <ui:PasswordBox x:Name="ProxyPasswordBox"
+                                        AutomationProperties.AutomationId="AccountEditor_ProxyPasswordBox" />
                     </StackPanel>
                 </StackPanel>
             </TabItem>

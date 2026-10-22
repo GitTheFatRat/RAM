@@ -18,6 +18,8 @@
 - **Tối ưu tài nguyên an toàn**: Tuỳ chọn giảm tài nguyên cửa sổ Roblox ngầm (không chạm cửa sổ tiền cảnh) và dọn dẹp RAM các tiến trình theo dõi với cơ chế bảo vệ tự động tắt khi bị từ chối truy cập.
 - **Sao lưu & Phục hồi mã hóa**: Xuất/nhập dữ liệu tài khoản với chuẩn mã hóa **PBKDF2-HMAC-SHA512 (600.000 vòng lặp) + AES-256-GCM**, bảo vệ bằng mật khẩu người dùng tự chọn.
 
+> **Ghi chú về tính toàn vẹn bản dựng**: Bản phát hành chính thức (Release build) hoàn toàn không chứa bất kỳ mã kiểm thử (test hooks) hay điểm can thiệp môi trường giả lập nào; tất cả cơ chế tự động hóa kiểm thử chỉ tồn tại trong các bản dựng Debug nội bộ.
+
 ---
 
 ## 2. Yêu cầu hệ thống

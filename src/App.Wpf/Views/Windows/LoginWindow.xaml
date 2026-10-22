@@ -4,6 +4,8 @@
                   xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                   xmlns:resources="clr-namespace:RbxManager.App.Resources"
                   Title="{x:Static resources:Strings.LoginWindowTitle}"
+                  AutomationProperties.AutomationId="LoginWindow"
+                  AutomationProperties.Name="{x:Static resources:Strings.LoginWindowTitle}"
                   Height="700"
                   Width="800"
                   MinWidth="500"
@@ -50,6 +52,7 @@
                                FontWeight="SemiBold"
                                Margin="{StaticResource MarginTight}" />
                     <ComboBox x:Name="ProxyTypeComboBox"
+                              AutomationProperties.AutomationId="LoginWindow_ProxyTypeBox"
                               Margin="{StaticResource MarginBottomMedium}"
                               SelectionChanged="OnProxyTypeChanged">
                         <ComboBoxItem Content="{x:Static resources:Strings.ProxyTypeNone}" IsSelected="True" />
@@ -71,6 +74,7 @@
                                            FontWeight="SemiBold"
                                            Margin="{StaticResource MarginTight}" />
                                 <ui:TextBox x:Name="ProxyHostBox"
+                                            AutomationProperties.AutomationId="LoginWindow_ProxyHostBox"
                                             PlaceholderText="127.0.0.1 / proxy.example.com" />
                             </StackPanel>
 
@@ -79,6 +83,7 @@
                                            FontWeight="SemiBold"
                                            Margin="{StaticResource MarginTight}" />
                                 <ui:TextBox x:Name="ProxyPortBox"
+                                            AutomationProperties.AutomationId="LoginWindow_ProxyPortBox"
                                             Text="8080" />
                             </StackPanel>
                         </Grid>
@@ -87,12 +92,14 @@
                                    FontWeight="SemiBold"
                                    Margin="{StaticResource MarginTight}" />
                         <ui:TextBox x:Name="ProxyUsernameBox"
+                                    AutomationProperties.AutomationId="LoginWindow_ProxyUsernameBox"
                                     Margin="{StaticResource MarginBottomMedium}" />
 
                         <TextBlock Text="{x:Static resources:Strings.ProxyPassword}"
                                    FontWeight="SemiBold"
                                    Margin="{StaticResource MarginTight}" />
                         <ui:PasswordBox x:Name="ProxyPasswordBox"
+                                        AutomationProperties.AutomationId="LoginWindow_ProxyPasswordBox"
                                         Margin="{StaticResource MarginBottomMedium}" />
                     </StackPanel>
 
@@ -114,16 +121,19 @@
                                 HorizontalAlignment="Right"
                                 Margin="{StaticResource MarginMedium}">
                         <ui:Button x:Name="TestProxyButton"
+                                   AutomationProperties.AutomationId="LoginWindow_TestProxyButton"
                                    Content="{x:Static resources:Strings.TestProxy}"
                                    Margin="{StaticResource MarginTight}"
                                    Click="OnTestProxyClick"
                                    Visibility="Collapsed" />
                         <ui:Button x:Name="StartBrowserButton"
+                                   AutomationProperties.AutomationId="LoginWindow_StartBrowserButton"
                                    Content="{x:Static resources:Strings.StartBrowser}"
                                    Appearance="Primary"
                                    Margin="{StaticResource MarginTight}"
                                    Click="OnStartBrowserClick" />
                         <ui:Button Content="{x:Static resources:Strings.Cancel}"
+                                   AutomationProperties.AutomationId="LoginWindow_CancelButton"
                                    Margin="{StaticResource MarginTight}"
                                    Click="OnCancelClick" />
                     </StackPanel>
@@ -176,6 +186,7 @@
                                    TextAlignment="Center"
                                    Margin="{StaticResource MarginMedium}" />
                         <ui:Button Content="{x:Static resources:Strings.ChangeProxy}"
+                                   AutomationProperties.AutomationId="LoginWindow_ChangeProxyButton"
                                    Appearance="Primary"
                                    HorizontalAlignment="Center"
                                    Margin="{StaticResource MarginMedium}"
