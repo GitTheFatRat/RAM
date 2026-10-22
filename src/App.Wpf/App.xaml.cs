@@ -3,6 +3,7 @@ namespace RbxManager.App;
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -164,6 +165,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        CleanupLeftoverLoginFolders();
+
         _appSingleInstanceMutex = new Mutex(true, AppMutexName, out bool isNewInstance);
         if (!isNewInstance)
         {
@@ -182,6 +185,42 @@ public partial class App : Application
 
         MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
         mainWindow.Show();
+    }
+
+    private static void CleanupLeftoverLoginFolders()
+    {
+        try
+        {
+            string rbxTemp = Path.Combine(Path.GetTempPath(), "RbxManager");
+            if (!Directory.Exists(rbxTemp))
+            {
+                return;
+            }
+
+            string[] leftoverDirs = Directory.GetDirectories(rbxTemp, "login-*");
+            int deletedCount = 0;
+            foreach (string dir in leftoverDirs)
+            {
+                try
+                {
+                    Directory.Delete(dir, recursive: true);
+                    deletedCount++;
+                }
+                catch
+                {
+                    // Best effort, ignore errors on individual folders in use
+                }
+            }
+
+            if (leftoverDirs.Length > 0)
+            {
+                Log.Information("Startup login folder cleanup: found {Total}, deleted {Deleted}.", leftoverDirs.Length, deletedCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Startup login folder cleanup failed: {ExceptionType}.", ex.GetType().Name);
+        }
     }
 
     private static void ApplyTheme(string theme)

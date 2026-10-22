@@ -119,6 +119,21 @@ public partial class LoginWindow : FluentWindow, IDisposable
                     break;
                 }
             }
+
+            if (!ct.IsCancellationRequested && DateTimeOffset.UtcNow >= timeout)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    System.Windows.MessageBox.Show(
+                        Strings.LoginTimeoutMessage,
+                        Strings.ErrorTitle,
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+
+                    DialogResult = false;
+                    Close();
+                });
+            }
         }
         catch (OperationCanceledException)
         {
@@ -155,16 +170,23 @@ public partial class LoginWindow : FluentWindow, IDisposable
             // Best effort cleanup
         }
 
-        try
+        for (int attempt = 1; attempt <= 5; attempt++)
         {
-            if (Directory.Exists(_tempUserDataFolder))
+            try
             {
-                Directory.Delete(_tempUserDataFolder, recursive: true);
+                if (Directory.Exists(_tempUserDataFolder))
+                {
+                    Directory.Delete(_tempUserDataFolder, recursive: true);
+                }
+                break;
             }
-        }
-        catch
-        {
-            // Best effort cleanup
+            catch
+            {
+                if (attempt < 5)
+                {
+                    Thread.Sleep(500);
+                }
+            }
         }
     }
 

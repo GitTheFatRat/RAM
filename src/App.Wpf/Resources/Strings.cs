@@ -107,6 +107,12 @@ public static class Strings
     public static string RejoinMaxAttemptsLabel => GetString(nameof(RejoinMaxAttemptsLabel));
     public static string MultiInstanceLabel => GetString(nameof(MultiInstanceLabel));
     public static string MultiInstanceNotAvailable => GetString(nameof(MultiInstanceNotAvailable));
+    public static string MultiInstanceRobloxRunning => GetString(nameof(MultiInstanceRobloxRunning));
+    public static string MultiInstanceCouldNotTakeOver => GetString(nameof(MultiInstanceCouldNotTakeOver));
+    public static string MultiInstanceDisposed => GetString(nameof(MultiInstanceDisposed));
+    public static string MultiInstanceMutexError => GetString(nameof(MultiInstanceMutexError));
+    public static string MultiInstanceTimeout => GetString(nameof(MultiInstanceTimeout));
+    public static string LoginTimeoutMessage => GetString(nameof(LoginTimeoutMessage));
     public static string MultiInstanceWarningTitle => GetString(nameof(MultiInstanceWarningTitle));
     public static string MultiInstanceWarningMessage => GetString(nameof(MultiInstanceWarningMessage));
     public static string RestartRequiredMessage => GetString(nameof(RestartRequiredMessage));

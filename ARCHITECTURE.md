@@ -52,3 +52,4 @@ graph TD
 - **M6**: Multi-instance real gate, Reveal() surface reduction, report reconciliation, review bundle. (Completed)
 - **M7**: Diagnostics page, redacted report generator, customizable launch templates, code health pass. (Completed)
 - **M8**: UI/UX polish, design tokens, virtualized high-density DataGrid, relative time formatting, UiState persistence, localization diacritics audit. (Completed)
+- **M9**: Code-review closure (tracked Backup source/tests, clean-clone verification, AuthFailureDetails & CSRF diagnosis, token-wide redaction & path username masking, HTTP redirect hardening, cookie memory hygiene, login folder cleanup, Core/Infra localization decoupling). (Completed)

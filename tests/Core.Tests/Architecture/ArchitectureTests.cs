@@ -7,13 +7,13 @@ using System.Linq;
 
 public sealed class ArchitectureTests
 {
-    private static readonly HashSet<string> AllowedRevealFileNames = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> AllowedRevealRelativePaths = new(StringComparer.OrdinalIgnoreCase)
     {
-        "SecretValue.cs",
-        "EncryptedFileVault.cs",
-        "RobloxAuthService.cs",
-        "RobloxLauncher.cs",
-        "EncryptedBackupService.cs"
+        "src/Core/Models/SecretValue.cs",
+        "src/Infrastructure/Storage/EncryptedFileVault.cs",
+        "src/Infrastructure/Auth/RobloxAuthService.cs",
+        "src/Infrastructure/Launch/RobloxLauncher.cs",
+        "src/Infrastructure/Backup/EncryptedBackupService.cs"
     };
 
     [Fact]
@@ -33,15 +33,15 @@ public sealed class ArchitectureTests
 
         foreach (string file in csFiles)
         {
-            string fileName = Path.GetFileName(file);
+            string relativePath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
             string[] lines = File.ReadAllLines(file);
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string line = lines[i];
-                if (line.Contains(".Reveal(", StringComparison.Ordinal) && !AllowedRevealFileNames.Contains(fileName))
+                if (line.Contains(".Reveal(", StringComparison.Ordinal) && !AllowedRevealRelativePaths.Contains(relativePath))
                 {
-                    unauthorizedUsages.Add($"{fileName}:{i + 1} -> {line.Trim()}");
+                    unauthorizedUsages.Add($"{relativePath}:{i + 1} -> {line.Trim()}");
                 }
             }
         }

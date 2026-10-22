@@ -74,88 +74,98 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         }
 
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
-        Account? account = accounts.FirstOrDefault(a => a.Id == request.AccountId);
-        if (account == null)
-        {
-            return Result.Failure("Account was not found.", "AccountNotFound");
-        }
-
-        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            int minInterval = _settingsService?.CurrentSettings.LaunchDelayMs ?? MinimumLaunchIntervalMs;
-            TimeSpan elapsed = DateTimeOffset.UtcNow - _lastLaunchTime;
-            if (elapsed.TotalMilliseconds < minInterval)
+            Account? account = accounts.FirstOrDefault(a => a.Id == request.AccountId);
+            if (account == null)
             {
-                int delayMs = minInterval - (int)elapsed.TotalMilliseconds;
-                if (delayMs > 0)
+                return Result.Failure("Account was not found.", "AccountNotFound");
+            }
+
+            await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                int minInterval = _settingsService?.CurrentSettings.LaunchDelayMs ?? MinimumLaunchIntervalMs;
+                TimeSpan elapsed = DateTimeOffset.UtcNow - _lastLaunchTime;
+                if (elapsed.TotalMilliseconds < minInterval)
                 {
-                    await Task.Delay(delayMs, ct).ConfigureAwait(false);
+                    int delayMs = minInterval - (int)elapsed.TotalMilliseconds;
+                    if (delayMs > 0)
+                    {
+                        await Task.Delay(delayMs, ct).ConfigureAwait(false);
+                    }
                 }
+
+                LogRequestingTicketForLaunch(account.Id.Value);
+
+                Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, ct).ConfigureAwait(false);
+                if (!ticketResult.IsSuccess)
+                {
+                    LogLaunchFailed(ticketResult.ErrorCode ?? "TicketFailed");
+                    return Result.Failure(ticketResult.Error ?? "Failed to acquire authentication ticket.", ticketResult.ErrorCode);
+                }
+
+                using SecretValue ticketSecret = ticketResult.Value!;
+                string ticket = ticketSecret.Reveal();
+                string trackerId = Random.Shared.Next(100000000, 999999999).ToString(CultureInfo.InvariantCulture);
+                long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                string? launchUriTemplate = _settingsService?.CurrentSettings.Advanced?.LaunchUriTemplate;
+                string? placeLauncherUrlTemplate = _settingsService?.CurrentSettings.Advanced?.PlaceLauncherUrlTemplate;
+
+                if (!string.IsNullOrWhiteSpace(launchUriTemplate) &&
+                    !LaunchTemplateValidator.ValidateLaunchUriTemplate(launchUriTemplate).IsSuccess)
+                {
+                    LogInvalidLaunchUriTemplateOverride();
+                }
+
+                if (!string.IsNullOrWhiteSpace(placeLauncherUrlTemplate) &&
+                    !LaunchTemplateValidator.ValidatePlaceLauncherUrlTemplate(placeLauncherUrlTemplate).IsSuccess)
+                {
+                    LogInvalidPlaceLauncherUrlTemplateOverride();
+                }
+
+                string launchUri = RobloxUriBuilder.BuildLaunchUri(
+                    ticket,
+                    request.PlaceId,
+                    request.JobId,
+                    unixMs,
+                    trackerId,
+                    launchUriTemplate,
+                    placeLauncherUrlTemplate);
+
+                bool started = _processStarter.Start(launchUri);
+                _lastLaunchTime = DateTimeOffset.UtcNow;
+
+                if (!started)
+                {
+                    LogLaunchFailed("ProcessStartFailed");
+                    return Result.Failure("Failed to start Roblox process.", "ProcessStartFailed");
+                }
+
+                LogLaunchSuccess(account.Id.Value, request.PlaceId);
+                return Result.Success();
             }
-
-            LogRequestingTicketForLaunch(account.Id.Value);
-
-            Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, ct).ConfigureAwait(false);
-            if (!ticketResult.IsSuccess)
+            catch (TaskCanceledException) when (ct.IsCancellationRequested)
             {
-                LogLaunchFailed(ticketResult.ErrorCode ?? "TicketFailed");
-                return Result.Failure(ticketResult.Error ?? "Failed to acquire authentication ticket.", ticketResult.ErrorCode);
+                throw;
             }
-
-            using SecretValue ticketSecret = ticketResult.Value!;
-            string ticket = ticketSecret.Reveal();
-            string trackerId = Random.Shared.Next(100000000, 999999999).ToString(CultureInfo.InvariantCulture);
-            long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-            string? launchUriTemplate = _settingsService?.CurrentSettings.Advanced?.LaunchUriTemplate;
-            string? placeLauncherUrlTemplate = _settingsService?.CurrentSettings.Advanced?.PlaceLauncherUrlTemplate;
-
-            if (!string.IsNullOrWhiteSpace(launchUriTemplate) &&
-                !LaunchTemplateValidator.ValidateLaunchUriTemplate(launchUriTemplate).IsSuccess)
+            catch (Exception ex)
             {
-                LogInvalidLaunchUriTemplateOverride();
+                LogLaunchError(ex.GetType().Name);
+                return Result.Failure("An error occurred launching Roblox.", "LaunchError");
             }
-
-            if (!string.IsNullOrWhiteSpace(placeLauncherUrlTemplate) &&
-                !LaunchTemplateValidator.ValidatePlaceLauncherUrlTemplate(placeLauncherUrlTemplate).IsSuccess)
+            finally
             {
-                LogInvalidPlaceLauncherUrlTemplateOverride();
+                _semaphore.Release();
             }
-
-            string launchUri = RobloxUriBuilder.BuildLaunchUri(
-                ticket,
-                request.PlaceId,
-                request.JobId,
-                unixMs,
-                trackerId,
-                launchUriTemplate,
-                placeLauncherUrlTemplate);
-
-            bool started = _processStarter.Start(launchUri);
-            _lastLaunchTime = DateTimeOffset.UtcNow;
-
-            if (!started)
-            {
-                LogLaunchFailed("ProcessStartFailed");
-                return Result.Failure("Failed to start Roblox process.", "ProcessStartFailed");
-            }
-
-            LogLaunchSuccess(account.Id.Value, request.PlaceId);
-            return Result.Success();
-        }
-        catch (TaskCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            LogLaunchError(ex.GetType().Name);
-            return Result.Failure("An error occurred launching Roblox.", "LaunchError");
         }
         finally
         {
-            _semaphore.Release();
+            foreach (Account a in accounts)
+            {
+                a.Cookie.Dispose();
+            }
         }
     }
 

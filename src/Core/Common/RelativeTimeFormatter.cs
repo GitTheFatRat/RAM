@@ -21,12 +21,12 @@ public static class RelativeTimeFormatter
             int seconds = Math.Max(0, (int)elapsed.TotalSeconds);
             if (seconds <= 5)
             {
-                return isVi ? "vừa xong" : "just now";
+                return isVi ? "v\u1EEBa xong" : "just now";
             }
 
             if (isVi)
             {
-                return $"{seconds} giây trước";
+                return $"{seconds} gi\u00E2y tr\u01B0\u1EDBc";
             }
 
             return seconds == 1 ? "1 second ago" : $"{seconds} seconds ago";
@@ -37,7 +37,7 @@ public static class RelativeTimeFormatter
             int minutes = Math.Max(1, (int)elapsed.TotalMinutes);
             if (isVi)
             {
-                return $"{minutes} phút trước";
+                return $"{minutes} ph\u00FAt tr\u01B0\u1EDBc";
             }
 
             return minutes == 1 ? "1 minute ago" : $"{minutes} minutes ago";
@@ -48,7 +48,7 @@ public static class RelativeTimeFormatter
             int hours = Math.Max(1, (int)elapsed.TotalHours);
             if (isVi)
             {
-                return $"{hours} giờ trước";
+                return $"{hours} gi\u1EDD tr\u01B0\u1EDBc";
             }
 
             return hours == 1 ? "1 hour ago" : $"{hours} hours ago";
@@ -57,7 +57,7 @@ public static class RelativeTimeFormatter
         int days = Math.Max(1, (int)elapsed.TotalDays);
         if (isVi)
         {
-            return $"{days} ngày trước";
+            return $"{days} ng\u00E0y tr\u01B0\u1EDBc";
         }
 
         return days == 1 ? "1 day ago" : $"{days} days ago";

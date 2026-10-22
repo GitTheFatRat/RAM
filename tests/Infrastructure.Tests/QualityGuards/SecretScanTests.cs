@@ -62,6 +62,7 @@ public sealed class SecretScanTests
                         !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) &&
                         !f.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar) &&
                         !f.Contains(Path.DirectorySeparatorChar + "artifacts" + Path.DirectorySeparatorChar) &&
+                        !f.Contains(Path.DirectorySeparatorChar + "prompts" + Path.DirectorySeparatorChar) &&
                         !f.Contains(Path.DirectorySeparatorChar + "tests" + Path.DirectorySeparatorChar))
             .Distinct()
             .ToArray();

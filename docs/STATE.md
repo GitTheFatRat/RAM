@@ -10,3 +10,4 @@
 - M6: done (1c716e9) - multi-instance gate, reveal surface, report fixes
 - M7: done (979fbeb) - diagnostics, launch templates, code health
 - M8: done (8f023e5) - ui polish and localization audit
+- M9: done - close code-review findings (repo integrity, diagnostics details, redaction token fix, http hardening, cookie memory hygiene, login cleanup, i18n decoupling)

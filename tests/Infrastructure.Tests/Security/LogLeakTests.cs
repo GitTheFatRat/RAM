@@ -21,7 +21,7 @@ using RbxManager.Infrastructure.Tests.TestHelpers;
 [SupportedOSPlatform("windows")]
 public sealed class LogLeakTests
 {
-    private const string FakeCookie = "FAKE_COOKIE_FOR_TESTS_123";
+    private const string FakeCookie = "_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_FAKE0123456789ABCDEFSECRETTAIL";
     private const string FakeTicket = "FAKE_TICKET_FOR_TESTS_456";
     private const string FakePassword = "FAKE_PASSWORD_FOR_TESTS_1234!";
 
@@ -255,6 +255,8 @@ public sealed class LogLeakTests
         foreach (string logMessage in logSink.Messages)
         {
             Assert.DoesNotContain(FakeCookie, logMessage, StringComparison.Ordinal);
+            Assert.DoesNotContain("WARNING:-DO-NOT-SHARE-THIS", logMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("FAKE0123456789ABCDEFSECRETTAIL", logMessage, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(FakeTicket, logMessage, StringComparison.Ordinal);
             Assert.DoesNotContain(FakePassword, logMessage, StringComparison.Ordinal);
         }

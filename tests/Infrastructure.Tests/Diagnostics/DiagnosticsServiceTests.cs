@@ -19,7 +19,7 @@ using Xunit;
 
 public sealed class DiagnosticsServiceTests
 {
-    private const string FakeCookie = "FAKE_COOKIE_FOR_TESTS_123";
+    private const string FakeCookie = "_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_FAKE0123456789ABCDEFSECRETTAIL";
     private const string FakeTicket = "FAKE_TICKET_FOR_TESTS_456";
     private const string SensitiveHeaderValue = "SUPER_SECRET_TOKEN_VALUE_HEADER";
 
@@ -73,16 +73,36 @@ public sealed class DiagnosticsServiceTests
     {
         public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default)
         {
+            AuthFailureDetails details = new(
+                Stage: "Validate",
+                HttpStatus: 401,
+                RobloxErrorCodes: [401],
+                RobloxMessage: $"Error with cookie {FakeCookie}",
+                CsrfTokenObtained: false,
+                ResponseHeaderNames: ["content-length"],
+                TicketHeaderPresent: false);
+
             return Task.FromResult(Result.Failure<RobloxUser>(
-                $"Error with {FakeCookie} and {FakeTicket}",
-                "Unauthorized"));
+                $"Error with cookie {FakeCookie}",
+                "Unauthorized",
+                details));
         }
 
         public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
         {
+            AuthFailureDetails details = new(
+                Stage: "Ticket",
+                HttpStatus: 403,
+                RobloxErrorCodes: [403],
+                RobloxMessage: $"Failed acquiring ticket with payload {FakeCookie}",
+                CsrfTokenObtained: true,
+                ResponseHeaderNames: ["x-csrf-token"],
+                TicketHeaderPresent: false);
+
             return Task.FromResult(Result.Failure<SecretValue>(
-                $"Failed acquiring ticket with payload {FakeCookie} and {FakeTicket}",
-                "TicketFailed"));
+                $"Failed acquiring ticket with payload {FakeCookie}",
+                "TicketFailed",
+                details));
         }
     }
 
@@ -93,7 +113,7 @@ public sealed class DiagnosticsServiceTests
             HttpResponseMessage response = new(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    $"{{\"errors\":[{{\"code\":401,\"message\":\"Body with {FakeCookie} and {FakeTicket}\"}}]}}",
+                    $"{{\"errors\":[{{\"code\":401,\"message\":\"Body with {FakeCookie}\"}}]}}",
                     Encoding.UTF8,
                     "application/json")
             };
@@ -135,9 +155,25 @@ public sealed class DiagnosticsServiceTests
         // Assert starts with required header line
         Assert.StartsWith("Safe to share: redacted. No cookies or tickets.", report, StringComparison.Ordinal);
 
-        // Assert sensitive secrets are never leaked
+        // Assert sensitive secrets are never leaked (neither prefix nor tail survives)
         Assert.DoesNotContain(FakeCookie, report, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("WARNING:-DO-NOT-SHARE-THIS", report, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("FAKE0123456789ABCDEFSECRETTAIL", report, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(FakeTicket, report, StringComparison.OrdinalIgnoreCase);
+
+        // Assert username path masking
+        Assert.DoesNotContain(@"C:\Users\Test\", report, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(@"C:\Users\<user>\", report, StringComparison.OrdinalIgnoreCase);
+
+        // Assert failure details are printed
+        Assert.Contains("Stage: Validate", report, StringComparison.Ordinal);
+        Assert.Contains("HttpStatus: 401", report, StringComparison.Ordinal);
+        Assert.Contains("RobloxErrorCodes: [401]", report, StringComparison.Ordinal);
+        Assert.Contains("Stage: Ticket", report, StringComparison.Ordinal);
+        Assert.Contains("HttpStatus: 403", report, StringComparison.Ordinal);
+        Assert.Contains("CsrfTokenObtained: yes", report, StringComparison.Ordinal);
+        Assert.Contains("TicketHeaderPresent: no", report, StringComparison.Ordinal);
+        Assert.Contains("ResponseHeaderNames: [x-csrf-token]", report, StringComparison.Ordinal);
 
         // Assert header values never appear (header names only)
         Assert.DoesNotContain(SensitiveHeaderValue, report, StringComparison.Ordinal);

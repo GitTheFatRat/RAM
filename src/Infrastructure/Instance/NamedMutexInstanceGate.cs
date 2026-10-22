@@ -34,7 +34,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
     private GateCommand _pendingCommand = GateCommand.None;
     private Result _commandResult = Result.Success();
 
-    private bool _isEnabled;
+    private volatile bool _isEnabled;
     private bool _disposed;
 
     public bool IsAvailable => !string.IsNullOrEmpty(_mutexName) && !string.IsNullOrEmpty(_eventName);
@@ -67,20 +67,20 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
     {
         if (!IsAvailable)
         {
-            return Result.Failure("Tính năng chạy nhiều tài khoản không khả dụng trong bản dựng này.", "MultiInstanceNotAvailable");
+            return Result.Failure("MultiInstanceNotAvailable", "MultiInstanceNotAvailable");
         }
 
         IReadOnlyList<ProcessSnapshot> running = _processProvider.GetRobloxProcesses();
         if (running.Count > 0)
         {
-            return Result.Failure("Roblox đang chạy; vui lòng đóng tất cả tiến trình Roblox trước khi bật.", "RobloxRunning");
+            return Result.Failure("RobloxRunning", "RobloxRunning");
         }
 
         lock (_syncLock)
         {
             if (_disposed)
             {
-                return Result.Failure("Cổng đa phiên đã bị hủy.", "Disposed");
+                return Result.Failure("Disposed", "Disposed");
             }
 
             if (_isEnabled)
@@ -91,7 +91,10 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             _pendingCommand = GateCommand.Enable;
             _commandDone.Reset();
             _commandReady.Set();
-            _commandDone.Wait();
+            if (!_commandDone.Wait(TimeSpan.FromSeconds(5)))
+            {
+                return Result.Failure("Timeout", "Timeout");
+            }
 
             return _commandResult;
         }
@@ -109,7 +112,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             _pendingCommand = GateCommand.Disable;
             _commandDone.Reset();
             _commandReady.Set();
-            _commandDone.Wait();
+            _commandDone.Wait(TimeSpan.FromSeconds(5));
         }
     }
 
@@ -126,12 +129,12 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             _pendingCommand = GateCommand.Shutdown;
             _commandDone.Reset();
             _commandReady.Set();
-            _commandDone.Wait();
+            _commandDone.Wait(TimeSpan.FromSeconds(5));
         }
 
         if (_workerThread.IsAlive)
         {
-            _workerThread.Join(TimeSpan.FromSeconds(3));
+            _workerThread.Join(TimeSpan.FromSeconds(5));
         }
 
         _commandReady.Dispose();
@@ -161,9 +164,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                     {
                         CleanupHandles(ref mutex, ref eventHandle);
                         _isEnabled = false;
-                        _commandResult = Result.Failure(
-                            "Không thể tiếp quản đối tượng đồng bộ hóa; vui lòng đóng Roblox và thử lại.",
-                            "CouldNotTakeOver");
+                        _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
                     }
                     else
                     {
@@ -177,9 +178,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                         {
                             CleanupHandles(ref mutex, ref eventHandle);
                             _isEnabled = false;
-                            _commandResult = Result.Failure(
-                                "Không thể tiếp quản đối tượng đồng bộ hóa; vui lòng đóng Roblox và thử lại.",
-                                "CouldNotTakeOver");
+                            _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
                         }
                         else
                         {
@@ -188,13 +187,11 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CleanupHandles(ref mutex, ref eventHandle);
                     _isEnabled = false;
-                    _commandResult = Result.Failure(
-                        $"Không thể kích hoạt đối tượng đồng bộ hóa: {ex.Message}",
-                        "MutexError");
+                    _commandResult = Result.Failure("MutexError", "MutexError");
                 }
 
                 _commandDone.Set();

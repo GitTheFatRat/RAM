@@ -66,33 +66,46 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         ArgumentNullException.ThrowIfNull(account);
 
         await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+        List<Account>? loadedAccounts = null;
         try
         {
-            List<Account> accounts = await LoadInternalAsync(ct).ConfigureAwait(false);
+            loadedAccounts = await LoadInternalAsync(ct).ConfigureAwait(false);
 
-            Result validationResult = AccountValidator.Validate(account, accounts);
+            Result validationResult = AccountValidator.Validate(account, loadedAccounts);
             if (!validationResult.IsSuccess)
             {
                 return validationResult;
             }
 
-            if (accounts.Any(existing => existing.Id == account.Id))
+            if (loadedAccounts.Any(existing => existing.Id == account.Id))
             {
                 return Result.Failure($"Account with ID '{account.Id}' already exists.");
             }
 
-            accounts.Add(account);
-            await SaveInternalAsync(accounts, ct).ConfigureAwait(false);
+            List<Account> toSave = new(loadedAccounts.Count + 1);
+            toSave.AddRange(loadedAccounts);
+            toSave.Add(account);
+            await SaveInternalAsync(toSave, ct).ConfigureAwait(false);
 
             if (_logger != null)
             {
-                LogAddedAccount(_logger, account.Id.Value, accounts.Count);
+                LogAddedAccount(_logger, account.Id.Value, toSave.Count);
             }
 
             return Result.Success();
         }
         finally
         {
+            if (loadedAccounts != null)
+            {
+                foreach (Account loaded in loadedAccounts)
+                {
+                    if (!ReferenceEquals(loaded.Cookie, account.Cookie))
+                    {
+                        loaded.Cookie.Dispose();
+                    }
+                }
+            }
             _semaphore.Release();
         }
     }
@@ -102,24 +115,26 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         ArgumentNullException.ThrowIfNull(account);
 
         await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+        List<Account>? loadedAccounts = null;
         try
         {
-            List<Account> accounts = await LoadInternalAsync(ct).ConfigureAwait(false);
+            loadedAccounts = await LoadInternalAsync(ct).ConfigureAwait(false);
 
-            Result validationResult = AccountValidator.Validate(account, accounts);
+            Result validationResult = AccountValidator.Validate(account, loadedAccounts);
             if (!validationResult.IsSuccess)
             {
                 return validationResult;
             }
 
-            int index = accounts.FindIndex(existing => existing.Id == account.Id);
+            int index = loadedAccounts.FindIndex(existing => existing.Id == account.Id);
             if (index == -1)
             {
                 return Result.Failure($"Account with ID '{account.Id}' was not found.");
             }
 
-            accounts[index] = account;
-            await SaveInternalAsync(accounts, ct).ConfigureAwait(false);
+            List<Account> toSave = new(loadedAccounts);
+            toSave[index] = account;
+            await SaveInternalAsync(toSave, ct).ConfigureAwait(false);
 
             if (_logger != null)
             {
@@ -130,6 +145,16 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
         finally
         {
+            if (loadedAccounts != null)
+            {
+                foreach (Account loaded in loadedAccounts)
+                {
+                    if (!ReferenceEquals(loaded.Cookie, account.Cookie))
+                    {
+                        loaded.Cookie.Dispose();
+                    }
+                }
+            }
             _semaphore.Release();
         }
     }
@@ -137,22 +162,30 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     public async Task RemoveAsync(AccountId id, CancellationToken ct = default)
     {
         await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+        List<Account>? loadedAccounts = null;
         try
         {
-            List<Account> accounts = await LoadInternalAsync(ct).ConfigureAwait(false);
-            int removedCount = accounts.RemoveAll(existing => existing.Id == id);
+            loadedAccounts = await LoadInternalAsync(ct).ConfigureAwait(false);
+            List<Account> toSave = loadedAccounts.Where(existing => existing.Id != id).ToList();
 
-            if (removedCount > 0)
+            if (toSave.Count != loadedAccounts.Count)
             {
-                await SaveInternalAsync(accounts, ct).ConfigureAwait(false);
+                await SaveInternalAsync(toSave, ct).ConfigureAwait(false);
                 if (_logger != null)
                 {
-                    LogRemovedAccount(_logger, id.Value, accounts.Count);
+                    LogRemovedAccount(_logger, id.Value, toSave.Count);
                 }
             }
         }
         finally
         {
+            if (loadedAccounts != null)
+            {
+                foreach (Account loaded in loadedAccounts)
+                {
+                    loaded.Cookie.Dispose();
+                }
+            }
             _semaphore.Release();
         }
     }
@@ -337,7 +370,12 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         string tmpPath = _filePath + ".tmp";
         string bakPath = _filePath + ".bak";
 
-        await File.WriteAllBytesAsync(tmpPath, outputBuffer, ct).ConfigureAwait(false);
+        await using (FileStream fs = new(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
+        {
+            await fs.WriteAsync(outputBuffer, ct).ConfigureAwait(false);
+            await fs.FlushAsync(ct).ConfigureAwait(false);
+            fs.Flush(true);
+        }
 
         if (File.Exists(_filePath))
         {

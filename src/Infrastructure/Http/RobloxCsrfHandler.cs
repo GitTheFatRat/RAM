@@ -1,5 +1,6 @@
 namespace RbxManager.Infrastructure.Http;
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -8,6 +9,8 @@ using System.Threading.Tasks;
 
 public sealed class RobloxCsrfHandler : DelegatingHandler
 {
+    public static readonly HttpRequestOptionsKey<bool> CsrfTokenObtainedKey = new("CsrfTokenObtained");
+
     public RobloxCsrfHandler()
     {
     }
@@ -28,9 +31,11 @@ public sealed class RobloxCsrfHandler : DelegatingHandler
                 string? token = csrfTokens.FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(token))
                 {
+                    request.Options.Set(CsrfTokenObtainedKey, true);
                     response.Dispose();
 
-                    using HttpRequestMessage retryRequest = CloneHttpRequestMessage(request);
+                    HttpRequestMessage retryRequest = await CloneHttpRequestMessageAsync(request, cancellationToken).ConfigureAwait(false);
+                    retryRequest.Options.Set(CsrfTokenObtainedKey, true);
                     retryRequest.Headers.Remove("X-CSRF-TOKEN");
                     retryRequest.Headers.Add("X-CSRF-TOKEN", token);
 
@@ -42,12 +47,17 @@ public sealed class RobloxCsrfHandler : DelegatingHandler
         return response;
     }
 
-    private static HttpRequestMessage CloneHttpRequestMessage(HttpRequestMessage req)
+    private static async Task<HttpRequestMessage> CloneHttpRequestMessageAsync(HttpRequestMessage req, CancellationToken cancellationToken)
     {
         HttpRequestMessage clone = new(req.Method, req.RequestUri)
         {
             Version = req.Version
         };
+
+        foreach (KeyValuePair<string, object?> option in req.Options)
+        {
+            clone.Options.Set(new HttpRequestOptionsKey<object?>(option.Key), option.Value);
+        }
 
         foreach (KeyValuePair<string, IEnumerable<string>> header in req.Headers)
         {
@@ -56,7 +66,7 @@ public sealed class RobloxCsrfHandler : DelegatingHandler
 
         if (req.Content != null)
         {
-            byte[] contentBytes = req.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+            byte[] contentBytes = await req.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
             clone.Content = new ByteArrayContent(contentBytes);
             foreach (KeyValuePair<string, IEnumerable<string>> header in req.Content.Headers)
             {

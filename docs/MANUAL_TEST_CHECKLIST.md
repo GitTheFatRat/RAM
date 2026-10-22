@@ -14,7 +14,7 @@
 - [ ] Kiểm tra báo cáo hoàn chỉnh hiển thị đủ các phần: Environment, Roblox Client, Network, Templates, Account Check.
 - [ ] Nhấn nút **Sao chép báo cáo (Copy report)** và kiểm tra snackbar xác nhận.
 - [ ] Báo cáo luôn bắt đầu bằng: `Safe to share: redacted. No cookies or tickets.` và tuyệt đối không chứa cookie hoặc auth ticket.
-- [ ] **LƯU Ý QUAN TRỌNG KHI GẶP LỖI**: Khi bất kỳ bước kiểm thử nào phía dưới thất bại, hãy chạy Diagnostics đầu tiên, sao chép toàn bộ báo cáo và dán trực tiếp cho Tech Lead để đối chiếu lỗi mà không sợ lộ bí mật tài khoản.
+- [ ] **LƯU Ý QUAN TRỌNG KHI GẶP LỖI**: Khi bất kỳ bước kiểm thử nào (đặc biệt khi xác thực cookie Validate hoặc lấy vé Ticket thất bại) xảy ra sự cố, hãy vào ngay trang **Chẩn đoán (Diagnostics)**, chọn tài khoản đó và nhấn **Chạy chẩn đoán (Run diagnostics)**, sau đó nhấn **Sao chép báo cáo (Copy report)** và gửi toàn bộ báo cáo cho Tech Lead. Báo cáo chẩn đoán đã được che giấu toàn bộ bí mật, tự động che tên người dùng máy tính (`<user>`), hiển thị đầy đủ thông tin chuẩn đoán (Stage, HttpStatus, RobloxErrorCodes, RobloxMessage, CsrfTokenObtained, TicketHeaderPresent, ResponseHeaderNames) giúp Tech Lead xác định chính xác nguyên nhân mà không sợ lộ thông tin bảo mật.
 
 ### 1. Thêm tài khoản qua WebView2 & Xác thực trạng thái
 - [ ] Mở ứng dụng RbxManager.

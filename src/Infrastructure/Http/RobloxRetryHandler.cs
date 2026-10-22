@@ -47,6 +47,11 @@ public sealed class RobloxRetryHandler : DelegatingHandler
                         int statusCode = (int)response.StatusCode;
                         return statusCode == 429 || (statusCode >= 500 && statusCode <= 599);
                     }),
+                OnRetry = args =>
+                {
+                    args.Outcome.Result?.Dispose();
+                    return ValueTask.CompletedTask;
+                },
                 DelayGenerator = args =>
                 {
                     HttpResponseMessage? response = args.Outcome.Result;

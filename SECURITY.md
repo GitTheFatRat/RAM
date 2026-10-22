@@ -104,23 +104,33 @@ To eliminate this single point of failure without exposing plaintext credentials
 
 ---
 
-## Hardening, Redaction & Quality Guards (M5)
+## Hardening, Redaction & Quality Guards (M5, M9)
 
 1. **Global Exception Sanitization**:
    - `DispatcherUnhandledException`, `TaskScheduler.UnobservedTaskException`, and `AppDomain.UnhandledException` log only the exception's type name and stack frame without raw message strings or request URLs, preventing secret leakage during runtime failures.
    - Non-fatal UI dialogs prevent recursive unhandled exception crash loops.
 
-2. **Log Redaction Enricher**:
-   - A custom Serilog enricher (`RobloxSecretRedactionEnricher`) inspects all scalar log properties.
-   - Any property value containing `.ROBLOSECURITY=` or `_|WARNING:-DO-NOT-SHARE-THIS` is automatically masked to `[REDACTED]`.
+2. **HTTP Hardening & Redirect Prevention**:
+   - The primary `SocketsHttpHandler` enforces `AllowAutoRedirect = false` and `UseCookies = false` via `CreatePrimarySocketsHttpHandler()`. This guarantees that redirects cannot bypass the host guard handler, and sensitive `Cookie` headers are never automatically forwarded across cross-domain or unexpected redirects. Any 3xx response is treated as an unexpected status with its HTTP status code recorded.
+   - Intermediate responses in retry loops (`RobloxRetryHandler`) are disposed before each retry attempt.
+
+3. **Log Redaction Enricher & Recursive Sanitization**:
+   - A custom Serilog enricher (`RobloxSecretRedactionEnricher`) inspects all log properties recursively, including scalar values, structured properties (`StructureValue`), sequence collections (`SequenceValue`), and dictionary entries (`DictionaryValue`).
+   - Redaction patterns cover whole tokens: `_\|WARNING:-DO-NOT-SHARE-THIS\S*`, `\.ROBLOSECURITY=\S*`, and standalone secret tails `\|_[A-Za-z0-9]{16,}`. Any matching property is masked to `[REDACTED]`.
    - Daily log file sink retains logs for at most 14 days.
 
-3. **Application Single-Instance Mutex**:
+4. **Cookie Memory Hygiene**:
+   - `EncryptedFileVault` operations (`AddAsync`, `UpdateAsync`, `RemoveAsync`) dispose every loaded account's cookie in `finally` blocks, preserving only caller-owned instances.
+   - `RobloxLauncher` and store-querying services wrap account lists in `try ... finally` and dispose all loaded `SecretValue` instances immediately after obtaining single-use tickets, minimizing credential residency in process memory.
+
+5. **Application Single-Instance Mutex**:
    - RbxManager uses a named mutex (`Local\RbxManager_Application_SingleInstance_Mutex`) to ensure only one instance of the manager runs at a time.
    - Subsequent launches activate the existing window via Win32 `SetForegroundWindow` and terminate gracefully, preventing database race conditions.
 
-4. **Automated Quality Guards**:
+6. **Automated Quality Guards**:
    - `SecretScanTests`: Scans all tracked source code and documentation to ensure no live Roblox secrets or warning prefixes with payloads exist in the codebase.
+   - `NoHardCodedVietnameseInCoreOrInfraTests`: Verifies that Core and Infrastructure layers return error codes only and contain zero Vietnamese UI language literals.
+   - `IgnoredSourceFilesTests`: Verifies that git does not ignore any required source, markup, or test files.
    - `I18nParityTests`: Validates 100% key and value parity across `Strings.resx` and `Strings.vi.resx`.
    - `XamlLiteralTests`: Prevents untranslated raw string literals in XAML presentation files.
 
@@ -140,15 +150,18 @@ To eliminate this single point of failure without exposing plaintext credentials
 
 ---
 
-## Diagnostics Report Sanitization (M7)
+## Diagnostics Report Sanitization (M7, M9)
 
 1. **Redacted by Design**:
    - The diagnostics report begins with the mandatory line: `Safe to share: redacted. No cookies or tickets.`
    - No cookies (`.ROBLOSECURITY`), auth tickets, or credential values are ever printed or captured in the report.
-   - HTTP response bodies are never logged or exported verbatim; only HTTP status codes, exception types, and structured Roblox JSON error codes/messages (truncated to 120 characters) are included.
+   - Comprehensive pattern redaction covers the entire credential token (`_\|WARNING:-DO-NOT-SHARE-THIS\S*`, `\.ROBLOSECURITY=\S*`, and `\|_[A-Za-z0-9]{16,}`).
+   - Local Windows usernames in filesystem paths are automatically masked to `C:\Users\<user>\...` across all report sections and protocol handler commands.
+   - HTTP response bodies are never logged or exported verbatim; only HTTP status codes, exception types, and structured Roblox JSON error codes/messages (truncated to 120 characters and sanitized to single-line text) are included.
+   - Detailed failure diagnosis records exact structured diagnostic fields: `Stage` ("Validate" or "Ticket"), `HttpStatus`, `RobloxErrorCodes`, truncated `RobloxMessage`, `CsrfTokenObtained`, `TicketHeaderPresent`, and `ResponseHeaderNames`.
    - HTTP header values are completely excluded; only header names are reported.
    - Account launch verification renders the launch URI using the literal placeholder `<ticket>`, matching the Dry Run pattern.
-   - The entire generated report is passed through `RobloxSecretRedactor` prior to UI display or clipboard copy.
+   - The entire generated report is sanitized via `SanitizeReport` prior to UI display or clipboard copy.
 
 2. **Network Diagnostics**:
    - Probing of public endpoints (`roblox.com`, `users`, `auth`, `games`, `presence`, `apis`) executes unauthenticated GET requests without cookies or authentication headers.

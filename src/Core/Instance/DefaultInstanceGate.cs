@@ -8,7 +8,7 @@ public sealed class DefaultInstanceGate : IInstanceGate
     public bool IsAvailable => false;
 
     public Result TryEnable() =>
-        Result.Failure("Tính năng chạy nhiều tài khoản không khả dụng trong bản dựng này.", "MultiInstanceNotAvailable");
+        Result.Failure("MultiInstanceNotAvailable", "MultiInstanceNotAvailable");
 
     public void Disable()
     {

@@ -349,6 +349,24 @@
   <data name="MultiInstanceNotAvailable" xml:space="preserve">
     <value>Multi-instance feature is not available in this build.</value>
   </data>
+  <data name="MultiInstanceRobloxRunning" xml:space="preserve">
+    <value>Roblox is already running; please close all Roblox processes before enabling.</value>
+  </data>
+  <data name="MultiInstanceCouldNotTakeOver" xml:space="preserve">
+    <value>Could not take over synchronization objects; please close Roblox and try again.</value>
+  </data>
+  <data name="MultiInstanceDisposed" xml:space="preserve">
+    <value>Multi-instance gate has been disposed.</value>
+  </data>
+  <data name="MultiInstanceMutexError" xml:space="preserve">
+    <value>Failed to initialize multi-instance synchronization objects.</value>
+  </data>
+  <data name="MultiInstanceTimeout" xml:space="preserve">
+    <value>Timed out waiting for multi-instance gate.</value>
+  </data>
+  <data name="LoginTimeoutMessage" xml:space="preserve">
+    <value>Login timed out after 10 minutes. Please try again.</value>
+  </data>
   <data name="MultiInstanceWarningTitle" xml:space="preserve">
     <value>Multi-Instance Risk Warning</value>
   </data>

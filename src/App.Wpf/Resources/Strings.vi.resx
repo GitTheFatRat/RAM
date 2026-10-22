@@ -349,6 +349,24 @@
   <data name="MultiInstanceNotAvailable" xml:space="preserve">
     <value>Tính năng chạy nhiều tài khoản không khả dụng trong bản dựng này.</value>
   </data>
+  <data name="MultiInstanceRobloxRunning" xml:space="preserve">
+    <value>Roblox đang chạy; vui lòng đóng tất cả tiến trình Roblox trước khi bật.</value>
+  </data>
+  <data name="MultiInstanceCouldNotTakeOver" xml:space="preserve">
+    <value>Không thể tiếp quản đối tượng đồng bộ hóa; vui lòng đóng Roblox và thử lại.</value>
+  </data>
+  <data name="MultiInstanceDisposed" xml:space="preserve">
+    <value>Cổng đa phiên đã bị hủy.</value>
+  </data>
+  <data name="MultiInstanceMutexError" xml:space="preserve">
+    <value>Không thể kích hoạt đối tượng đồng bộ hóa.</value>
+  </data>
+  <data name="MultiInstanceTimeout" xml:space="preserve">
+    <value>Hết thời gian chờ cổng đa phiên.</value>
+  </data>
+  <data name="LoginTimeoutMessage" xml:space="preserve">
+    <value>Đăng nhập đã hết thời gian chờ sau 10 phút. Vui lòng thử lại.</value>
+  </data>
   <data name="MultiInstanceWarningTitle" xml:space="preserve">
     <value>Cảnh báo rủi ro chạy nhiều tài khoản</value>
   </data>

@@ -33,8 +33,12 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
     ];
 
     private static readonly Regex SecretLeakRegex = new(
-        @"(_\|WARNING:-DO-NOT-SHARE-THIS[A-Za-z0-9_\-\.]*)|(\.ROBLOSECURITY=[A-Za-z0-9_\-\.]*)|(FAKE_COOKIE_[A-Za-z0-9_]*)|(FAKE_TICKET_[A-Za-z0-9_]*)",
+        @"(_\|WARNING:-DO-NOT-SHARE-THIS\S*)|(\.ROBLOSECURITY=\S*)|(\|_[A-Za-z0-9]{16,})",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex UsernamePathRegex = new(
+        @"(?i)(?<=[A-Za-z]:[\\/]Users[\\/])[^\\/]+",
+        RegexOptions.Compiled);
 
     private readonly IRegistryProvider _registryProvider;
     private readonly IProcessProvider _processProvider;
@@ -181,6 +185,10 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
             else
             {
                 sb.AppendLine(CultureInfo.InvariantCulture, $"CookieValidation: Failed (Code={cookieResult.ErrorCode ?? "Unknown"})");
+                if (cookieResult.Details != null)
+                {
+                    AppendAuthFailureDetails(sb, cookieResult.Details);
+                }
             }
 
             // Auth Ticket & CSRF
@@ -191,16 +199,23 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
                 ticketResult.Value.Dispose();
             }
 
-            bool csrfObtained = ticketResult.IsSuccess || !string.Equals(ticketResult.ErrorCode, "CsrfValidationFailed", StringComparison.OrdinalIgnoreCase);
+            bool csrfObtained = ticketResult.IsSuccess || (ticketResult.Details?.CsrfTokenObtained ?? false);
             sb.AppendLine(CultureInfo.InvariantCulture, $"CsrfTokenObtained: {(csrfObtained ? "yes" : "no")}");
             sb.AppendLine(CultureInfo.InvariantCulture, $"AuthTicketObtained: {(ticketObtained ? "yes" : "no")}");
 
-            if (!ticketResult.IsSuccess && !string.IsNullOrWhiteSpace(ticketResult.Error))
+            if (!ticketResult.IsSuccess)
             {
-                string truncatedMsg = ticketResult.Error.Length > 120
-                    ? ticketResult.Error.Substring(0, 120)
-                    : ticketResult.Error;
-                sb.AppendLine(CultureInfo.InvariantCulture, $"TicketError: Code={ticketResult.ErrorCode ?? "Unknown"}, Message={truncatedMsg}");
+                if (ticketResult.Details != null)
+                {
+                    AppendAuthFailureDetails(sb, ticketResult.Details);
+                }
+                else if (!string.IsNullOrWhiteSpace(ticketResult.Error))
+                {
+                    string truncatedMsg = ticketResult.Error.Length > 120
+                        ? ticketResult.Error.Substring(0, 120)
+                        : ticketResult.Error;
+                    sb.AppendLine(CultureInfo.InvariantCulture, $"TicketError: Code={ticketResult.ErrorCode ?? "Unknown"}, Message={truncatedMsg}");
+                }
             }
 
             // Dry-run URI
@@ -222,6 +237,17 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
         return SanitizeReport(rawReport);
     }
 
+    private static void AppendAuthFailureDetails(StringBuilder sb, AuthFailureDetails details)
+    {
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Stage: {details.Stage}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"HttpStatus: {(details.HttpStatus.HasValue ? details.HttpStatus.Value.ToString(CultureInfo.InvariantCulture) : "None")}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"RobloxErrorCodes: [{string.Join(", ", details.RobloxErrorCodes)}]");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"RobloxMessage: {details.RobloxMessage ?? "None"}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"CsrfTokenObtained: {(details.CsrfTokenObtained ? "yes" : "no")}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"TicketHeaderPresent: {(details.TicketHeaderPresent ? "yes" : "no")}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"ResponseHeaderNames: [{string.Join(", ", details.ResponseHeaderNames)}]");
+    }
+
     public static string SanitizeReport(string report)
     {
         if (string.IsNullOrEmpty(report))
@@ -229,6 +255,7 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
             return report;
         }
 
-        return SecretLeakRegex.Replace(report, "[REDACTED]");
+        string redacted = SecretLeakRegex.Replace(report, "[REDACTED]");
+        return UsernamePathRegex.Replace(redacted, "<user>");
     }
 }

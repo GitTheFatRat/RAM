@@ -182,7 +182,17 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (!enableResult.IsSuccess)
             {
                 MultiInstanceEnabled = false;
-                _snackbarService.Show(Strings.ErrorTitle, enableResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger, null, TimeSpan.FromSeconds(4));
+                string errorMessage = enableResult.ErrorCode switch
+                {
+                    "MultiInstanceNotAvailable" => Strings.MultiInstanceNotAvailable,
+                    "RobloxRunning" => Strings.MultiInstanceRobloxRunning,
+                    "CouldNotTakeOver" => Strings.MultiInstanceCouldNotTakeOver,
+                    "Disposed" => Strings.MultiInstanceDisposed,
+                    "MutexError" => Strings.MultiInstanceMutexError,
+                    "Timeout" => Strings.MultiInstanceTimeout,
+                    _ => enableResult.Error ?? Strings.ErrorTitle
+                };
+                _snackbarService.Show(Strings.ErrorTitle, errorMessage, ControlAppearance.Danger, null, TimeSpan.FromSeconds(4));
             }
             else
             {

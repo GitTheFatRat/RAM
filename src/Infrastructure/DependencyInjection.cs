@@ -31,6 +31,12 @@ public static class InfrastructureServiceExtensions
 {
     public const string RobloxHttpClientName = "RobloxClient";
 
+    public static SocketsHttpHandler CreatePrimarySocketsHttpHandler() => new()
+    {
+        UseCookies = false,
+        AllowAutoRedirect = false
+    };
+
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
         services.AddSingleton<ISettingsService, SettingsService>();
@@ -50,10 +56,7 @@ public static class InfrastructureServiceExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "RbxManager/1.0");
         })
-        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-        {
-            UseCookies = false
-        })
+        .ConfigurePrimaryHttpMessageHandler(CreatePrimarySocketsHttpHandler)
         .AddHttpMessageHandler<RobloxHostGuardHandler>()
         .AddHttpMessageHandler<RobloxCsrfHandler>()
         .AddHttpMessageHandler<RobloxRetryHandler>();
