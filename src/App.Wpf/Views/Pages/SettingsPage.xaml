@@ -5,120 +5,234 @@
       xmlns:resources="clr-namespace:RbxManager.App.Resources"
       Title="{x:Static resources:Strings.SettingsPageTitle}">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="24" MaxWidth="600" HorizontalAlignment="Left">
+        <StackPanel Margin="{StaticResource MarginLarge}" MaxWidth="720" HorizontalAlignment="Left">
             <TextBlock Text="{x:Static resources:Strings.SettingsPageTitle}"
-                       FontSize="24"
+                       FontSize="{StaticResource FontSizeTitle}"
                        FontWeight="SemiBold"
-                       Margin="0,0,0,24" />
+                       Margin="{StaticResource MarginMedium}" />
 
-            <!-- Language Setting -->
-            <TextBlock Text="{x:Static resources:Strings.LanguageLabel}"
-                       FontWeight="Medium"
-                       Margin="0,0,0,6" />
-            <ComboBox SelectedValuePath="Tag"
-                      SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
-                      Margin="0,0,0,16"
-                      Width="260"
-                      HorizontalAlignment="Left">
-                <ComboBoxItem Content="Tiếng Việt (vi-VN)" Tag="vi" />
-                <ComboBoxItem Content="English (en-US)" Tag="en" />
-            </ComboBox>
-
-            <!-- Theme Setting -->
-            <TextBlock Text="{x:Static resources:Strings.ThemeLabel}"
-                       FontWeight="Medium"
-                       Margin="0,0,0,6" />
-            <ComboBox SelectedValuePath="Tag"
-                      SelectedValue="{Binding SelectedTheme, Mode=TwoWay}"
-                      Margin="0,0,0,16"
-                      Width="260"
-                      HorizontalAlignment="Left">
-                <ComboBoxItem Content="{x:Static resources:Strings.ThemeDark}" Tag="Dark" />
-                <ComboBoxItem Content="{x:Static resources:Strings.ThemeLight}" Tag="Light" />
-                <ComboBoxItem Content="{x:Static resources:Strings.ThemeSystem}" Tag="System" />
-            </ComboBox>
-
-            <!-- Launch Delay Setting -->
-            <TextBlock Text="{x:Static resources:Strings.LaunchDelayLabel}"
-                       FontWeight="Medium"
-                       Margin="0,0,0,6" />
-            <TextBox Text="{Binding LaunchDelayMs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Width="260"
-                     HorizontalAlignment="Left"
-                     Margin="0,0,0,16" />
-
-            <!-- Rejoin Delay Setting -->
-            <TextBlock Text="{x:Static resources:Strings.RejoinDelayLabel}"
-                       FontWeight="Medium"
-                       Margin="0,0,0,6" />
-            <TextBox Text="{Binding RejoinDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Width="260"
-                     HorizontalAlignment="Left"
-                     Margin="0,0,0,16" />
-
-            <!-- Rejoin Max Attempts Setting -->
-            <TextBlock Text="{x:Static resources:Strings.RejoinMaxAttemptsLabel}"
-                       FontWeight="Medium"
-                       Margin="0,0,0,6" />
-            <TextBox Text="{Binding RejoinMaxAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Width="260"
-                     HorizontalAlignment="Left"
-                     Margin="0,0,0,16" />
-
-            <!-- Multi-Instance Setting -->
+            <!-- Card 1: Appearance -->
             <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
-                    CornerRadius="6"
-                    Padding="16"
-                    Margin="0,8,0,24">
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
                 <StackPanel>
-                    <TextBlock Text="{x:Static resources:Strings.MultiInstanceLabel}"
+                    <TextBlock Text="{x:Static resources:Strings.AppearanceSectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
                                FontWeight="SemiBold"
-                               FontSize="15"
-                               Margin="0,0,0,6" />
-                    <CheckBox Content="{x:Static resources:Strings.MultiInstanceLabel}"
-                              IsChecked="{Binding MultiInstanceEnabled, Mode=TwoWay}"
-                              IsEnabled="{Binding IsMultiInstanceAvailable}"
-                              Margin="0,0,0,8" />
-                    <TextBlock Text="{x:Static resources:Strings.MultiInstanceNotAvailable}"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.AppearanceSectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               FontSize="12"
-                               TextWrapping="Wrap" />
+                               Margin="{StaticResource MarginMedium}" />
+
+                    <!-- Language Setting -->
+                    <TextBlock Text="{x:Static resources:Strings.LanguageLabel}"
+                               FontWeight="Medium"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginTight}" />
+                    <ComboBox SelectedValuePath="Tag"
+                              SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
+                              Margin="{StaticResource MarginBase}"
+                              Width="280"
+                              HorizontalAlignment="Left">
+                        <ComboBoxItem Content="Tiếng Việt (vi-VN)" Tag="vi" />
+                        <ComboBoxItem Content="English (en-US)" Tag="en" />
+                    </ComboBox>
+
+                    <!-- Theme Setting -->
+                    <TextBlock Text="{x:Static resources:Strings.ThemeLabel}"
+                               FontWeight="Medium"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginTight}" />
+                    <ComboBox SelectedValuePath="Tag"
+                              SelectedValue="{Binding SelectedTheme, Mode=TwoWay}"
+                              Margin="{StaticResource MarginTight}"
+                              Width="280"
+                              HorizontalAlignment="Left">
+                        <ComboBoxItem Content="{x:Static resources:Strings.ThemeDark}" Tag="Dark" />
+                        <ComboBoxItem Content="{x:Static resources:Strings.ThemeLight}" Tag="Light" />
+                        <ComboBoxItem Content="{x:Static resources:Strings.ThemeSystem}" Tag="System" />
+                    </ComboBox>
                 </StackPanel>
             </Border>
 
-            <!-- Advanced Expander -->
-            <Expander Header="{x:Static resources:Strings.AdvancedSettingsTitle}"
-                      Margin="0,0,0,24"
-                      MaxWidth="600"
-                      HorizontalAlignment="Left">
-                <StackPanel Margin="12">
-                    <TextBlock Text="{x:Static resources:Strings.AdvancedSettingsSubtitle}"
+            <!-- Card 2: Launching -->
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
+                <StackPanel>
+                    <TextBlock Text="{x:Static resources:Strings.LaunchingSectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.LaunchingSectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               FontSize="12"
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,12" />
+                               Margin="{StaticResource MarginMedium}" />
+
+                    <!-- Launch Delay Setting -->
+                    <TextBlock Text="{x:Static resources:Strings.LaunchDelayLabel}"
+                               FontWeight="Medium"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBox Text="{Binding LaunchDelayMs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             HorizontalAlignment="Left"
+                             Margin="{StaticResource MarginTight}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Card 3: Auto-rejoin -->
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
+                <StackPanel>
+                    <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginMedium}" />
+
+                    <!-- Rejoin Delay Setting -->
+                    <TextBlock Text="{x:Static resources:Strings.RejoinDelayLabel}"
+                               FontWeight="Medium"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBox Text="{Binding RejoinDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             HorizontalAlignment="Left"
+                             Margin="{StaticResource MarginBase}" />
+
+                    <!-- Rejoin Max Attempts Setting -->
+                    <TextBlock Text="{x:Static resources:Strings.RejoinMaxAttemptsLabel}"
+                               FontWeight="Medium"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBox Text="{Binding RejoinMaxAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             HorizontalAlignment="Left"
+                             Margin="{StaticResource MarginTight}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Card 4: Multi-Instance -->
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
+                <StackPanel>
+                    <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginMedium}" />
+
+                    <CheckBox Content="{x:Static resources:Strings.MultiInstanceLabel}"
+                              IsChecked="{Binding MultiInstanceEnabled, Mode=TwoWay}"
+                              IsEnabled="{Binding IsMultiInstanceAvailable}"
+                              Margin="{StaticResource MarginBase}" />
+
+                    <!-- Risk text next to toggle -->
+                    <Border Background="{DynamicResource StatusExpiredBackgroundBrush}"
+                            BorderBrush="{DynamicResource StatusExpiredBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusSmall}"
+                            Padding="{StaticResource PaddingBase}"
+                            Margin="{StaticResource MarginTight}">
+                        <TextBlock Text="{x:Static resources:Strings.MultiInstanceNotAvailable}"
+                                   Foreground="{DynamicResource StatusExpiredForegroundBrush}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   TextWrapping="Wrap" />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Card 5: Backup & Restore -->
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
+                <StackPanel>
+                    <TextBlock Text="{x:Static resources:Strings.BackupSectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.BackupSectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginMedium}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource MarginTight}">
+                        <ui:Button Content="{x:Static resources:Strings.ExportBackup}"
+                                   Icon="{ui:SymbolIcon ArrowUpload24}"
+                                   Margin="{StaticResource MarginTight}"
+                                   Command="{Binding ExportBackupCommand}" />
+                        <ui:Button Content="{x:Static resources:Strings.ImportBackup}"
+                                   Icon="{ui:SymbolIcon ArrowDownload24}"
+                                   Margin="{StaticResource MarginTight}"
+                                   Command="{Binding ImportBackupCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Card 6: Advanced -->
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="{StaticResource PaddingMedium}"
+                    Margin="{StaticResource MarginBase}">
+                <StackPanel>
+                    <TextBlock Text="{x:Static resources:Strings.AdvancedSectionTitle}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="SemiBold"
+                               Margin="{StaticResource MarginTight}" />
+                    <TextBlock Text="{x:Static resources:Strings.AdvancedSectionSubtitle}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginMedium}" />
 
                     <TextBlock Text="{x:Static resources:Strings.LaunchUriTemplateStatus}"
                                FontWeight="SemiBold"
-                               Margin="0,0,0,2" />
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginTight}" />
                     <TextBlock Text="{Binding LaunchUriTemplateStatus}"
+                               FontFamily="{StaticResource FontFamilyMonospace}"
+                               FontSize="{StaticResource FontSizeCaption}"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="0,0,0,10" />
+                               Margin="{StaticResource MarginBase}" />
 
                     <TextBlock Text="{x:Static resources:Strings.PlaceLauncherUrlTemplateStatus}"
                                FontWeight="SemiBold"
-                               Margin="0,0,0,2" />
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="{StaticResource MarginTight}" />
                     <TextBlock Text="{Binding PlaceLauncherUrlTemplateStatus}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                               FontFamily="{StaticResource FontFamilyMonospace}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginTight}" />
                 </StackPanel>
-            </Expander>
+            </Border>
 
-            <!-- Save Button -->
+            <!-- Save Action Button -->
             <ui:Button Appearance="Primary"
                        Content="{x:Static resources:Strings.Save}"
                        Command="{Binding SaveSettingsCommand}"
                        Width="140"
+                       Margin="{StaticResource MarginMedium}"
                        HorizontalAlignment="Left" />
         </StackPanel>
     </ScrollViewer>

@@ -49,7 +49,14 @@ public partial class ServersViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsEmptyStateVisible))]
     private bool _hasServers;
 
-    public bool IsEmptyStateVisible => !HasServers && !IsLoading;
+    public bool IsEmptyStateVisible => !HasServers && !IsLoading && !HasError;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEmptyStateVisible))]
+    private bool _hasError;
+
+    [ObservableProperty]
+    private string _errorMessage = string.Empty;
 
     public ObservableCollection<ServerInfo> Servers { get; } = new();
 
@@ -176,6 +183,8 @@ public partial class ServersViewModel : ObservableObject
 
             if (result.IsSuccess && result.Value != null)
             {
+                HasError = false;
+                ErrorMessage = string.Empty;
                 if (!append)
                 {
                     Servers.Clear();
@@ -191,6 +200,8 @@ public partial class ServersViewModel : ObservableObject
             }
             else
             {
+                HasError = true;
+                ErrorMessage = result.Error ?? Strings.ErrorTitle;
                 _snackbarService.Show(Strings.ErrorTitle, result.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
             }
         }

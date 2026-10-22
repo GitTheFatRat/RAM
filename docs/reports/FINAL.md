@@ -16,6 +16,8 @@ This report summarizes the final engineering state, test coverage, dependency se
 | **M4** | Done | `ca4d92a` | `AppSettings` & `SettingsService` (`settings.json`), group filter chips, editable group combo, bulk launch with cancellation, encrypted backup format v1 (PBKDF2-HMAC-SHA512 at 600,000 iters + AES-256-GCM) | None |
 | **M5** | Done | `v0.1.0` | Global exception handling, app single-instance mutex, log redaction enricher, keyboard shortcuts, i18n & XAML literal & secret quality guards, packaging (`tools/publish.ps1`), documentation (`README.vi.md`, `docs/MANUAL_TEST_CHECKLIST.md`, `docs/BEFORE_PUBLIC_RELEASE.md`) | None |
 | **M6** | Done | `v0.1.1` | Multi-instance real gate (`ROBLOX_singletonMutex` / `ROBLOX_singletonEvent`), shrink `Reveal()` surface via `Clone()` and `HasContent`, report & test reconciliation, review bundle script (`tools/make-review.ps1`) | None |
+| **M7** | Done | `979fbeb` | Diagnostics page, safe redacted report generator, customizable launch templates in `settings.json`, Dry Run preview, code health pass (`dotnet format` CI step, CancellationToken propagation, Process disposal) | None |
+| **M8** | Done | `v0.2.0` | Modern UI/UX polish, centralized design tokens (`Themes/Tokens.xaml`), virtualized DataGrid, relative time formatting, `UiState` window bounds and sorting persistence, diacritics audit (`LocalizationAuditTests`, `XamlScanTests`), monogram icon | None |
 
 ---
 
@@ -37,9 +39,9 @@ This report summarizes the final engineering state, test coverage, dependency se
 
 ## 3. Test Totals per Project
 
-- **`tests/Core.Tests`**: 52 passed, 0 failed, 0 skipped.
-- **`tests/Infrastructure.Tests`**: 77 passed, 0 failed, 0 skipped.
-- **Total Test Suite**: **129 tests passing** (0 failures, 0 warnings).
+- **`tests/Core.Tests`**: 77 passed, 0 failed, 0 skipped.
+- **`tests/Infrastructure.Tests`**: 87 passed, 0 failed, 0 skipped.
+- **Total Test Suite**: **164 tests passing** (0 failures, 0 warnings).
 - **Test Isolation**: Verified `%LOCALAPPDATA%\RbxManager\vault.dat` timestamp remained untouched throughout all test executions.
 
 ---

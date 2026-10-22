@@ -15,7 +15,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Page.Resources>
 
-    <Grid Margin="24">
+    <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -27,12 +27,12 @@
         <!-- Title Header -->
         <TextBlock Grid.Row="0"
                    Text="{x:Static resources:Strings.AccountsPageTitle}"
-                   FontSize="24"
+                   FontSize="{StaticResource FontSizeTitle}"
                    FontWeight="SemiBold"
-                   Margin="0,0,0,16" />
+                   Margin="{StaticResource MarginMedium}" />
 
-        <!-- Controls Bar 1: Search + Individual Actions -->
-        <Grid Grid.Row="1" Margin="0,0,0,12">
+        <!-- Controls Bar 1: Search + Primary & More Toolbar -->
+        <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -44,57 +44,127 @@
                         PlaceholderText="{x:Static resources:Strings.SearchPlaceholder}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                         Icon="{ui:SymbolIcon Search24}"
-                        MaxWidth="300"
+                        MaxWidth="320"
                         HorizontalAlignment="Left" />
 
-            <!-- Buttons -->
+            <!-- Toolbar Actions -->
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
-                        Margin="16,0,0,0">
-                <ui:Button Content="{x:Static resources:Strings.AddViaLogin}"
-                           Icon="{ui:SymbolIcon PersonAdd24}"
-                           Appearance="Primary"
-                           Margin="0,0,6,0"
-                           Command="{Binding AddViaLoginCommand}" />
-                <ui:Button Content="{x:Static resources:Strings.AddViaCookie}"
-                           Icon="{ui:SymbolIcon Key24}"
-                           Margin="0,0,6,0"
-                           Command="{Binding AddAccountCommand}" />
-                <ui:Button Content="{x:Static resources:Strings.Check}"
-                           Icon="{ui:SymbolIcon CheckmarkCircle24}"
-                           Margin="0,0,6,0"
-                           Command="{Binding CheckAccountCommand}"
-                           IsEnabled="{Binding IsAccountSelected}" />
-                <ui:Button Content="{x:Static resources:Strings.CheckAll}"
-                           Icon="{ui:SymbolIcon ArrowSync24}"
-                           Margin="0,0,6,0"
-                           Command="{Binding CheckAllCommand}" />
-                <ui:Button Content="{x:Static resources:Strings.Cancel}"
-                           Icon="{ui:SymbolIcon Dismiss24}"
-                           Margin="0,0,6,0"
-                           Command="{Binding CancelCheckAllCommand}"
-                           Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}" />
+                        Margin="{StaticResource MarginMedium}">
+                <!-- Primary Action: Launch (Accent) -->
                 <ui:Button Content="{x:Static resources:Strings.Launch}"
                            Icon="{ui:SymbolIcon Play24}"
-                           Appearance="Success"
-                           Margin="0,0,6,0"
+                           Appearance="Primary"
+                           Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchAccountCommand}"
                            IsEnabled="{Binding IsAccountSelected}" />
-                <ui:Button Content="{x:Static resources:Strings.EditAccount}"
-                           Icon="{ui:SymbolIcon Edit24}"
-                           Margin="0,0,6,0"
-                           Command="{Binding EditAccountCommand}"
-                           IsEnabled="{Binding IsAccountSelected}" />
-                <ui:Button Content="{x:Static resources:Strings.DeleteAccount}"
-                           Icon="{ui:SymbolIcon Delete24}"
-                           Appearance="Danger"
-                           Command="{Binding DeleteAccountCommand}"
-                           IsEnabled="{Binding IsAccountSelected}" />
+
+                <!-- Add Split Button (Add via Login default + Options) -->
+                <Grid Margin="{StaticResource MarginTight}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:Button Grid.Column="0"
+                               Content="{x:Static resources:Strings.AddViaLogin}"
+                               Icon="{ui:SymbolIcon PersonAdd24}"
+                               Command="{Binding AddViaLoginCommand}"
+                               ToolTip="Ctrl+N" />
+                    <ui:Button Grid.Column="1"
+                               Icon="{ui:SymbolIcon ChevronDown24}"
+                               Click="OnAddSplitMenuClick"
+                               AutomationProperties.Name="{x:Static resources:Strings.AddAccountDialogTitle}">
+                        <ui:Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{x:Static resources:Strings.AddViaLogin}"
+                                          Command="{Binding AddViaLoginCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:SymbolIcon Symbol="PersonAdd24" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{x:Static resources:Strings.AddViaCookie}"
+                                          Command="{Binding AddAccountCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:SymbolIcon Symbol="Key24" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </ui:Button.ContextMenu>
+                    </ui:Button>
+                </Grid>
+
+                <!-- More Actions Menu -->
+                <ui:Button Content="{x:Static resources:Strings.MoreActions}"
+                           Icon="{ui:SymbolIcon MoreHorizontal24}"
+                           Margin="{StaticResource MarginTight}"
+                           Click="OnMoreButtonClick">
+                    <ui:Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{x:Static resources:Strings.Check}"
+                                      Command="{Binding CheckAccountCommand}"
+                                      IsEnabled="{Binding IsAccountSelected}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="CheckmarkCircle24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{x:Static resources:Strings.CheckAll}"
+                                      Command="{Binding CheckAllCommand}"
+                                      IsEnabled="{Binding IsNotBusy}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="ArrowSync24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem Header="{x:Static resources:Strings.EditAccount}"
+                                      Command="{Binding EditAccountCommand}"
+                                      IsEnabled="{Binding IsAccountSelected}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="Edit24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{x:Static resources:Strings.DeleteAccount}"
+                                      Command="{Binding DeleteAccountCommand}"
+                                      IsEnabled="{Binding IsAccountSelected}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="Delete24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem Header="{x:Static resources:Strings.RenameGroup}"
+                                      Command="{Binding RenameGroupCommand}"
+                                      IsEnabled="{Binding IsRenameGroupVisible}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="FolderEdit24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem Header="{x:Static resources:Strings.ExportBackup}"
+                                      Command="{Binding ExportBackupCommand}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="ArrowUpload24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{x:Static resources:Strings.ImportBackup}"
+                                      Command="{Binding ImportBackupCommand}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="ArrowDownload24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </ui:Button.ContextMenu>
+                </ui:Button>
+
+                <!-- Cancel button during CheckAll -->
+                <ui:Button Content="{x:Static resources:Strings.Cancel}"
+                           Icon="{ui:SymbolIcon Dismiss24}"
+                           Margin="{StaticResource MarginTight}"
+                           Command="{Binding CancelCheckAllCommand}"
+                           Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </Grid>
 
-        <!-- Controls Bar 2: Group Chips + Bulk Launch + Backup -->
-        <Grid Grid.Row="2" Margin="0,0,0,12">
+        <!-- Controls Bar 2: Group Filter Chips + Bulk Actions -->
+        <Grid Grid.Row="2" Margin="{StaticResource MarginBase}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -114,7 +184,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <ui:Button Content="{Binding}"
-                                           Margin="0,0,6,0"
+                                           Margin="{StaticResource MarginTight}"
                                            Command="{Binding DataContext.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                            CommandParameter="{Binding}" />
                             </DataTemplate>
@@ -123,40 +193,31 @@
 
                     <ui:Button Content="{x:Static resources:Strings.RenameGroup}"
                                Icon="{ui:SymbolIcon Edit24}"
-                               Margin="6,0,0,0"
+                               Margin="{StaticResource MarginTight}"
                                Command="{Binding RenameGroupCommand}"
                                Visibility="{Binding IsRenameGroupVisible, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Bulk Launch and Backup Actions -->
+            <!-- Bulk Launch Actions -->
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
-                        Margin="16,0,0,0">
+                        Margin="{StaticResource MarginMedium}">
                 <ui:Button Content="{x:Static resources:Strings.LaunchSelected}"
                            Icon="{ui:SymbolIcon PlayMultiple24}"
-                           Appearance="Primary"
-                           Margin="0,0,6,0"
+                           Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchSelectedAccountsCommand}" />
                 <ui:Button Content="{x:Static resources:Strings.LaunchGroup}"
                            Icon="{ui:SymbolIcon PlayMultiple24}"
-                           Appearance="Success"
-                           Margin="0,0,6,0"
+                           Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchGroupAccountsCommand}"
                            Visibility="{Binding IsLaunchGroupVisible, Converter={StaticResource BoolToVis}}" />
-                <ui:Button Content="{x:Static resources:Strings.ExportBackup}"
-                           Icon="{ui:SymbolIcon ArrowUpload24}"
-                           Margin="0,0,6,0"
-                           Command="{Binding ExportBackupCommand}" />
-                <ui:Button Content="{x:Static resources:Strings.ImportBackup}"
-                           Icon="{ui:SymbolIcon ArrowDownload24}"
-                           Command="{Binding ImportBackupCommand}" />
             </StackPanel>
         </Grid>
 
-        <!-- Progress Bar for Check All -->
+        <!-- Progress Indicator for Check All -->
         <Grid Grid.Row="3"
-              Margin="0,0,0,12"
+              Margin="{StaticResource MarginBase}"
               Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -164,27 +225,77 @@
             </Grid.ColumnDefinitions>
             <ProgressBar Grid.Column="0"
                          IsIndeterminate="True"
-                         Height="6"
+                         Height="4"
                          VerticalAlignment="Center"
-                         Margin="0,0,12,0" />
+                         Margin="{StaticResource MarginBase}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding CheckAllProgressText}"
+                       FontSize="{StaticResource FontSizeCaption}"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         </Grid>
 
-        <!-- Main Content Area -->
+        <!-- Main Content Area: High-Density Virtualized DataGrid -->
         <Grid Grid.Row="4">
-            <!-- Data Grid -->
-            <ui:DataGrid ItemsSource="{Binding FilteredAccounts}"
+            <ui:DataGrid x:Name="AccountsDataGrid"
+                         ItemsSource="{Binding FilteredAccounts}"
                          SelectedItem="{Binding SelectedAccount}"
                          AutoGenerateColumns="False"
                          CanUserAddRows="False"
                          IsReadOnly="True"
                          SelectionMode="Single"
-                         GridLinesVisibility="Horizontal">
+                         GridLinesVisibility="None"
+                         RowHeight="36"
+                         Sorting="OnDataGridSorting"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
+                         VirtualizingPanel.ScrollUnit="Pixel"
+                         ScrollViewer.CanContentScroll="True">
+                <ui:DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu>
+                                    <MenuItem Header="{x:Static resources:Strings.Launch}"
+                                              Command="{Binding DataContext.LaunchAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                        <MenuItem.Icon>
+                                            <ui:SymbolIcon Symbol="Play24" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{x:Static resources:Strings.Check}"
+                                              Command="{Binding DataContext.CheckAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                        <MenuItem.Icon>
+                                            <ui:SymbolIcon Symbol="CheckmarkCircle24" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{x:Static resources:Strings.EditAccount}"
+                                              Command="{Binding DataContext.EditAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                        <MenuItem.Icon>
+                                            <ui:SymbolIcon Symbol="Edit24" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{x:Static resources:Strings.DeleteAccount}"
+                                              Command="{Binding DataContext.DeleteAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                        <MenuItem.Icon>
+                                            <ui:SymbolIcon Symbol="Delete24" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator />
+                                    <MenuItem Header="{x:Static resources:Strings.CopyAlias}"
+                                              Command="{Binding DataContext.CopyAliasCommand, RelativeSource={RelativeSource AncestorType=Page}}">
+                                        <MenuItem.Icon>
+                                            <ui:SymbolIcon Symbol="Copy24" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ui:DataGrid.RowStyle>
+
                 <ui:DataGrid.Columns>
-                    <DataGridTemplateColumn Width="40" CanUserResize="False">
+                    <!-- Checkbox Selection Column -->
+                    <DataGridTemplateColumn Width="40" CanUserResize="False" CanUserSort="False">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -193,46 +304,187 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+
+                    <!-- Alias Column -->
                     <DataGridTextColumn Header="{x:Static resources:Strings.ColumnAlias}"
                                         Binding="{Binding Alias}"
+                                        SortMemberPath="Alias"
                                         Width="160" />
+
+                    <!-- Group Column -->
+                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnGroup}"
+                                        Binding="{Binding Group}"
+                                        SortMemberPath="Group"
+                                        Width="130" />
+
+                    <!-- Username Column -->
                     <DataGridTextColumn Header="{x:Static resources:Strings.ColumnUsername}"
                                         Binding="{Binding Username}"
-                                        Width="160" />
+                                        SortMemberPath="Username"
+                                        Width="150" />
+
+                    <!-- Status Chip Column (Glyph + Text + Token-based Contrast) -->
                     <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnStatus}"
+                                            SortMemberPath="Status"
                                             Width="140">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ui:InfoBadge Severity="{Binding StatusSeverity}"
-                                              Value="{Binding StatusText}" />
+                                <Border CornerRadius="{StaticResource RadiusSmall}"
+                                        Padding="8,3"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderThickness" Value="1" />
+                                            <!-- Default Unknown -->
+                                            <Setter Property="Background" Value="{DynamicResource StatusUnknownBackgroundBrush}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource StatusUnknownBorderBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Valid">
+                                                    <Setter Property="Background" Value="{DynamicResource StatusValidBackgroundBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource StatusValidBorderBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Expired">
+                                                    <Setter Property="Background" Value="{DynamicResource StatusExpiredBackgroundBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource StatusExpiredBorderBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                    <Setter Property="Background" Value="{DynamicResource StatusErrorBackgroundBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource StatusErrorBorderBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:SymbolIcon Symbol="{Binding StatusGlyph}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Margin="{StaticResource MarginTight}">
+                                            <ui:SymbolIcon.Style>
+                                                <Style TargetType="ui:SymbolIcon">
+                                                    <Setter Property="Foreground" Value="{DynamicResource StatusUnknownForegroundBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Valid">
+                                                            <Setter Property="Foreground" Value="{DynamicResource StatusValidForegroundBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Expired">
+                                                            <Setter Property="Foreground" Value="{DynamicResource StatusExpiredForegroundBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForegroundBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:SymbolIcon.Style>
+                                        </ui:SymbolIcon>
+                                        <TextBlock Text="{Binding StatusText}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource StatusUnknownForegroundBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Valid">
+                                                            <Setter Property="Foreground" Value="{DynamicResource StatusValidForegroundBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Expired">
+                                                            <Setter Property="Foreground" Value="{DynamicResource StatusExpiredForegroundBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForegroundBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnGroup}"
-                                        Binding="{Binding Group}"
-                                        Width="140" />
-                    <DataGridTextColumn Header="{x:Static resources:Strings.ColumnLastChecked}"
-                                        Binding="{Binding LastCheckedFormatted}"
-                                        Width="170" />
+
+                    <!-- Last Checked Column (Relative time + Tooltip full timestamp) -->
+                    <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnLastChecked}"
+                                            SortMemberPath="LastChecked"
+                                            Width="160">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding LastCheckedRelative}"
+                                           ToolTip="{Binding LastCheckedTooltip}"
+                                           VerticalAlignment="Center"
+                                           FontSize="{StaticResource FontSizeBody}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Created Column -->
                     <DataGridTextColumn Header="{x:Static resources:Strings.ColumnCreated}"
                                         Binding="{Binding CreatedFormatted}"
-                                        Width="170" />
+                                        SortMemberPath="Created"
+                                        Width="160" />
                 </ui:DataGrid.Columns>
             </ui:DataGrid>
 
-            <!-- Empty State Overlay -->
+            <!-- Empty State 1: No Accounts in Vault -->
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
+                        Visibility="{Binding IsNoAccounts, Converter={StaticResource BoolToVis}}">
                 <ui:SymbolIcon Symbol="PersonQuestionMark24"
                                FontSize="48"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"
-                               Margin="0,0,0,12" />
+                               Margin="{StaticResource MarginMedium}" />
                 <TextBlock Text="{x:Static resources:Strings.EmptyAccountsList}"
-                           FontSize="16"
+                           FontSize="{StaticResource FontSizeSubtitle}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginTight}" />
+                <TextBlock Text="{x:Static resources:Strings.EmptyAccountsHint}"
+                           FontSize="{StaticResource FontSizeBody}"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           HorizontalAlignment="Center" />
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginMedium}" />
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="{StaticResource MarginBase}">
+                    <ui:Button Content="{x:Static resources:Strings.AddViaLogin}"
+                               Icon="{ui:SymbolIcon PersonAdd24}"
+                               Appearance="Primary"
+                               Margin="{StaticResource MarginTight}"
+                               Command="{Binding AddViaLoginCommand}" />
+                    <ui:Button Content="{x:Static resources:Strings.AddViaCookie}"
+                               Icon="{ui:SymbolIcon Key24}"
+                               Margin="{StaticResource MarginTight}"
+                               Command="{Binding AddAccountCommand}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Empty State 2: No Search Results Found -->
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsNoSearchResults, Converter={StaticResource BoolToVis}}">
+                <ui:SymbolIcon Symbol="Search24"
+                               FontSize="48"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="{StaticResource MarginMedium}" />
+                <TextBlock Text="{x:Static resources:Strings.NoSearchResults}"
+                           FontSize="{StaticResource FontSizeSubtitle}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginTight}" />
+                <TextBlock Text="{x:Static resources:Strings.NoSearchResultsHint}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginMedium}" />
+                <ui:Button Content="{x:Static resources:Strings.ClearSearch}"
+                           Icon="{ui:SymbolIcon Dismiss24}"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginBase}"
+                           Command="{Binding ClearSearchCommand}" />
             </StackPanel>
         </Grid>
     </Grid>

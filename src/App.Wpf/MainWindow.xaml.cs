@@ -1,25 +1,33 @@
 namespace RbxManager.App;
 
 using System;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Input;
 using RbxManager.App.ViewModels;
 using RbxManager.App.Views.Pages;
+using RbxManager.Core.Settings;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
 public partial class MainWindow : FluentWindow
 {
+    private readonly ISettingsService _settingsService;
     public MainViewModel ViewModel { get; }
 
     public MainWindow(
         MainViewModel viewModel,
         IServiceProvider serviceProvider,
         IContentDialogService contentDialogService,
-        ISnackbarService snackbarService)
+        ISnackbarService snackbarService,
+        ISettingsService settingsService)
     {
         ArgumentNullException.ThrowIfNull(contentDialogService);
         ArgumentNullException.ThrowIfNull(snackbarService);
+        ArgumentNullException.ThrowIfNull(settingsService);
 
         ViewModel = viewModel;
+        _settingsService = settingsService;
         DataContext = this;
 
         InitializeComponent();
@@ -27,6 +35,91 @@ public partial class MainWindow : FluentWindow
         contentDialogService.SetDialogHost(RootContentDialogHost);
         snackbarService.SetSnackbarPresenter(RootSnackbarPresenter);
         RootNavigation.SetServiceProvider(serviceProvider);
-        RootNavigation.Loaded += (_, _) => RootNavigation.Navigate(typeof(AccountsPage));
+
+        RestoreWindowState();
+
+        Closing += OnWindowClosing;
+    }
+
+    private void RestoreWindowState()
+    {
+        try
+        {
+            AppSettings settings = _settingsService.CurrentSettings;
+            double screenWidth = SystemParameters.VirtualScreenWidth > 0 ? SystemParameters.VirtualScreenWidth : 1920;
+            double screenHeight = SystemParameters.VirtualScreenHeight > 0 ? SystemParameters.VirtualScreenHeight : 1080;
+
+            UiStateSettings uiState = (settings.UiState ?? new UiStateSettings()).ValidateAndClamp(screenWidth, screenHeight);
+
+            Width = uiState.WindowWidth ?? UiStateSettings.DefaultWindowWidth;
+            Height = uiState.WindowHeight ?? UiStateSettings.DefaultWindowHeight;
+            Top = uiState.WindowTop ?? 100;
+            Left = uiState.WindowLeft ?? 100;
+
+            if (uiState.IsMaximized)
+            {
+                WindowState = WindowState.Maximized;
+            }
+
+            Type targetPageType = typeof(AccountsPage);
+            if (!string.IsNullOrEmpty(uiState.LastSelectedPage))
+            {
+                targetPageType = uiState.LastSelectedPage switch
+                {
+                    nameof(ServersPage) => typeof(ServersPage),
+                    nameof(RunningPage) => typeof(RunningPage),
+                    nameof(DiagnosticsPage) => typeof(DiagnosticsPage),
+                    nameof(SettingsPage) => typeof(SettingsPage),
+                    _ => typeof(AccountsPage)
+                };
+            }
+
+            RootNavigation.Loaded += (_, _) => RootNavigation.Navigate(targetPageType);
+        }
+        catch
+        {
+            RootNavigation.Loaded += (_, _) => RootNavigation.Navigate(typeof(AccountsPage));
+        }
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        try
+        {
+            AppSettings current = _settingsService.CurrentSettings;
+            bool isMaximized = WindowState == WindowState.Maximized;
+            double width = RestoreBounds.Width > 0 ? RestoreBounds.Width : Width;
+            double height = RestoreBounds.Height > 0 ? RestoreBounds.Height : Height;
+            double top = RestoreBounds.Top;
+            double left = RestoreBounds.Left;
+
+            string lastPage = RootNavigation.SelectedItem?.TargetPageType?.Name ?? nameof(AccountsPage);
+
+            UiStateSettings uiState = (current.UiState ?? new UiStateSettings()) with
+            {
+                WindowWidth = width,
+                WindowHeight = height,
+                WindowTop = top,
+                WindowLeft = left,
+                IsMaximized = isMaximized,
+                LastSelectedPage = lastPage
+            };
+
+            _ = _settingsService.SaveSettingsAsync(current with { UiState = uiState });
+        }
+        catch
+        {
+        }
+    }
+
+    private void OnMainWindowPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.N && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            if (RootNavigation.SelectedItem?.TargetPageType != typeof(AccountsPage))
+            {
+                RootNavigation.Navigate(typeof(AccountsPage));
+            }
+        }
     }
 }

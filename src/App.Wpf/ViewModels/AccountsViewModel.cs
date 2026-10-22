@@ -19,6 +19,7 @@ using RbxManager.Core.Common;
 using RbxManager.Core.Exceptions;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
+using RbxManager.Core.Settings;
 using RbxManager.Core.Storage;
 using RbxManager.Core.Validation;
 using RbxManager.Infrastructure.Launch;
@@ -68,15 +69,34 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmptyStateVisible))]
+    [NotifyPropertyChangedFor(nameof(IsNoAccounts))]
+    [NotifyPropertyChangedFor(nameof(IsNoSearchResults))]
     private bool _hasAccounts;
 
     public bool IsEmptyStateVisible => !HasAccounts;
+    public bool IsNoAccounts => !IsLoading && _allAccounts.Count == 0;
+    public bool IsNoSearchResults => !IsLoading && _allAccounts.Count > 0 && FilteredAccounts.Count == 0;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotBusy))]
     private bool _isCheckingAll;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotBusy))]
+    private bool _isCheckingSingle;
+
+    public bool IsNotBusy => !IsLoading && !IsCheckingAll && !IsCheckingSingle;
+
+    [ObservableProperty]
     private string _checkAllProgressText = string.Empty;
+
+    [ObservableProperty]
+    private string _sortColumn = "Alias";
+
+    [ObservableProperty]
+    private bool _sortDescending;
+
+    private readonly DebounceDispatcher _searchDebouncer;
 
     public AccountsViewModel(
         IAccountStore accountStore,
@@ -95,11 +115,32 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _settingsService = settingsService;
         _backupService = backupService;
 
+        _searchDebouncer = new DebounceDispatcher(TimeSpan.FromMilliseconds(200));
         _selectedGroup = Strings.GroupFilterAll;
+
+        if (_settingsService?.CurrentSettings.UiState != null)
+        {
+            _sortColumn = _settingsService.CurrentSettings.UiState.SortColumn ?? "Alias";
+            _sortDescending = _settingsService.CurrentSettings.UiState.SortDescending;
+        }
     }
 
     partial void OnSelectedGroupChanged(string? value) => ApplyFilter();
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchDebouncer.Debounce(() =>
+        {
+            if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+            {
+                Application.Current.Dispatcher.Invoke(ApplyFilter);
+            }
+            else
+            {
+                ApplyFilter();
+            }
+        });
+    }
 
     [RelayCommand]
     private void SelectGroup(string? group)
@@ -439,13 +480,21 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public async Task CheckAccountAsync()
     {
-        if (SelectedAccount == null)
+        if (SelectedAccount == null || IsCheckingSingle)
         {
             return;
         }
 
-        await ValidateAndUpdateAccountAsync(SelectedAccount.Account);
-        await LoadAccountsAsync();
+        IsCheckingSingle = true;
+        try
+        {
+            await ValidateAndUpdateAccountAsync(SelectedAccount.Account);
+            await LoadAccountsAsync();
+        }
+        finally
+        {
+            IsCheckingSingle = false;
+        }
     }
 
     [RelayCommand]
@@ -647,12 +696,98 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 (a.Account.Username != null && a.Account.Username.Contains(search, StringComparison.OrdinalIgnoreCase)));
         }
 
+        query = SortAccounts(query, SortColumn, SortDescending);
+
         foreach (AccountItemViewModel item in query)
         {
             FilteredAccounts.Add(item);
         }
 
         HasAccounts = FilteredAccounts.Count > 0;
+        OnPropertyChanged(nameof(IsNoAccounts));
+        OnPropertyChanged(nameof(IsNoSearchResults));
+    }
+
+    private static IEnumerable<AccountItemViewModel> SortAccounts(IEnumerable<AccountItemViewModel> items, string sortColumn, bool descending)
+    {
+        Func<AccountItemViewModel, object?> keySelector = sortColumn switch
+        {
+            "Group" => a => a.Group ?? string.Empty,
+            "Username" => a => a.Username,
+            "Status" => a => (int)a.Status,
+            "LastChecked" => a => a.Account.LastCheckedAt ?? DateTimeOffset.MinValue,
+            "Created" => a => a.CreatedAt,
+            _ => a => a.Alias
+        };
+
+        return descending
+            ? items.OrderByDescending(keySelector)
+            : items.OrderBy(keySelector);
+    }
+
+    [RelayCommand]
+    public void Sort(string column)
+    {
+        if (string.Equals(SortColumn, column, StringComparison.OrdinalIgnoreCase))
+        {
+            SortDescending = !SortDescending;
+        }
+        else
+        {
+            SortColumn = column;
+            SortDescending = false;
+        }
+
+        ApplyFilter();
+        SaveSortState();
+    }
+
+    private void SaveSortState()
+    {
+        if (_settingsService == null) return;
+        try
+        {
+            AppSettings current = _settingsService.CurrentSettings;
+            UiStateSettings uiState = (current.UiState ?? new UiStateSettings()) with
+            {
+                SortColumn = SortColumn,
+                SortDescending = SortDescending
+            };
+            _ = _settingsService.SaveSettingsAsync(current with { UiState = uiState });
+        }
+        catch
+        {
+        }
+    }
+
+    [RelayCommand]
+    public void ClearSearch()
+    {
+        SearchText = string.Empty;
+        SelectedGroup = Strings.GroupFilterAll;
+    }
+
+    [RelayCommand]
+    public void CopyAlias()
+    {
+        if (SelectedAccount != null)
+        {
+            try
+            {
+                Clipboard.SetText(SelectedAccount.Alias);
+                _snackbarService.Show(Strings.SuccessTitle, Strings.AliasCopied, ControlAppearance.Success);
+            }
+            catch (Exception ex)
+            {
+                _snackbarService.Show(Strings.ErrorTitle, ex.Message, ControlAppearance.Danger);
+            }
+        }
+    }
+
+    [RelayCommand]
+    public async Task RefreshAsync()
+    {
+        await LoadAccountsAsync();
     }
 
     [RelayCommand]
@@ -984,6 +1119,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _bulkLaunchCts.Dispose();
             _bulkLaunchCts = null;
         }
+
+        _searchDebouncer.Dispose();
 
         GC.SuppressFinalize(this);
     }

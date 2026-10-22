@@ -28,15 +28,15 @@ graph TD
    - **Dependencies**: References `Core`.
 
 3. **`src/App.Wpf/`**
-   - **Responsibility**: WPF UI shell, MVVM view models (`AccountsViewModel`, `ServersViewModel`, `RunningViewModel`, `SettingsViewModel`), Views & Controls (`AccountsPage`, `ServersPage`, `RunningPage`, `SettingsPage`, `AccountEditorControl`, `LaunchDialogControl`, `AccountPickerControl`, `BackupPasswordDialogControl`, `RenameGroupDialogControl`), Windows (`LoginWindow` with WebView2), dialogs (`IContentDialogService`), notifications (`ISnackbarService`), and DI bootstrapping.
+   - **Responsibility**: WPF UI shell, design tokens (`Themes/Tokens.xaml`), theme engine (`ThemeTokens`), window state restoration and screen-bounds clamping (`UiState`), MVVM view models (`AccountsViewModel`, `ServersViewModel`, `RunningViewModel`, `SettingsViewModel`, `DiagnosticsViewModel`), Views & Controls (`AccountsPage`, `ServersPage`, `RunningPage`, `SettingsPage`, `DiagnosticsPage`), Windows (`MainWindow`, `LoginWindow`), dialogs (`IContentDialogService`), notifications (`ISnackbarService`), and DI bootstrapping.
    - **Dependencies**: References `Core` and `Infrastructure`.
 
 4. **`tests/Core.Tests/`**
-   - **Responsibility**: Unit tests exercising core domain types, value objects, business validation rules, auto-rejoin policies (`RejoinPolicyTests`), settings clamping (`AppSettingsTests`), and architecture boundaries (`ArchitectureTests` enforcing `SecretValue.Reveal` allowlist).
+   - **Responsibility**: Unit tests exercising core domain types, value objects, business validation rules, auto-rejoin policies (`RejoinPolicyTests`), settings clamping (`AppSettingsTests`), `UiStateSettings` serialization and screen-boundary clamping, `RelativeTimeFormatter` boundary calculations, `DebounceDispatcher` timing, and architecture boundaries (`ArchitectureTests` enforcing strict 5-caller `SecretValue.Reveal` allowlist).
    - **Dependencies**: References `Core`.
 
 5. **`tests/Infrastructure.Tests/`**
-   - **Responsibility**: Integration and security tests verifying DPAPI wrapping, AES-GCM encryption round-trip, backup generation, tamper detection, HTTP handlers, Roblox authentication flows, URI construction, server browser parsing and retry, session tracking and auto-rejoin lifecycle, settings persistence and clamping, named mutex instance gate, encrypted backup PBKDF2/AES-GCM export and import, and log leak prevention (`LogLeakTests`).
+   - **Responsibility**: Integration and security tests verifying DPAPI wrapping, AES-GCM encryption round-trip, backup generation, tamper detection, HTTP handlers, Roblox authentication flows, URI construction, diagnostics report sanitization, server browser parsing and retry, session tracking and auto-rejoin lifecycle, settings persistence and clamping, named mutex instance gate, encrypted backup PBKDF2/AES-GCM export and import, log leak prevention (`LogLeakTests`), XAML scan tests (`XamlScanTests`), and localization audits (`LocalizationAuditTests`, `I18nParityTests`).
    - **Dependencies**: References `Core` and `Infrastructure`.
 
 ---
@@ -51,3 +51,4 @@ graph TD
 - **M5**: Hardening, packaging, and final documentation. (Completed)
 - **M6**: Multi-instance real gate, Reveal() surface reduction, report reconciliation, review bundle. (Completed)
 - **M7**: Diagnostics page, redacted report generator, customizable launch templates, code health pass. (Completed)
+- **M8**: UI/UX polish, design tokens, virtualized high-density DataGrid, relative time formatting, UiState persistence, localization diacritics audit. (Completed)

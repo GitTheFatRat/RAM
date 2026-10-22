@@ -14,7 +14,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Page.Resources>
 
-    <Grid Margin="24">
+    <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -24,12 +24,12 @@
         <!-- Title -->
         <TextBlock Grid.Row="0"
                    Text="{x:Static res:Strings.ServersPageTitle}"
-                   FontSize="24"
+                   FontSize="{StaticResource FontSizeTitle}"
                    FontWeight="SemiBold"
-                   Margin="0,0,0,16" />
+                   Margin="{StaticResource MarginMedium}" />
 
         <!-- Controls -->
-        <Grid Grid.Row="1" Margin="0,0,0,16">
+        <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -42,12 +42,12 @@
                         Text="{Binding PlaceIdText, UpdateSourceTrigger=PropertyChanged}"
                         PlaceholderText="{x:Static res:Strings.PlaceIdLabel}"
                         Width="180"
-                        Margin="0,0,12,0" />
+                        Margin="{StaticResource MarginTight}" />
 
             <ComboBox Grid.Column="1"
                       SelectedIndex="{Binding SelectedSortIndex}"
                       Width="200"
-                      Margin="0,0,12,0">
+                      Margin="{StaticResource MarginTight}">
                 <ComboBoxItem Content="{x:Static res:Strings.SortAscending}" />
                 <ComboBoxItem Content="{x:Static res:Strings.SortDescending}" />
             </ComboBox>
@@ -56,6 +56,7 @@
                        Content="{x:Static res:Strings.Refresh}"
                        Icon="{ui:SymbolIcon ArrowSync24}"
                        Appearance="Primary"
+                       Margin="{StaticResource MarginTight}"
                        Command="{Binding RefreshCommand}" />
 
             <ui:Button Grid.Column="4"
@@ -65,18 +66,33 @@
                        IsEnabled="{Binding HasNextPage}" />
         </Grid>
 
-        <!-- Data Grid -->
+        <!-- Data Grid Area -->
         <Grid Grid.Row="2">
             <ui:DataGrid ItemsSource="{Binding Servers}"
                          AutoGenerateColumns="False"
                          CanUserAddRows="False"
                          IsReadOnly="True"
                          SelectionMode="Single"
-                         GridLinesVisibility="Horizontal">
+                         GridLinesVisibility="None"
+                         RowHeight="36"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
+                         VirtualizingPanel.ScrollUnit="Pixel"
+                         ScrollViewer.CanContentScroll="True">
                 <ui:DataGrid.Columns>
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnServerId}"
-                                        Binding="{Binding Id}"
-                                        Width="260" />
+                    <!-- Server ID (Monospace) -->
+                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnServerId}"
+                                            Width="280">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Id}"
+                                           FontFamily="{StaticResource FontFamilyMonospace}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnPlayers}"
                                         Binding="{Binding StringFormat='{}{0}/{1}', Path=Playing, ConverterParameter={Binding MaxPlayers}}"
                                         Width="120" />
@@ -94,7 +110,7 @@
                                     <ui:Button Content="{x:Static res:Strings.JoinWithAccount}"
                                                Icon="{ui:SymbolIcon Play24}"
                                                Appearance="Success"
-                                               Margin="0,0,8,0"
+                                               Margin="{StaticResource MarginTight}"
                                                Command="{Binding DataContext.JoinWithAccountCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
                                                CommandParameter="{Binding}" />
                                     <ui:Button Content="{x:Static res:Strings.CopyServerId}"
@@ -122,11 +138,40 @@
                                FontSize="48"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"
-                               Margin="0,0,0,12" />
+                               Margin="{StaticResource MarginMedium}" />
                 <TextBlock Text="{x:Static res:Strings.NoServersFound}"
-                           FontSize="16"
+                           FontSize="{StaticResource FontSizeSubtitle}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginTight}" />
+                <TextBlock Text="{x:Static res:Strings.SearchPlaceholder}"
+                           FontSize="{StaticResource FontSizeBody}"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Error State with Retry Button -->
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                <ui:SymbolIcon Symbol="Warning24"
+                               FontSize="48"
+                               Foreground="{DynamicResource StatusErrorForegroundBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="{StaticResource MarginMedium}" />
+                <TextBlock Text="{Binding ErrorMessage}"
+                           FontSize="{StaticResource FontSizeSubtitle}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginTight}" />
+                <ui:Button Content="{x:Static res:Strings.Retry}"
+                           Icon="{ui:SymbolIcon ArrowSync24}"
+                           Appearance="Primary"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginBase}"
+                           Command="{Binding RefreshCommand}" />
             </StackPanel>
         </Grid>
     </Grid>

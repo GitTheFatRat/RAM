@@ -58,7 +58,7 @@
                     Text="{Binding ReportText, Mode=OneWay}"
                     IsReadOnly="True"
                     TextWrapping="Wrap"
-                    FontFamily="Cascadia Mono, Consolas, Courier New"
+                    FontFamily="{StaticResource FontFamilyMonospace}"
                     VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Auto" />
     </Grid>

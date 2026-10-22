@@ -147,6 +147,26 @@ public static class Strings
     public static string TemplateDefault => GetString(nameof(TemplateDefault));
     public static string TemplateCustomValid => GetString(nameof(TemplateCustomValid));
     public static string TemplateCustomInvalid => GetString(nameof(TemplateCustomInvalid));
+    public static string MoreActions => GetString(nameof(MoreActions));
+    public static string CopyAlias => GetString(nameof(CopyAlias));
+    public static string ClearSearch => GetString(nameof(ClearSearch));
+    public static string NoSearchResults => GetString(nameof(NoSearchResults));
+    public static string NoSearchResultsHint => GetString(nameof(NoSearchResultsHint));
+    public static string EmptyAccountsHint => GetString(nameof(EmptyAccountsHint));
+    public static string AliasCopied => GetString(nameof(AliasCopied));
+    public static string AppearanceSectionTitle => GetString(nameof(AppearanceSectionTitle));
+    public static string AppearanceSectionSubtitle => GetString(nameof(AppearanceSectionSubtitle));
+    public static string LaunchingSectionTitle => GetString(nameof(LaunchingSectionTitle));
+    public static string LaunchingSectionSubtitle => GetString(nameof(LaunchingSectionSubtitle));
+    public static string AutoRejoinSectionTitle => GetString(nameof(AutoRejoinSectionTitle));
+    public static string AutoRejoinSectionSubtitle => GetString(nameof(AutoRejoinSectionSubtitle));
+    public static string MultiInstanceSectionTitle => GetString(nameof(MultiInstanceSectionTitle));
+    public static string MultiInstanceSectionSubtitle => GetString(nameof(MultiInstanceSectionSubtitle));
+    public static string BackupSectionTitle => GetString(nameof(BackupSectionTitle));
+    public static string BackupSectionSubtitle => GetString(nameof(BackupSectionSubtitle));
+    public static string AdvancedSectionTitle => GetString(nameof(AdvancedSectionTitle));
+    public static string AdvancedSectionSubtitle => GetString(nameof(AdvancedSectionSubtitle));
+    public static string Retry => GetString(nameof(Retry));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

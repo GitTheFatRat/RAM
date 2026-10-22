@@ -469,4 +469,64 @@
   <data name="TemplateCustomInvalid" xml:space="preserve">
     <value>Custom (invalid - ignored)</value>
   </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>More</value>
+  </data>
+  <data name="CopyAlias" xml:space="preserve">
+    <value>Copy alias</value>
+  </data>
+  <data name="ClearSearch" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
+  <data name="NoSearchResults" xml:space="preserve">
+    <value>No accounts found</value>
+  </data>
+  <data name="NoSearchResultsHint" xml:space="preserve">
+    <value>Try searching for a different keyword or group.</value>
+  </data>
+  <data name="EmptyAccountsHint" xml:space="preserve">
+    <value>Add your first Roblox account to get started.</value>
+  </data>
+  <data name="AliasCopied" xml:space="preserve">
+    <value>Alias copied to clipboard.</value>
+  </data>
+  <data name="AppearanceSectionTitle" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="AppearanceSectionSubtitle" xml:space="preserve">
+    <value>Customize theme and UI language</value>
+  </data>
+  <data name="LaunchingSectionTitle" xml:space="preserve">
+    <value>Launching</value>
+  </data>
+  <data name="LaunchingSectionSubtitle" xml:space="preserve">
+    <value>Configure launch delays and options</value>
+  </data>
+  <data name="AutoRejoinSectionTitle" xml:space="preserve">
+    <value>Auto-rejoin</value>
+  </data>
+  <data name="AutoRejoinSectionSubtitle" xml:space="preserve">
+    <value>Automatic reconnection on disconnect</value>
+  </data>
+  <data name="MultiInstanceSectionTitle" xml:space="preserve">
+    <value>Multi-instance</value>
+  </data>
+  <data name="MultiInstanceSectionSubtitle" xml:space="preserve">
+    <value>Run multiple Roblox clients concurrently</value>
+  </data>
+  <data name="BackupSectionTitle" xml:space="preserve">
+    <value>Backup &amp; Restore</value>
+  </data>
+  <data name="BackupSectionSubtitle" xml:space="preserve">
+    <value>Export or import encrypted vault backup</value>
+  </data>
+  <data name="AdvancedSectionTitle" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="AdvancedSectionSubtitle" xml:space="preserve">
+    <value>Customizable launch URI templates</value>
+  </data>
+  <data name="Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
 </root>

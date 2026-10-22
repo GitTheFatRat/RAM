@@ -4,6 +4,7 @@ using System;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using RbxManager.App.Resources;
+using RbxManager.Core.Common;
 using RbxManager.Core.Models;
 using Wpf.Ui.Controls;
 
@@ -33,6 +34,14 @@ public partial class AccountItemViewModel : ObservableObject
         _ => Strings.StatusUnknown
     };
 
+    public SymbolRegular StatusGlyph => Account.Status switch
+    {
+        AccountStatus.Valid => SymbolRegular.CheckmarkCircle24,
+        AccountStatus.Expired => SymbolRegular.Warning24,
+        AccountStatus.Error => SymbolRegular.DismissCircle24,
+        _ => SymbolRegular.QuestionCircle24
+    };
+
     public InfoBadgeSeverity StatusSeverity => Account.Status switch
     {
         AccountStatus.Valid => InfoBadgeSeverity.Success,
@@ -43,6 +52,14 @@ public partial class AccountItemViewModel : ObservableObject
 
     public string LastCheckedFormatted => Account.LastCheckedAt.HasValue
         ? Account.LastCheckedAt.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+        : Strings.Never;
+
+    public string LastCheckedRelative => Account.LastCheckedAt.HasValue
+        ? RelativeTimeFormatter.Format(Account.LastCheckedAt.Value, DateTimeOffset.UtcNow)
+        : Strings.Never;
+
+    public string LastCheckedTooltip => Account.LastCheckedAt.HasValue
+        ? Account.LastCheckedAt.Value.ToLocalTime().ToString("F", CultureInfo.CurrentCulture)
         : Strings.Never;
 
     public AccountItemViewModel(Account account)

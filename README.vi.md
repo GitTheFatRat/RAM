@@ -95,6 +95,15 @@ Trong trường hợp Roblox thay đổi cú pháp tham số giao thức `roblox
 ```
 *Ghi chú: Nếu giá trị là `null`, ứng dụng sẽ tự động dùng định dạng mặc định tích hợp sẵn. Các placeholder hợp lệ bao gồm `{ticket}`, `{launchTimeMs}`, `{placeLauncherUrl}`, `{trackerId}`, `{request}`, `{placeId}`, `{gameIdParam}`.*
 
+### 4.8. Phím tắt thao tác nhanh (Keyboard Shortcuts)
+Ứng dụng hỗ trợ đầy đủ điều hướng bằng bàn phím để tối ưu hóa năng suất làm việc:
+- `Ctrl + N`: Thêm tài khoản nhanh qua giao diện đăng nhập WebView2.
+- `Ctrl + F`: Nhảy nhanh đến ô tìm kiếm tài khoản.
+- `F5`: Làm mới danh sách tài khoản hoặc dữ liệu trang hiện tại.
+- `Enter`: Khởi chạy tài khoản đang chọn vào trò chơi.
+- `Delete`: Xóa tài khoản đang chọn (có hộp thoại xác nhận).
+- `Esc`: Đóng các hộp thoại (ContentDialog).
+
 ---
 
 ## 5. Lưu ý quan trọng về tính năng Đa phiên (Multi-Instance)

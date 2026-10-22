@@ -13,6 +13,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M5**: Hardening, packaging, and final documentation. (Completed)
 - **M6**: Multi-instance real gate, Reveal() surface reduction, report reconciliation, review bundle. (Completed)
 - **M7**: Diagnostics page, redacted report generator, customizable launch templates, code health pass. (Completed)
+- **M8**: UI/UX polish, design tokens, virtualized high-density DataGrid, relative time formatting, UiState persistence, localization diacritics audit. (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

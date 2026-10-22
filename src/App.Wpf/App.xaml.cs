@@ -195,6 +195,7 @@ public partial class App : Application
                 _ => Wpf.Ui.Appearance.ApplicationTheme.Dark
             };
             Wpf.Ui.Appearance.ApplicationThemeManager.Apply(appTheme);
+            RbxManager.App.Themes.ThemeTokens.ApplyTheme(appTheme);
         }
         catch
         {

@@ -1,10 +1,63 @@
 namespace RbxManager.Core.Settings;
 
 using System;
+using System.Collections.Generic;
 
 public sealed record AdvancedSettings(
     string? LaunchUriTemplate = null,
     string? PlaceLauncherUrlTemplate = null);
+
+public sealed record UiStateSettings(
+    double? WindowWidth = null,
+    double? WindowHeight = null,
+    double? WindowTop = null,
+    double? WindowLeft = null,
+    bool IsMaximized = false,
+    string? LastSelectedPage = null,
+    string? SortColumn = null,
+    bool SortDescending = false,
+    Dictionary<string, double>? AccountsColumnWidths = null)
+{
+    public const double MinimumWindowWidth = 960.0;
+    public const double MinimumWindowHeight = 600.0;
+    public const double DefaultWindowWidth = 1100.0;
+    public const double DefaultWindowHeight = 700.0;
+
+    public UiStateSettings ValidateAndClamp(double screenWidth, double screenHeight)
+    {
+        double width = WindowWidth.HasValue
+            ? Math.Max(MinimumWindowWidth, WindowWidth.Value)
+            : DefaultWindowWidth;
+        double height = WindowHeight.HasValue
+            ? Math.Max(MinimumWindowHeight, WindowHeight.Value)
+            : DefaultWindowHeight;
+
+        double top;
+        double left;
+
+        // If coordinates fall offscreen or are invalid, reset to centered coordinates
+        if (WindowTop.HasValue && WindowLeft.HasValue &&
+            WindowLeft.Value >= 0 && WindowLeft.Value < screenWidth - 100 &&
+            WindowTop.Value >= 0 && WindowTop.Value < screenHeight - 100)
+        {
+            top = WindowTop.Value;
+            left = WindowLeft.Value;
+        }
+        else
+        {
+            top = Math.Max(0, (screenHeight - height) / 2.0);
+            left = Math.Max(0, (screenWidth - width) / 2.0);
+        }
+
+        return this with
+        {
+            WindowWidth = width,
+            WindowHeight = height,
+            WindowTop = top,
+            WindowLeft = left
+        };
+    }
+}
 
 public sealed record AppSettings(
     string Language = AppSettings.DefaultLanguage,
@@ -14,7 +67,8 @@ public sealed record AppSettings(
     int RejoinMaxAttempts = AppSettings.DefaultRejoinMaxAttempts,
     bool MultiInstanceEnabled = false,
     bool MultiInstanceAcknowledged = false,
-    AdvancedSettings? Advanced = null)
+    AdvancedSettings? Advanced = null,
+    UiStateSettings? UiState = null)
 {
     public const string DefaultLanguage = "vi";
     public const string DefaultTheme = "Dark";
