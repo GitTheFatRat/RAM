@@ -22,6 +22,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M14**: UI/UX polish, contrast enhancement, DataGrid styling overhaul, and multi-version fixes. (Completed)
 - **M15**: Tech Lead audit, launch precheck, UI defect fixes, XAML smoke tests. (Completed)
 - **M16**: Sandboxed UI automation harness with window-only screenshots and UIA tree dumps. (Completed)
+- **M17**: Proxy removal, launch pacing (20 s spacing), sequential cookie validation (2 s gap), Reveal() allowlist restriction. (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

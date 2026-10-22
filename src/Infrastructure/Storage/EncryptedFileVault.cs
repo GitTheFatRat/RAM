@@ -123,11 +123,6 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     {
                         loaded.Cookie.Dispose();
                     }
-
-                    if (loaded.Proxy?.Password != null && !ReferenceEquals(loaded.Proxy.Password, account.Proxy?.Password))
-                    {
-                        loaded.Proxy.Dispose();
-                    }
                 }
             }
             _semaphore.Release();
@@ -177,11 +172,6 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     {
                         loaded.Cookie.Dispose();
                     }
-
-                    if (loaded.Proxy?.Password != null && !ReferenceEquals(loaded.Proxy.Password, account.Proxy?.Password))
-                    {
-                        loaded.Proxy.Dispose();
-                    }
                 }
             }
             _semaphore.Release();
@@ -213,7 +203,6 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 foreach (Account loaded in loadedAccounts)
                 {
                     loaded.Cookie.Dispose();
-                    loaded.Proxy?.Dispose();
                 }
             }
             _semaphore.Release();
@@ -308,21 +297,6 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     ? (AccountStatus)dto.Status
                     : AccountStatus.Unknown;
 
-                ProxyConfig? proxy = null;
-                if (dto.Proxy != null)
-                {
-                    ProxyType proxyType = Enum.IsDefined(typeof(ProxyType), dto.Proxy.Type)
-                        ? (ProxyType)dto.Proxy.Type
-                        : ProxyType.Http;
-
-                    proxy = new ProxyConfig(
-                        Host: dto.Proxy.Host,
-                        Port: dto.Proxy.Port,
-                        Username: dto.Proxy.Username,
-                        Password: dto.Proxy.Password != null ? SecretValue.FromString(dto.Proxy.Password) : null,
-                        Type: proxyType);
-                }
-
                 accounts.Add(new Account(
                     Id: new AccountId(dto.Id),
                     Alias: dto.Alias,
@@ -333,8 +307,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     Username: dto.Username,
                     UserId: dto.UserId,
                     Status: status,
-                    LastCheckedAt: dto.LastCheckedAt,
-                    Proxy: proxy));
+                    LastCheckedAt: dto.LastCheckedAt));
             }
         }
 
@@ -551,19 +524,6 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         List<AccountDto> dtos = new(accounts.Count);
         foreach (Account account in accounts)
         {
-            ProxyDto? proxyDto = null;
-            if (account.Proxy != null)
-            {
-                proxyDto = new ProxyDto
-                {
-                    Host = account.Proxy.Host,
-                    Port = account.Proxy.Port,
-                    Username = account.Proxy.Username,
-                    Password = account.Proxy.Password?.Reveal(),
-                    Type = (int)account.Proxy.Type
-                };
-            }
-
             dtos.Add(new AccountDto
             {
                 Id = account.Id.Value,
@@ -575,8 +535,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 Username = account.Username,
                 UserId = account.UserId,
                 Status = (int)account.Status,
-                LastCheckedAt = account.LastCheckedAt,
-                Proxy = proxyDto
+                LastCheckedAt = account.LastCheckedAt
             });
         }
 

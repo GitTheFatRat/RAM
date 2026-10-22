@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using RbxManager.Core.Common;
@@ -354,46 +355,112 @@ public sealed class EncryptedFileVaultTests
     }
 
     [Fact]
-    public async Task FormatV2_WithArgon2id_RoundTrip_SavesAndLoadsAccountsAndProxy()
+    public async Task VaultCompatibility_PayloadWithLegacyProxyFields_IgnoresOnLoad_AndNextSaveOmitsThem()
     {
         using TempDirectory tempDir = new();
         string vaultFilePath = tempDir.CreateFilePath();
 
-        using VaultKeyProvider keyProvider = new();
-        using SecretValue masterPassword = SecretValue.FromString("MyMasterSecretPassword2026!");
-        keyProvider.SetKey(masterPassword.Clone());
+        // 1. Manually craft a v1 vault payload with legacy Proxy fields
+        string legacyJson = """
+            [
+              {
+                "Id": 555,
+                "Alias": "LegacyProxyAccount",
+                "Group": "LegacyGroup",
+                "Note": "LegacyNote",
+                "Cookie": "FAKE_ROBLOSECURITY_COOKIE_FOR_TESTING_PURPOSES_ONLY_0001",
+                "CreatedAt": "2026-10-22T00:00:00+00:00",
+                "Username": "LegacyUser",
+                "UserId": 99999,
+                "Status": 1,
+                "Proxy": {
+                  "Host": "fake-proxy.legacy.network",
+                  "Port": 8080,
+                  "Username": "legacy-proxy-user",
+                  "Password": "FAKE_LEGACY_PROXY_PASSWORD_12345",
+                  "Type": 1
+                }
+              }
+            ]
+            """;
 
-        using SecretValue cookie = SecretValue.FromString(FakeCookie1);
-        using SecretValue proxyPass = SecretValue.FromString("ProxySecret456");
-        using ProxyConfig proxy = new("proxy.network.local", 1080, "puser", proxyPass, ProxyType.Socks5);
-        Account account = new(new AccountId(555), "ProxyAccount", "PGroup", "PNote", cookie, DateTimeOffset.UtcNow, Proxy: proxy);
+        byte[] plaintextBytes = Encoding.UTF8.GetBytes(legacyJson);
+        byte[] dataKey = RandomNumberGenerator.GetBytes(32);
+        byte[] nonce = RandomNumberGenerator.GetBytes(12);
+        byte[] tag = new byte[16];
+        byte[] ciphertext = new byte[plaintextBytes.Length];
+        byte[] aad = [0x52, 0x42, 0x58, 0x56, 0x01];
 
-        // 1. Save with Argon2id + DPAPI
-        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        using (AesGcm aes = new(dataKey, 16))
         {
-            Result addResult = await vault.AddAsync(account);
-            Assert.True(addResult.IsSuccess);
+            aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, aad);
         }
 
-        // 2. Inspect disk bytes
-        byte[] fileBytes = await File.ReadAllBytesAsync(vaultFilePath);
-        Assert.Equal(0x02, fileBytes[4]); // version 2
-        Assert.Equal(0x01, fileBytes[5]); // kdfType 1 (Argon2id + DPAPI)
+        byte[] wrappedKey = ProtectedData.Protect(dataKey, null, DataProtectionScope.CurrentUser);
+        ushort wrappedKeyLength = checked((ushort)wrappedKey.Length);
 
-        // 3. Reopen with new vault instance and same key
-        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        using (FileStream fs = File.Create(vaultFilePath))
+        {
+            fs.Write([0x52, 0x42, 0x58, 0x56, 0x01]);
+            byte[] lenBytes = new byte[2];
+            BinaryPrimitives.WriteUInt16LittleEndian(lenBytes, wrappedKeyLength);
+            fs.Write(lenBytes);
+            fs.Write(wrappedKey);
+            fs.Write(nonce);
+            fs.Write(tag);
+            fs.Write(ciphertext);
+        }
+
+        // 2. Load through vault: must ignore legacy proxy fields without error
+        using (EncryptedFileVault vault = new(vaultFilePath))
         {
             IReadOnlyList<Account> loaded = await vault.ListAsync();
             Assert.Single(loaded);
-            Account loadedAcc = loaded[0];
-            Assert.Equal("ProxyAccount", loadedAcc.Alias);
-            Assert.NotNull(loadedAcc.Proxy);
-            Assert.Equal("proxy.network.local", loadedAcc.Proxy.Host);
-            Assert.Equal(1080, loadedAcc.Proxy.Port);
-            Assert.Equal("puser", loadedAcc.Proxy.Username);
-            Assert.Equal(ProxyType.Socks5, loadedAcc.Proxy.Type);
-            Assert.NotNull(loadedAcc.Proxy.Password);
-            Assert.True(loadedAcc.Proxy.Password.HasContent);
+            Account account = loaded[0];
+            Assert.Equal("LegacyProxyAccount", account.Alias);
+            Assert.Equal(555, account.Id.Value);
+
+            // 3. Save / Update through vault
+            Account updated = account with { Note = "UpdatedNote" };
+            Result updateResult = await vault.UpdateAsync(updated);
+            Assert.True(updateResult.IsSuccess);
+        }
+
+        // 4. Reload raw file and assert decrypted payload no longer contains proxy fields or secrets
+        // With default key provider (DPAPI), Format V2 header is:
+        // Magic (4) + Version (1) + KdfType (1) = 6 bytes prefix
+        // Followed by wrappedKeyLength (2 bytes)
+        // Followed by wrappedKey
+        // Followed by nonce (12 bytes)
+        // Followed by tag (16 bytes)
+        // Followed by ciphertext
+        byte[] reloadedFileBytes = await File.ReadAllBytesAsync(vaultFilePath);
+        ushort savedWrappedKeyLen = BinaryPrimitives.ReadUInt16LittleEndian(reloadedFileBytes.AsSpan(6, 2));
+        byte[] savedWrappedKey = reloadedFileBytes.AsSpan(8, savedWrappedKeyLen).ToArray();
+        byte[] savedDataKey = ProtectedData.Unprotect(savedWrappedKey, null, DataProtectionScope.CurrentUser);
+        int cipherOffset = 8 + savedWrappedKeyLen;
+        ReadOnlySpan<byte> savedNonce = reloadedFileBytes.AsSpan(cipherOffset, 12);
+        ReadOnlySpan<byte> savedTag = reloadedFileBytes.AsSpan(cipherOffset + 12, 16);
+        ReadOnlySpan<byte> savedCiphertext = reloadedFileBytes.AsSpan(cipherOffset + 28);
+        byte[] savedAad = reloadedFileBytes.AsSpan(0, 6).ToArray();
+
+        byte[] savedPlaintext = new byte[savedCiphertext.Length];
+        using (AesGcm savedAes = new(savedDataKey, 16))
+        {
+            savedAes.Decrypt(savedNonce, savedCiphertext, savedTag, savedPlaintext, savedAad);
+        }
+        string decryptedJson = Encoding.UTF8.GetString(savedPlaintext);
+
+        Assert.DoesNotContain("fake-proxy.legacy.network", decryptedJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("FAKE_LEGACY_PROXY_PASSWORD_12345", decryptedJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-proxy-user", decryptedJson, StringComparison.Ordinal);
+
+        // 5. Reopen with a fresh vault instance
+        using (EncryptedFileVault vault = new(vaultFilePath))
+        {
+            IReadOnlyList<Account> reloadedAccounts = await vault.ListAsync();
+            Assert.Single(reloadedAccounts);
+            Assert.Equal("UpdatedNote", reloadedAccounts[0].Note);
         }
     }
 

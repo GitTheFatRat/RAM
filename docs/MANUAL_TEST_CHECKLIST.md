@@ -151,3 +151,41 @@ Theo dõi và ghi nhận phản hồi thực tế từ máy chủ Roblox đối 
 - **Kỳ vọng**:
   - Chế độ mặc định là "Chỉ thông báo" (`NotifyOnly`), không tự ý tắt tiến trình game.
   - Nếu chọn "Diệt tiến trình và vào lại", chỉ diệt khi phiên game đã sống tối thiểu 60 giây và cách lần thử trước ít nhất 5 phút.
+
+---
+
+## 17. Kiểm thử M17 (Điều tiết khởi chạy & Xoá bỏ hoàn toàn Proxy)
+
+### Kịch bản 17.1: Điều tiết khởi chạy đơn lẻ & Cổng chung (Launch Pacing)
+- **Thao tác**:
+  1. Trong Cài đặt, kiểm tra trường cấu hình "Khoảng cách khởi chạy giữa các tài khoản (giây)" hiển thị giá trị mặc định là `20` (phạm vi từ 1 đến 600 giây).
+  2. Khởi chạy tài khoản A vào một Place. Tài khoản A khởi chạy ngay lập tức.
+  3. Ngay lập tức nhấn khởi chạy tài khoản B: quan sát tài khoản B không khởi chạy ngay mà đợi đủ thời gian 20 giây kể từ khi tài khoản A bắt đầu.
+- **Kỳ vọng**:
+  - Lần phóng đầu tiên luôn tức thì. Lần phóng tiếp theo bị hoãn đúng số giây còn lại của khoảng cách đã định.
+  - Cả 5 đường dẫn khởi chạy (đơn lẻ, hàng loạt, server browser, auto-rejoin, server hop) đều đi qua cùng một cổng điều tiết duy nhất.
+
+### Kịch bản 17.2: Khởi chạy hàng loạt & Huỷ đếm ngược (Bulk Launch Countdown & Cancel)
+- **Thao tác**:
+  1. Chọn nhiều tài khoản (hoặc nhóm tài khoản) trên trang Tài khoản, nhấn nút "Khởi chạy đã chọn".
+  2. Nhập Place ID và xác nhận bắt đầu.
+  3. Quan sát giao diện tiến trình hàng loạt: tài khoản 1 khởi chạy ngay, thanh trạng thái hiển thị "Đang chờ: Tài khoản tiếp theo sau 20 giây...".
+  4. Trước khi hết 20 giây, nhấn nút "Huỷ hàng đợi".
+- **Kỳ vọng**:
+  - Đồng hồ đếm ngược giảm dần từng giây chính xác ("Tài khoản tiếp theo sau 19 giây...", "18 giây...").
+  - Khi nhấn huỷ, hàng đợi dừng ngay lập tức, không phóng tài khoản tiếp theo và không tiêu tốn khoảng chờ.
+
+### Kịch bản 17.3: Kiểm tra tất cả theo trình tự (Check All 2s Spacing)
+- **Thao tác**:
+  1. Có ít nhất 3 tài khoản trong danh sách.
+  2. Nhấn nút "Kiểm tra tất cả" (Check all).
+- **Kỳ vọng**:
+  - Việc kiểm tra cookie diễn ra tuần tự từng tài khoản một, cách nhau đúng 2 giây giữa các tài khoản, ngăn chặn tình trạng gửi đồng thời gây 429 Too Many Requests từ Roblox API.
+
+### Kịch bản 17.4: Xác minh xoá sạch tính năng Proxy
+- **Thao tác**:
+  1. Mở hộp thoại Thêm tài khoản / Sửa tài khoản: không còn tab Cấu hình Proxy hoặc trường nhập thông tin proxy.
+  2. Mở cửa sổ Đăng nhập WebView2: giao diện đăng nhập trực tiếp, không còn thanh cấu hình proxy phía trên.
+  3. Mở trang Cài đặt và Chẩn đoán: không còn tuỳ chọn hay trường cấu hình proxy cho tài khoản.
+- **Kỳ vọng**:
+  - Không còn bất kỳ tham chiếu hoặc tuỳ chọn cấu hình proxy nào cho từng tài khoản trên toàn bộ giao diện người dùng.

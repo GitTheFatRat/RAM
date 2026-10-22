@@ -37,7 +37,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _selectedTheme = "Dark";
 
     [ObservableProperty]
-    private int _launchDelayMs = 3000;
+    private int _launchDelaySeconds = 20;
 
     [ObservableProperty]
     private int _rejoinDelaySeconds = 10;
@@ -115,7 +115,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         SelectedLanguage = settings.Language;
         _initialLanguage = settings.Language;
         SelectedTheme = settings.Theme;
-        LaunchDelayMs = settings.LaunchDelayMs;
+        LaunchDelaySeconds = settings.LaunchDelaySeconds;
         RejoinDelaySeconds = settings.RejoinDelaySeconds;
         RejoinMaxAttempts = settings.RejoinMaxAttempts;
         MultiInstanceEnabled = _instanceGate.IsMultiInstanceEnabled;
@@ -157,7 +157,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             AppSettings updated = new(
                 Language: SelectedLanguage,
                 Theme: SelectedTheme,
-                LaunchDelayMs: LaunchDelayMs,
+                LaunchDelaySeconds: LaunchDelaySeconds,
                 RejoinDelaySeconds: RejoinDelaySeconds,
                 RejoinMaxAttempts: RejoinMaxAttempts,
                 MultiInstanceEnabled: MultiInstanceEnabled,

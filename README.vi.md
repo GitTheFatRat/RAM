@@ -11,12 +11,15 @@
 
 ### Các tính năng cốt lõi:
 - **Lưu trữ bảo mật cục bộ**: Mã hóa tài khoản và cookie bằng chuẩn **AES-256-GCM** kết hợp với **Windows DPAPI** (`CurrentUser`) và tuỳ chọn **Mật khẩu chính (Argon2id)** chống rò rỉ dữ liệu ngay cả khi tài khoản Windows bị xâm nhập. Tự động sao lưu `vault.dat.v1.bak` khi nâng cấp phiên bản. Cookie không bao giờ bị lộ dưới dạng plaintext hoặc ghi vào log.
-- **Xác thực linh hoạt**: Đăng nhập qua WebView2 cách ly hoặc nhập cookie thủ công. Kiểm tra trạng thái cookie (Hợp lệ / Hết hạn) với 1 click. Hỗ trợ Proxy cho kết nối HTTP và trình duyệt đăng nhập WebView2.
-- **Khởi chạy trò chơi an toàn**: Khởi chạy trực tiếp tài khoản vào bất kỳ Place ID nào hoặc vào thẳng một Server Job cụ thể qua giao thức `roblox-player:` với cơ chế kiểm tra lỗi hệ thống (Win32 1155/2) thân thiện.
+- **Xác thực linh hoạt**: Đăng nhập qua WebView2 cách ly hoặc nhập cookie thủ công. Kiểm tra trạng thái cookie (Hợp lệ / Hết hạn) với 1 click theo trình tự cách nhau 2 giây chống nghẽn mạng.
+- **Khởi chạy trò chơi an toàn & Điều tiết nhịp khởi chạy (Launch Pacing)**: Khởi chạy trực tiếp tài khoản vào bất kỳ Place ID nào hoặc vào thẳng một Server Job cụ thể qua giao thức `roblox-player:` với cơ chế kiểm tra lỗi hệ thống (Win32 1155/2) thân thiện. Tất cả các luồng khởi chạy (đơn lẻ, hàng loạt, server browser, auto-rejoin) đều đi qua một cổng điều tiết chung với khoảng cách mặc định 20 giây (có thể cấu hình từ 1 đến 600 giây trong Cài đặt).
 - **Duyệt máy chủ công khai (Server Browser)**: Xem danh sách server công khai, số người chơi hiện tại, ping, fps để chọn server phù hợp mà không cần mở trình duyệt web.
 - **Theo dõi phiên & Tự động kết nối lại (Auto-rejoin)**: Theo dõi tiến trình `RobloxPlayerBeta.exe`, phát hiện mất kết nối âm thầm (Ghost Disconnect) với chế độ Chỉ thông báo an toàn, tự động vào lại phòng với thuật toán Exponential Backoff và Circuit Breaker chống lặp vô tận.
 - **Tối ưu tài nguyên an toàn**: Tuỳ chọn giảm tài nguyên cửa sổ Roblox ngầm (không chạm cửa sổ tiền cảnh) và dọn dẹp RAM các tiến trình theo dõi với cơ chế bảo vệ tự động tắt khi bị từ chối truy cập.
 - **Sao lưu & Phục hồi mã hóa**: Xuất/nhập dữ liệu tài khoản với chuẩn mã hóa **PBKDF2-HMAC-SHA512 (600.000 vòng lặp) + AES-256-GCM**, bảo vệ bằng mật khẩu người dùng tự chọn.
+
+> **Tuyên bố về phạm vi và giới hạn công cụ**:
+> Công cụ này không tạo tài khoản Roblox và sẽ không bao giờ có tính năng tạo tài khoản, lên lịch tạo tài khoản hoặc vượt qua giới hạn tạo tài khoản. Không hỗ trợ proxy cho từng tài khoản; client game Roblox kết nối mạng trực tiếp theo cấu hình hệ thống Windows.
 
 > **Ghi chú về tính toàn vẹn bản dựng**: Bản phát hành chính thức (Release build) hoàn toàn không chứa bất kỳ mã kiểm thử (test hooks) hay điểm can thiệp môi trường giả lập nào; tất cả cơ chế tự động hóa kiểm thử chỉ tồn tại trong các bản dựng Debug nội bộ.
 
@@ -61,17 +64,15 @@ Có 2 phương thức để thêm tài khoản vào RbxManager:
 - Ứng dụng sẽ tự động yêu cầu Roblox cấp Auth Ticket một lần và kích hoạt tiến trình Roblox Player.
 
 ### 4.3. Duyệt danh sách máy chủ (Server Browser)
-
-### 4.4. Sử dụng Proxy cho tài khoản (M10, M14.4)
-- **Phạm vi hoạt động của Proxy**:
-  - Proxy chỉ áp dụng cho trình duyệt đăng nhập WebView2 và các yêu cầu HTTP nội bộ của RbxManager (xác thực cookie, lấy Auth Ticket, tải danh sách máy chủ).
-  - Client game Roblox (`RobloxPlayerBeta.exe`) được hệ điều hành Windows khởi chạy trực tiếp qua giao thức `roblox-player:` và **KHÔNG** đi qua proxy này. Công cụ không can thiệp hay bẻ hướng lưu lượng mạng trong game.
-  - Người dùng muốn toàn bộ lưu lượng game đi qua địa chỉ IP khác cần cấu hình ở cấp độ hệ thống bên ngoài (ví dụ dùng VPN toàn hệ thống hoặc proxifier bên thứ ba).
-  - Công cụ **không** cam kết hay tuyên bố rằng việc dùng proxy sẽ ngăn chặn bị khóa tài khoản hoặc lỗi mạng cụ thể của Roblox.
 - Chuyển sang trang **Máy chủ**.
 - Nhập **Place ID** và nhấn **Tìm kiếm**.
 - Danh sách các server công khai đang chạy sẽ hiển thị kèm số lượng người chơi (Playing / Max Players), Ping và FPS.
 - Chọn server mong muốn và nhấn **Tham gia** để mở ngay bằng tài khoản đã chọn.
+
+### 4.4. Điều tiết khoảng cách khởi chạy (Launch Pacing)
+- RbxManager áp dụng cổng kiểm soát nhịp khởi chạy duy nhất cho toàn bộ hệ thống (`RobloxLauncher`).
+- Khoảng cách khởi chạy mặc định là **20 giây** (có thể cấu hình từ 1 đến 600 giây tại trang Cài đặt).
+- Khi khởi chạy hàng loạt tài khoản hoặc tự động vào lại (auto-rejoin), hệ thống sẽ hiển thị đếm ngược ("Tài khoản tiếp theo sau Xs") và cho phép hủy hàng đợi bất cứ lúc nào. Lần phóng đầu tiên luôn bắt đầu ngay lập tức mà không phải chờ đợi.
 
 ### 4.4. Theo dõi phiên & Tự động kết nối lại (Auto-rejoin)
 - Khi trò chơi được khởi chạy thông qua RbxManager, phiên chơi sẽ xuất hiện tại trang **Đang chạy**.

@@ -13,6 +13,7 @@
                   Icon="Assets/app.ico"
                   WindowStartupLocation="CenterScreen"
                   Background="{DynamicResource ApplicationBackgroundBrush}"
+                  TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                   PreviewKeyDown="OnMainWindowPreviewKeyDown">
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>

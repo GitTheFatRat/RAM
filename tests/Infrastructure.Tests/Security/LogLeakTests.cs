@@ -137,9 +137,7 @@ public sealed class LogLeakTests
         using (EncryptedFileVault vault = new(vaultPath, keyProvider: keyProvider, logger: vaultLogger))
         {
             using SecretValue cookie = SecretValue.FromString(FakeCookie);
-            using SecretValue proxyPw = SecretValue.FromString(FakeProxyPassword);
-            using ProxyConfig proxy = new("127.0.0.1", 8080, "puser", proxyPw, ProxyType.Http);
-            Account account = new(new AccountId(1), "SecurityAccount", null, null, cookie, DateTimeOffset.UtcNow, Proxy: proxy);
+            Account account = new(new AccountId(1), "SecurityAccount", null, null, cookie, DateTimeOffset.UtcNow);
 
             Result addResult = await vault.AddAsync(account);
             Assert.True(addResult.IsSuccess);

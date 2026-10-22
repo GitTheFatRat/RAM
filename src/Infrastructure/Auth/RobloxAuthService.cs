@@ -37,14 +37,8 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
         _logger = logger ?? NullLogger<RobloxAuthService>.Instance;
     }
 
-    private HttpClient ResolveClient(ProxyConfig? proxy, out bool shouldDispose)
+    private HttpClient ResolveClient(out bool shouldDispose)
     {
-        if (proxy != null && _clientFactory != null)
-        {
-            shouldDispose = true;
-            return _clientFactory.CreateClient(proxy);
-        }
-
         if (_defaultHttpClient != null)
         {
             shouldDispose = false;
@@ -54,17 +48,17 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
         if (_clientFactory != null)
         {
             shouldDispose = true;
-            return _clientFactory.CreateClient(null);
+            return _clientFactory.CreateClient();
         }
 
         throw new InvalidOperationException("No HttpClient or IRobloxHttpClientFactory configured.");
     }
 
-    public async Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
+    public async Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default)
     {
         LogValidatingCookie();
 
-        HttpClient client = ResolveClient(proxy, out bool shouldDispose);
+        HttpClient client = ResolveClient(out bool shouldDispose);
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Get, "https://users.roblox.com/v1/users/authenticated");
@@ -186,11 +180,11 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
         }
     }
 
-    public async Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
+    public async Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
     {
         LogRequestingTicket();
 
-        HttpClient client = ResolveClient(proxy, out bool shouldDispose);
+        HttpClient client = ResolveClient(out bool shouldDispose);
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Post, "https://auth.roblox.com/v1/authentication-ticket");

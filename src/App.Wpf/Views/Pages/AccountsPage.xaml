@@ -280,25 +280,75 @@
         </Grid>
 
         <!-- ══════════════════════════════════════════════════════════════════
-             ROW 2: Progress Indicator for Check All
+             ROW 2: Progress Indicators for Check All and Bulk Launch
              ══════════════════════════════════════════════════════════════════ -->
         <Grid Grid.Row="2"
-              Margin="{StaticResource MarginBottomMedium}"
-              Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ProgressBar Grid.Column="0"
-                         IsIndeterminate="True"
-                         Height="4"
-                         VerticalAlignment="Center"
-                         Margin="0,0,12,0" />
-            <TextBlock Grid.Column="1"
-                       Text="{Binding CheckAllProgressText}"
-                       FontSize="{StaticResource FontSizeCaption}"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              Margin="{StaticResource MarginBottomMedium}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Check All Progress -->
+            <Grid Grid.Row="0"
+                  Visibility="{Binding IsCheckingAll, Converter={StaticResource BoolToVis}}"
+                  Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ProgressBar Grid.Column="0"
+                             IsIndeterminate="True"
+                             Height="4"
+                             VerticalAlignment="Center"
+                             Margin="0,0,12,0" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding CheckAllProgressText}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:Button Grid.Column="2"
+                           AutomationProperties.AutomationId="Accounts_CancelCheckAllButton"
+                           Content="{x:Static resources:Strings.Cancel}"
+                           Command="{Binding CancelCheckAllCommand}"
+                           Margin="8,0,0,0" />
+            </Grid>
+
+            <!-- Bulk Launch Progress & Countdown -->
+            <Grid Grid.Row="1"
+                  Visibility="{Binding IsBulkLaunching, Converter={StaticResource BoolToVis}}"
+                  Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ProgressBar Grid.Column="0"
+                             IsIndeterminate="True"
+                             Height="4"
+                             VerticalAlignment="Center"
+                             Margin="0,0,12,0" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding BulkLaunchQueueText}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,12,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Grid.Column="2"
+                           AutomationProperties.AutomationId="Accounts_BulkLaunchCountdownText"
+                           Text="{Binding BulkLaunchCountdownText}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                <ui:Button Grid.Column="3"
+                           AutomationProperties.AutomationId="Accounts_CancelBulkLaunchButton"
+                           Content="{x:Static resources:Strings.Cancel}"
+                           Command="{Binding CancelBulkLaunchCommand}"
+                           Margin="8,0,0,0" />
+            </Grid>
         </Grid>
 
         <!-- ══════════════════════════════════════════════════════════════════

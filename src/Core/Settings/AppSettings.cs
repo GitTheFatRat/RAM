@@ -67,7 +67,7 @@ public sealed record UiStateSettings(
 public sealed record AppSettings(
     string Language = AppSettings.DefaultLanguage,
     string Theme = AppSettings.DefaultTheme,
-    int LaunchDelayMs = AppSettings.DefaultLaunchDelayMs,
+    int LaunchDelaySeconds = AppSettings.DefaultLaunchDelaySeconds,
     int RejoinDelaySeconds = AppSettings.DefaultRejoinDelaySeconds,
     int RejoinMaxAttempts = AppSettings.DefaultRejoinMaxAttempts,
     bool MultiInstanceEnabled = false,
@@ -80,14 +80,20 @@ public sealed record AppSettings(
     int RamCleanerIntervalMinutes = AppSettings.DefaultRamCleanerIntervalMinutes,
     bool EnableSmartServerHopping = true,
     GhostDisconnectMode GhostDisconnectMode = GhostDisconnectMode.NotifyOnly,
-    [property: JsonPropertyName("EnableGhostDisconnectDetection")] bool? LegacyEnableGhostDisconnectDetection = null,
+    [property: JsonPropertyName("EnableGhostDisconnectDetection")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? LegacyEnableGhostDisconnectDetection = null,
+    [property: JsonPropertyName("LaunchDelayMs")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? LegacyLaunchDelayMs = null,
     AdvancedSettings? Advanced = null,
     UiStateSettings? UiState = null)
 {
     public const string DefaultLanguage = "vi";
     public const string DefaultTheme = "Dark";
-    public const int DefaultLaunchDelayMs = 3000;
-    public const int MinimumLaunchDelayMs = 1000;
+    public const int DefaultLaunchDelaySeconds = 20;
+    public const int MinimumLaunchDelaySeconds = 1;
+    public const int MaximumLaunchDelaySeconds = 600;
     public const int DefaultRejoinDelaySeconds = 10;
     public const int MinimumRejoinDelaySeconds = 1;
     public const int DefaultRejoinMaxAttempts = 5;
@@ -111,7 +117,24 @@ public sealed record AppSettings(
             _ => "Dark"
         };
 
-        int launchDelay = Math.Max(MinimumLaunchDelayMs, LaunchDelayMs);
+        int launchDelay;
+        if (LegacyLaunchDelayMs.HasValue)
+        {
+            if (LegacyLaunchDelayMs.Value == 3000)
+            {
+                launchDelay = DefaultLaunchDelaySeconds;
+            }
+            else
+            {
+                int converted = (int)Math.Ceiling(LegacyLaunchDelayMs.Value / 1000.0);
+                launchDelay = Math.Clamp(converted, MinimumLaunchDelaySeconds, MaximumLaunchDelaySeconds);
+            }
+        }
+        else
+        {
+            launchDelay = Math.Clamp(LaunchDelaySeconds, MinimumLaunchDelaySeconds, MaximumLaunchDelaySeconds);
+        }
+
         int rejoinDelay = Math.Max(MinimumRejoinDelaySeconds, RejoinDelaySeconds);
         int rejoinMax = Math.Max(MinimumRejoinMaxAttempts, RejoinMaxAttempts);
         int ramInterval = Math.Clamp(RamCleanerIntervalMinutes, MinimumRamCleanerIntervalMinutes, MaximumRamCleanerIntervalMinutes);
@@ -139,7 +162,7 @@ public sealed record AppSettings(
         {
             Language = lang,
             Theme = theme,
-            LaunchDelayMs = launchDelay,
+            LaunchDelaySeconds = launchDelay,
             RejoinDelaySeconds = rejoinDelay,
             RejoinMaxAttempts = rejoinMax,
             ThrottleBackgroundRoblox = throttle,
@@ -147,6 +170,7 @@ public sealed record AppSettings(
             RamCleanerIntervalMinutes = ramInterval,
             GhostDisconnectMode = mode,
             LegacyEnableGhostDisconnectDetection = null,
+            LegacyLaunchDelayMs = null,
             Advanced = advanced
         };
     }

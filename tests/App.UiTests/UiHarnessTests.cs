@@ -326,8 +326,8 @@ public sealed class UiHarnessTests
             DismissOpenContentDialog(root, session.MainWindowHandle);
         });
 
-        // 18. LoginWindowProxy
-        RunScenario(session, "LoginWindowProxy", theme, artifactsDir, results, () =>
+        // 18. LoginWindow
+        RunScenario(session, "LoginWindow", theme, artifactsDir, results, () =>
         {
             NavigateTo(session.MainWindowHandle, root, "NavItem_Accounts");
 
@@ -345,19 +345,7 @@ public sealed class UiHarnessTests
             IntPtr loginHwnd = FindLoginWindowHwnd(session.Process.Id, session.MainWindowHandle);
             if (loginHwnd != IntPtr.Zero)
             {
-                AutomationElement? loginWin = AutomationElement.FromHandle(loginHwnd);
-                if (loginWin != null)
-                {
-                    AutomationElement? cancelBtn = AutomationHelper.FindByAutomationId(loginWin, "LoginWindow_CancelButton", 2000);
-                    if (cancelBtn != null)
-                    {
-                        AutomationHelper.TryInvoke(cancelBtn);
-                    }
-                    else
-                    {
-                        SendEscape(loginHwnd);
-                    }
-                }
+                SendEscape(loginHwnd);
                 Thread.Sleep(300);
             }
         });

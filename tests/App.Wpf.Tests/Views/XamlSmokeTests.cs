@@ -185,6 +185,8 @@ public sealed class XamlSmokeTests
 
             SettingsPage page = new(viewModel);
             Assert.NotNull(page);
+            Assert.True(page.Resources.Contains("SettingLabelStyle"));
+            Assert.IsType<Style>(page.Resources["SettingLabelStyle"]);
         });
     }
 
@@ -231,7 +233,7 @@ public sealed class XamlSmokeTests
     [Theory]
     [InlineData("Dark")]
     [InlineData("Light")]
-    public void LoginWindow_LoadsInProxyPanelAndBrowserStates(string theme)
+    public void LoginWindow_LoadsInInitialState(string theme)
     {
         ExecuteWithTraceListener(() =>
         {
@@ -239,16 +241,7 @@ public sealed class XamlSmokeTests
 
             LoginWindow window = new();
             Assert.NotNull(window);
-
-            // State 1: Proxy panel state (default on open)
-            Assert.Equal(Visibility.Visible, window.ProxyPanel.Visibility);
-            Assert.Equal(Visibility.Collapsed, window.BrowserContainer.Visibility);
-
-            // State 2: Browser state
-            window.ProxyPanel.Visibility = Visibility.Collapsed;
-            window.BrowserContainer.Visibility = Visibility.Visible;
-            Assert.Equal(Visibility.Collapsed, window.ProxyPanel.Visibility);
-            Assert.Equal(Visibility.Visible, window.BrowserContainer.Visibility);
+            Assert.Equal(Visibility.Visible, window.LoadingOverlay.Visibility);
         });
     }
 

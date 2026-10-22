@@ -335,7 +335,13 @@
     <value>System</value>
   </data>
   <data name="LaunchDelayLabel" xml:space="preserve">
-    <value>Launch Delay (ms)</value>
+    <value>Launch Spacing (Seconds)</value>
+  </data>
+  <data name="LaunchDelayDescription" xml:space="preserve">
+    <value>The spacing between two account launches. Short spacing may be treated as unusual activity. The default is 20 seconds.</value>
+  </data>
+  <data name="NextAccountCountdown" xml:space="preserve">
+    <value>Next account in {0} s</value>
   </data>
   <data name="RejoinDelayLabel" xml:space="preserve">
     <value>Initial Rejoin Delay (seconds)</value>
@@ -619,27 +625,6 @@
   <data name="TabGeneral" xml:space="preserve">
     <value>General</value>
   </data>
-  <data name="TabProxy" xml:space="preserve">
-    <value>Proxy</value>
-  </data>
-  <data name="ProxyType" xml:space="preserve">
-    <value>Proxy Type</value>
-  </data>
-  <data name="ProxyHost" xml:space="preserve">
-    <value>Host</value>
-  </data>
-  <data name="ProxyPort" xml:space="preserve">
-    <value>Port</value>
-  </data>
-  <data name="ProxyUsername" xml:space="preserve">
-    <value>Username</value>
-  </data>
-  <data name="ProxyPassword" xml:space="preserve">
-    <value>Password</value>
-  </data>
-  <data name="ProxyPasswordHint" xml:space="preserve">
-    <value>Leave empty to keep existing password</value>
-  </data>
   <data name="EnableRamCleaner" xml:space="preserve">
     <value>Enable Smart RAM Cleaner</value>
   </data>
@@ -669,39 +654,6 @@
   </data>
   <data name="LoadingRoblox" xml:space="preserve">
     <value>Loading Roblox...</value>
-  </data>
-  <data name="ProxyTypeNone" xml:space="preserve">
-    <value>None (Direct Connection)</value>
-  </data>
-  <data name="ProxyTypeHttp" xml:space="preserve">
-    <value>HTTP</value>
-  </data>
-  <data name="ProxyTypeSocks5" xml:space="preserve">
-    <value>SOCKS5</value>
-  </data>
-  <data name="TestProxy" xml:space="preserve">
-    <value>Test Proxy</value>
-  </data>
-  <data name="StartBrowser" xml:space="preserve">
-    <value>Start Browser</value>
-  </data>
-  <data name="ChangeProxy" xml:space="preserve">
-    <value>Change Proxy</value>
-  </data>
-  <data name="TestingProxy" xml:space="preserve">
-    <value>Testing proxy connection...</value>
-  </data>
-  <data name="ProxyTestSuccess" xml:space="preserve">
-    <value>Proxy connection successful (HTTP {0})</value>
-  </data>
-  <data name="ProxyTestFailed" xml:space="preserve">
-    <value>Proxy connection failed: {0}</value>
-  </data>
-  <data name="ProxyScopeNote" xml:space="preserve">
-    <value>The proxy covers the login browser and the tool's own HTTP requests. The Roblox game client connects directly and does not use this proxy.</value>
-  </data>
-  <data name="ProxyNavigationFailed" xml:space="preserve">
-    <value>Unable to load login page through the configured proxy. Please check your proxy settings or connection.</value>
   </data>
   <data name="MasterPasswordAcknowledgeWarning" xml:space="preserve">
     <value>I understand that if I forget this password, my vault data cannot be recovered. It is recommended to export an encrypted backup before proceeding.</value>

@@ -7,6 +7,6 @@ using RbxManager.Core.Models;
 
 public interface IRobloxAuthService
 {
-    Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default);
-    Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default);
+    Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default);
+    Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default);
 }

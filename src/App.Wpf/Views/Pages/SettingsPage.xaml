@@ -5,14 +5,23 @@
       xmlns:resources="clr-namespace:RbxManager.App.Resources"
       xmlns:processes="clr-namespace:RbxManager.Core.Processes;assembly=RbxManager.Core"
       Title="{x:Static resources:Strings.SettingsPageTitle}"
-      Background="Transparent"
-      PreviewMouseWheel="OnPagePreviewMouseWheel">
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
-    <Grid Margin="{StaticResource MarginLarge}" Background="Transparent">
+    <Page.Resources>
+        <Style x:Key="SettingLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
             <!-- Row 0: Page Title & Save Action Header -->
             <RowDefinition Height="Auto" />
-            <!-- Row 1: Scrollable Settings Cards Grid -->
+            <!-- Row 1: Settings Cards Grid -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -39,14 +48,8 @@
                        VerticalAlignment="Center" />
         </Grid>
 
-        <!-- Main Content: Scrollable Grid of Setting Cards -->
-        <ScrollViewer x:Name="SettingsScrollViewer"
-                      Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      Background="Transparent"
-                      Focusable="False">
-            <StackPanel MaxWidth="860" HorizontalAlignment="Left" Background="Transparent">
+        <!-- Main Content: Settings Cards -->
+        <StackPanel Grid.Row="1" MaxWidth="860" HorizontalAlignment="Left">
 
                 <!-- ══════════════════════════════════════════════════════════
                      CARD 1: Giao diện (Appearance)
@@ -75,8 +78,7 @@
                         <!-- Row 1: Language -->
                         <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.LanguageLabel}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                         </StackPanel>
                         <ComboBox Grid.Row="1" Grid.Column="1"
                                   SelectedValuePath="Tag"
@@ -98,8 +100,7 @@
                         <!-- Row 2: Theme -->
                         <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.ThemeLabel}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                         </StackPanel>
                         <ComboBox Grid.Row="3" Grid.Column="1"
                                   SelectedValuePath="Tag"
@@ -140,15 +141,20 @@
                         <!-- Row 1: Launch Delay -->
                         <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.LaunchDelayLabel}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.LaunchDelayDescription}"
+                                       Style="{StaticResource DescriptionTextStyle}"
+                                       Margin="0,2,0,0" />
                         </StackPanel>
-                        <TextBox Grid.Row="1" Grid.Column="1"
-                                 AutomationProperties.AutomationId="Settings_LaunchDelayTextBox"
-                                 AutomationProperties.Name="{x:Static resources:Strings.LaunchDelayLabel}"
-                                 Text="{Binding LaunchDelayMs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="260"
-                                 VerticalAlignment="Center" />
+                        <ui:NumberBox Grid.Row="1" Grid.Column="1"
+                                      AutomationProperties.AutomationId="Settings_LaunchDelayNumberBox"
+                                      AutomationProperties.Name="{x:Static resources:Strings.LaunchDelayLabel}"
+                                      Value="{Binding LaunchDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      Minimum="1"
+                                      Maximum="600"
+                                      SpinButtonPlacementMode="Inline"
+                                      Width="260"
+                                      VerticalAlignment="Center" />
                     </Grid>
                 </Border>
 
@@ -183,8 +189,7 @@
                         <!-- Row 1: Rejoin Delay -->
                         <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.RejoinDelayLabel}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                         </StackPanel>
                         <TextBox Grid.Row="1" Grid.Column="1"
                                  AutomationProperties.AutomationId="Settings_RejoinDelayTextBox"
@@ -202,8 +207,7 @@
                         <!-- Row 2: Rejoin Max Attempts -->
                         <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.RejoinMaxAttemptsLabel}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                         </StackPanel>
                         <TextBox Grid.Row="3" Grid.Column="1"
                                  AutomationProperties.AutomationId="Settings_RejoinMaxAttemptsTextBox"
@@ -221,8 +225,7 @@
                         <!-- Row 3: Smart Server Hopping -->
                         <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHopping}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                             <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHoppingDescription}"
                                        Style="{StaticResource DescriptionTextStyle}"
                                        Margin="0,2,0,0" />
@@ -244,8 +247,7 @@
                         <!-- Row 4: Ghost Disconnect Detection -->
                         <StackPanel Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.GhostDisconnectMode}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                             <TextBlock Text="{x:Static resources:Strings.GhostDisconnectModeDescription}"
                                        Style="{StaticResource DescriptionTextStyle}"
                                        Margin="0,2,0,0" />
@@ -290,8 +292,7 @@
                         <!-- Row 1: Multi-Instance Toggle -->
                         <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.MultiInstanceLabel}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                         </StackPanel>
                         <CheckBox Grid.Row="1" Grid.Column="1"
                                   AutomationProperties.AutomationId="Settings_MultiInstanceToggle"
@@ -341,8 +342,7 @@
                         <!-- Row 1: Master Password -->
                         <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.EnableMasterPassword}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                             <TextBlock Text="{x:Static resources:Strings.EnableMasterPasswordDescription}"
                                        Style="{StaticResource DescriptionTextStyle}"
                                        Margin="0,2,0,0" />
@@ -386,8 +386,7 @@
                         <!-- Row 1: Throttle Background Roblox -->
                         <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRoblox}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                             <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRobloxDescription}"
                                        Style="{StaticResource DescriptionTextStyle}"
                                        Margin="0,2,0,0" />
@@ -409,8 +408,7 @@
                         <!-- Row 2: Smart RAM Cleaner -->
                         <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.EnableRamCleaner}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                             <TextBlock Text="{x:Static resources:Strings.EnableRamCleanerDescription}"
                                        Style="{StaticResource DescriptionTextStyle}"
                                        Margin="0,2,0,0" />
@@ -432,8 +430,7 @@
                         <!-- Row 3: RAM Cleaner Interval -->
                         <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
                             <TextBlock Text="{x:Static resources:Strings.RamCleanerInterval}"
-                                       FontWeight="Medium"
-                                       FontSize="{StaticResource FontSizeBody}" />
+                                       Style="{StaticResource SettingLabelStyle}" />
                             <TextBlock Text="{x:Static resources:Strings.RamCleanerIntervalDescription}"
                                        Style="{StaticResource DescriptionTextStyle}"
                                        Margin="0,2,0,0" />
@@ -450,6 +447,7 @@
                                     IsEnabled="{Binding EnableRamCleaner}"
                                     VerticalAlignment="Center" />
                             <TextBlock Text="{Binding RamCleanerIntervalDisplay}"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        VerticalAlignment="Center"
                                        MinWidth="60"
                                        Margin="8,0,0,0" />
@@ -527,9 +525,7 @@
                         <!-- Row 1: Launch URI Template -->
                         <TextBlock Grid.Row="1" Grid.Column="0"
                                    Text="{x:Static resources:Strings.LaunchUriTemplateStatus}"
-                                   FontWeight="SemiBold"
-                                   FontSize="{StaticResource FontSizeBody}"
-                                   VerticalAlignment="Center"
+                                   Style="{StaticResource SettingLabelStyle}"
                                    Margin="{StaticResource MarginTight}" />
                         <TextBlock Grid.Row="1" Grid.Column="1"
                                    Text="{Binding LaunchUriTemplateStatus}"
@@ -545,9 +541,7 @@
                         <!-- Row 2: Place Launcher URL Template -->
                         <TextBlock Grid.Row="3" Grid.Column="0"
                                    Text="{x:Static resources:Strings.PlaceLauncherUrlTemplateStatus}"
-                                   FontWeight="SemiBold"
-                                   FontSize="{StaticResource FontSizeBody}"
-                                   VerticalAlignment="Center"
+                                   Style="{StaticResource SettingLabelStyle}"
                                    Margin="{StaticResource MarginTight}" />
                         <TextBlock Grid.Row="3" Grid.Column="1"
                                    Text="{Binding PlaceLauncherUrlTemplateStatus}"
@@ -557,6 +551,5 @@
                 </Border>
 
             </StackPanel>
-        </ScrollViewer>
     </Grid>
 </Page>

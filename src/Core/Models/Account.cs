@@ -12,5 +12,4 @@ public sealed record Account(
     string? Username = null,
     long? UserId = null,
     AccountStatus Status = AccountStatus.Unknown,
-    DateTimeOffset? LastCheckedAt = null,
-    ProxyConfig? Proxy = null);
+    DateTimeOffset? LastCheckedAt = null);

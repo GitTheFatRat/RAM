@@ -21,7 +21,7 @@ public sealed class SettingsServiceTests
         Assert.Equal(AppSettings.Default, loaded);
         Assert.Equal("vi", loaded.Language);
         Assert.Equal("Dark", loaded.Theme);
-        Assert.Equal(3000, loaded.LaunchDelayMs);
+        Assert.Equal(20, loaded.LaunchDelaySeconds);
         Assert.Equal(10, loaded.RejoinDelaySeconds);
         Assert.Equal(5, loaded.RejoinMaxAttempts);
         Assert.False(loaded.MultiInstanceEnabled);
@@ -38,7 +38,7 @@ public sealed class SettingsServiceTests
         AppSettings expected = new(
             Language: "en",
             Theme: "Light",
-            LaunchDelayMs: 4500,
+            LaunchDelaySeconds: 45,
             RejoinDelaySeconds: 15,
             RejoinMaxAttempts: 8,
             MultiInstanceEnabled: true,
@@ -63,7 +63,7 @@ public sealed class SettingsServiceTests
         AppSettings invalid = new(
             Language: "fr",
             Theme: "CustomTheme",
-            LaunchDelayMs: 100,
+            LaunchDelaySeconds: 0,
             RejoinDelaySeconds: -5,
             RejoinMaxAttempts: 0);
 
@@ -74,7 +74,7 @@ public sealed class SettingsServiceTests
 
         Assert.Equal("vi", clamped.Language);
         Assert.Equal("Dark", clamped.Theme);
-        Assert.Equal(AppSettings.MinimumLaunchDelayMs, clamped.LaunchDelayMs);
+        Assert.Equal(AppSettings.MinimumLaunchDelaySeconds, clamped.LaunchDelaySeconds);
         Assert.Equal(AppSettings.MinimumRejoinDelaySeconds, clamped.RejoinDelaySeconds);
         Assert.Equal(AppSettings.MinimumRejoinMaxAttempts, clamped.RejoinMaxAttempts);
     }

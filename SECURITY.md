@@ -12,6 +12,7 @@
    - No automatic updates that download and execute arbitrary binaries.
 
 3. **Strict Out-of-Scope Activities (Permanent)**
+   - Account creation: RbxManager does not create Roblox accounts, does not schedule account creation, and will never incorporate features to create accounts or bypass account creation limits.
    - Anti-cheat bypasses or tampering.
    - Process injection or memory modification.
    - Script executors.
@@ -63,11 +64,10 @@
   - Plaintext data leakage in logs or crash dumps via immediate zero-memory buffer wiping (`CryptographicOperations.ZeroMemory`).
   - Tampering or bit-flipping via AES-GCM AEAD authentication tag verification.
 
-### Per-Account Proxy Security
-- Proxy credentials (passwords) are treated as sensitive secrets:
-  - Stored inside the encrypted vault alongside cookies (`SecretValue`).
-  - Decrypted only via `Reveal()` inside `RobloxHttpClientFactory` to configure `NetworkCredential` and never logged or exposed.
-  - Memory buffers are zeroed on disposal.
+### Network Security & No Proxy Support
+- RbxManager does not support custom proxy configurations per account or within the application.
+- The Roblox game client connects directly over the host operating system network.
+- The primary HTTP handler in RbxManager uses the default .NET behavior, which delegates to the Windows system proxy configuration if present.
 
 ---
 
@@ -189,25 +189,6 @@ To eliminate this single point of failure without exposing plaintext credentials
 
 2. **Network Diagnostics**:
    - Probing of public endpoints (`roblox.com`, `users`, `auth`, `games`, `presence`, `apis`) executes unauthenticated GET requests without cookies or authentication headers.
-
----
-
-## Proxy Scope and Security (M10, M14.4)
-
-1. **Scope of Proxying**:
-   - Configured proxies apply **ONLY** to this application's own HTTP requests (cookie validation, authentication ticket retrieval, and server browser queries) and the WebView2 login browser session configured in the pre-login panel.
-   - The Roblox game client (`RobloxPlayerBeta.exe`) launched via the `roblox-player` protocol connects directly over the host operating system network and does **NOT** use this proxy. This tool does not redirect or tunnel in-game traffic.
-   - The application makes no claims that a proxy prevents account bans, enforcement actions, or specific Roblox platform error codes.
-   - No third-party IP-check, geolocation, or external tracking services are ever contacted.
-
-2. **Credential Storage and Transient Memory Exposure**:
-   - Proxy credentials (host, port, username, password) are persisted strictly inside the encrypted vault (Format v2).
-   - In process memory, proxy passwords are held within `SecretValue` instances.
-   - During WebView2 proxy basic authentication (`WebViewProxyAuthHandler`), the proxy password must be passed to `CoreWebView2BasicAuthenticationResponse.Password` as a managed string, which is an unavoidable requirement of the WebView2 API surface. Plaintext exposure is confined strictly to this event invocation, and proxy passwords are never logged, formatted, or exposed in diagnostics.
-
-3. **End-to-End Encryption & Host Guard**:
-   - All communications with Roblox endpoints use end-to-end TLS (HTTPS). When routing through an HTTP or SOCKS5 proxy, the proxy operator can observe target destination hosts and connection timing, but cannot inspect or decrypt plaintext cookies, tokens, or response payloads.
-   - The strict Roblox host guard handler (`RobloxHostGuardHandler`) applies to the target request URI host, ensuring outbound requests are dispatched only to official `roblox.com` or `*.roblox.com` endpoints regardless of proxy configuration.
 
 ---
 

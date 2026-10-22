@@ -335,7 +335,13 @@
     <value>Hệ thống</value>
   </data>
   <data name="LaunchDelayLabel" xml:space="preserve">
-    <value>Thời gian trễ giữa các lần khởi chạy (ms)</value>
+    <value>Khoảng cách khởi chạy (Giây)</value>
+  </data>
+  <data name="LaunchDelayDescription" xml:space="preserve">
+    <value>Khoảng cách giữa hai lần khởi chạy tài khoản. Khoảng cách quá ngắn có thể bị coi là hoạt động bất thường. Mặc định là 20 giây.</value>
+  </data>
+  <data name="NextAccountCountdown" xml:space="preserve">
+    <value>Tài khoản tiếp theo sau {0} giây</value>
   </data>
   <data name="RejoinDelayLabel" xml:space="preserve">
     <value>Thời gian trễ khi tự động vào lại (giây)</value>
@@ -619,27 +625,6 @@
   <data name="TabGeneral" xml:space="preserve">
     <value>Chung</value>
   </data>
-  <data name="TabProxy" xml:space="preserve">
-    <value>Cấu hình Proxy</value>
-  </data>
-  <data name="ProxyType" xml:space="preserve">
-    <value>Loại Proxy</value>
-  </data>
-  <data name="ProxyHost" xml:space="preserve">
-    <value>Máy chủ</value>
-  </data>
-  <data name="ProxyPort" xml:space="preserve">
-    <value>Cổng</value>
-  </data>
-  <data name="ProxyUsername" xml:space="preserve">
-    <value>Tên đăng nhập</value>
-  </data>
-  <data name="ProxyPassword" xml:space="preserve">
-    <value>Mật khẩu</value>
-  </data>
-  <data name="ProxyPasswordHint" xml:space="preserve">
-    <value>Để trống để giữ nguyên mật khẩu cũ</value>
-  </data>
   <data name="EnableRamCleaner" xml:space="preserve">
     <value>Bật tối ưu RAM tự động</value>
   </data>
@@ -669,39 +654,6 @@
   </data>
   <data name="LoadingRoblox" xml:space="preserve">
     <value>Đang tải Roblox...</value>
-  </data>
-  <data name="ProxyTypeNone" xml:space="preserve">
-    <value>Không dùng (Kết nối trực tiếp)</value>
-  </data>
-  <data name="ProxyTypeHttp" xml:space="preserve">
-    <value>HTTP</value>
-  </data>
-  <data name="ProxyTypeSocks5" xml:space="preserve">
-    <value>SOCKS5</value>
-  </data>
-  <data name="TestProxy" xml:space="preserve">
-    <value>Kiểm tra Proxy</value>
-  </data>
-  <data name="StartBrowser" xml:space="preserve">
-    <value>Khởi động Trình duyệt</value>
-  </data>
-  <data name="ChangeProxy" xml:space="preserve">
-    <value>Thay đổi Proxy</value>
-  </data>
-  <data name="TestingProxy" xml:space="preserve">
-    <value>Đang kiểm tra kết nối proxy...</value>
-  </data>
-  <data name="ProxyTestSuccess" xml:space="preserve">
-    <value>Kết nối proxy thành công (HTTP {0})</value>
-  </data>
-  <data name="ProxyTestFailed" xml:space="preserve">
-    <value>Kết nối proxy thất bại: {0}</value>
-  </data>
-  <data name="ProxyScopeNote" xml:space="preserve">
-    <value>Proxy chỉ áp dụng cho trình duyệt đăng nhập và các yêu cầu HTTP nội bộ của công cụ. Client game Roblox kết nối trực tiếp và không đi qua proxy này.</value>
-  </data>
-  <data name="ProxyNavigationFailed" xml:space="preserve">
-    <value>Không thể tải trang đăng nhập qua proxy đã cấu hình. Vui lòng kiểm tra lại cài đặt proxy hoặc kết nối mạng.</value>
   </data>
   <data name="MasterPasswordAcknowledgeWarning" xml:space="preserve">
     <value>Tôi hiểu rằng nếu quên mật khẩu này, toàn bộ dữ liệu trong vault sẽ không thể khôi phục. Bạn nên xuất bản sao lưu mã hóa trước khi tiếp tục.</value>

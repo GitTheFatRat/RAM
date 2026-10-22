@@ -38,6 +38,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private readonly ILauncher _launcher;
     private readonly Core.Settings.ISettingsService? _settingsService;
     private readonly Core.Backup.IBackupService? _backupService;
+    private readonly TimeProvider _timeProvider;
     private readonly List<AccountItemViewModel> _allAccounts = new();
 
     private CancellationTokenSource? _checkAllCts;
@@ -85,7 +86,17 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
     private bool _isCheckingSingle;
 
-    public bool IsNotBusy => !IsLoading && !IsCheckingAll && !IsCheckingSingle;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotBusy))]
+    private bool _isBulkLaunching;
+
+    [ObservableProperty]
+    private string _bulkLaunchCountdownText = string.Empty;
+
+    [ObservableProperty]
+    private string _bulkLaunchQueueText = string.Empty;
+
+    public bool IsNotBusy => !IsLoading && !IsCheckingAll && !IsCheckingSingle && !IsBulkLaunching;
 
     [ObservableProperty]
     private string _checkAllProgressText = string.Empty;
@@ -105,7 +116,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         IRobloxAuthService authService,
         ILauncher launcher,
         Core.Settings.ISettingsService? settingsService = null,
-        Core.Backup.IBackupService? backupService = null)
+        Core.Backup.IBackupService? backupService = null,
+        TimeProvider? timeProvider = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _contentDialogService = contentDialogService ?? throw new ArgumentNullException(nameof(contentDialogService));
@@ -114,6 +126,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _launcher = launcher ?? throw new ArgumentNullException(nameof(launcher));
         _settingsService = settingsService;
         _backupService = backupService;
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         _searchDebouncer = new DebounceDispatcher(TimeSpan.FromMilliseconds(200));
         _selectedGroup = Strings.GroupFilterAll;
@@ -212,15 +225,13 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         bool? result = loginWindow.ShowDialog();
         if (result != true || loginWindow.CapturedCookie == null)
         {
-            loginWindow.UsedProxy?.Dispose();
             return;
         }
 
         using SecretValue cookie = loginWindow.CapturedCookie;
-        using ProxyConfig? usedProxy = loginWindow.UsedProxy;
         _snackbarService.Show(Strings.SuccessTitle, Strings.LoginSuccessValidating, ControlAppearance.Info);
 
-        Result<RobloxUser> validationResult = await _authService.ValidateCookieAsync(cookie, usedProxy);
+        Result<RobloxUser> validationResult = await _authService.ValidateCookieAsync(cookie);
         if (!validationResult.IsSuccess || validationResult.Value == null)
         {
             _snackbarService.Show(Strings.ErrorTitle, validationResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
@@ -240,8 +251,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             Username: user.Name,
             UserId: user.Id,
             Status: AccountStatus.Valid,
-            LastCheckedAt: DateTimeOffset.UtcNow,
-            Proxy: usedProxy?.DeepClone());
+            LastCheckedAt: DateTimeOffset.UtcNow);
 
         Result addResult = await _accountStore.AddAsync(newAccount);
         if (addResult.IsSuccess)
@@ -282,14 +292,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             {
                 string rawCookie = editorControl.ReadPassword();
                 using SecretValue testCookie = SecretValue.FromString(rawCookie);
-                using ProxyConfig? testProxy = !string.IsNullOrWhiteSpace(editorViewModel.ProxyHost)
-                    ? new ProxyConfig(
-                        editorViewModel.ProxyHost.Trim(),
-                        editorViewModel.ProxyPort,
-                        string.IsNullOrWhiteSpace(editorViewModel.ProxyUsername) ? null : editorViewModel.ProxyUsername.Trim(),
-                        null,
-                        editorViewModel.SelectedProxyType)
-                    : null;
 
                 Account testAccount = new(
                     Id: new AccountId(0),
@@ -297,8 +299,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     Group: editorViewModel.Group,
                     Note: editorViewModel.Note,
                     Cookie: testCookie,
-                    CreatedAt: DateTimeOffset.UtcNow,
-                    Proxy: testProxy);
+                    CreatedAt: DateTimeOffset.UtcNow);
 
                 Result validation = AccountValidator.Validate(testAccount, _allAccounts.Select(a => a.Account));
                 if (!validation.IsSuccess)
@@ -324,21 +325,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             using SecretValue cookieSecret = SecretValue.FromString(rawCookie);
             editorControl.ClearPassword();
 
-            string rawProxyPassword = editorControl.ReadProxyPassword();
-            using SecretValue? proxyPasswordSecret = !string.IsNullOrWhiteSpace(rawProxyPassword)
-                ? SecretValue.FromString(rawProxyPassword)
-                : null;
-            editorControl.ClearProxyPassword();
-
-            using ProxyConfig? proxyConfig = !string.IsNullOrWhiteSpace(editorViewModel.ProxyHost)
-                ? new ProxyConfig(
-                    editorViewModel.ProxyHost.Trim(),
-                    editorViewModel.ProxyPort,
-                    string.IsNullOrWhiteSpace(editorViewModel.ProxyUsername) ? null : editorViewModel.ProxyUsername.Trim(),
-                    proxyPasswordSecret?.Clone(),
-                    editorViewModel.SelectedProxyType)
-                : null;
-
             long nextId = _allAccounts.Count > 0 ? _allAccounts.Max(a => a.Id.Value) + 1 : 1;
             Account newAccount = new(
                 Id: new AccountId(nextId),
@@ -346,8 +332,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 Group: string.IsNullOrWhiteSpace(editorViewModel.Group) ? null : editorViewModel.Group.Trim(),
                 Note: string.IsNullOrWhiteSpace(editorViewModel.Note) ? null : editorViewModel.Note.Trim(),
                 Cookie: cookieSecret,
-                CreatedAt: DateTimeOffset.UtcNow,
-                Proxy: proxyConfig);
+                CreatedAt: DateTimeOffset.UtcNow);
 
             Result validation = AccountValidator.Validate(newAccount, _allAccounts.Select(a => a.Account));
             if (!validation.IsSuccess)
@@ -376,7 +361,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         else
         {
             editorControl.ClearPassword();
-            editorControl.ClearProxyPassword();
         }
     }
 
@@ -393,11 +377,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         {
             Alias = current.Alias,
             Group = current.Group ?? string.Empty,
-            Note = current.Note ?? string.Empty,
-            SelectedProxyType = current.Proxy?.Type ?? ProxyType.Http,
-            ProxyHost = current.Proxy?.Host ?? string.Empty,
-            ProxyPort = current.Proxy?.Port ?? 8080,
-            ProxyUsername = current.Proxy?.Username ?? string.Empty
+            Note = current.Note ?? string.Empty
         };
 
         foreach (string group in _allAccounts.Select(a => a.Group?.Trim()).Where(g => !string.IsNullOrEmpty(g)).Distinct()!)
@@ -428,22 +408,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
             editorControl.ClearPassword();
 
-            string newProxyPassword = editorControl.ReadProxyPassword();
-            SecretValue? proxyPasswordToUse = !string.IsNullOrWhiteSpace(newProxyPassword)
-                ? SecretValue.FromString(newProxyPassword)
-                : current.Proxy?.Password?.Clone();
-
-            editorControl.ClearProxyPassword();
-
-            ProxyConfig? proxyToUse = !string.IsNullOrWhiteSpace(editorViewModel.ProxyHost)
-                ? new ProxyConfig(
-                    editorViewModel.ProxyHost.Trim(),
-                    editorViewModel.ProxyPort,
-                    string.IsNullOrWhiteSpace(editorViewModel.ProxyUsername) ? null : editorViewModel.ProxyUsername.Trim(),
-                    proxyPasswordToUse,
-                    editorViewModel.SelectedProxyType)
-                : null;
-
             Account updatedAccount = new(
                 Id: current.Id,
                 Alias: editorViewModel.Alias.Trim(),
@@ -454,15 +418,13 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 Username: current.Username,
                 UserId: current.UserId,
                 Status: current.Status,
-                LastCheckedAt: current.LastCheckedAt,
-                Proxy: proxyToUse);
+                LastCheckedAt: current.LastCheckedAt);
 
             Result validation = AccountValidator.Validate(updatedAccount, _allAccounts.Select(a => a.Account));
             if (!validation.IsSuccess)
             {
                 _snackbarService.Show(Strings.ErrorTitle, validation.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
                 cookieToUse.Dispose();
-                proxyToUse?.Dispose();
                 return;
             }
 
@@ -486,13 +448,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             finally
             {
                 cookieToUse.Dispose();
-                proxyToUse?.Dispose();
             }
         }
         else
         {
             editorControl.ClearPassword();
-            editorControl.ClearProxyPassword();
         }
     }
 
@@ -563,41 +523,40 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _checkAllCts = new CancellationTokenSource();
         CancellationToken ct = _checkAllCts.Token;
 
-        using SemaphoreSlim semaphore = new(3, 3);
         int total = _allAccounts.Count;
         int completed = 0;
         CheckAllProgressText = $"0 / {total}";
 
-        List<Task> tasks = new();
-        foreach (AccountItemViewModel item in _allAccounts.ToList())
-        {
-            tasks.Add(Task.Run(async () =>
-            {
-                await semaphore.WaitAsync(ct);
-                try
-                {
-                    if (ct.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    await ValidateAndUpdateAccountAsync(item.Account, ct);
-                    int currentCompleted = Interlocked.Increment(ref completed);
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        CheckAllProgressText = $"{currentCompleted} / {total}";
-                    });
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            }, ct));
-        }
-
         try
         {
-            await Task.WhenAll(tasks);
+            List<AccountItemViewModel> list = _allAccounts.ToList();
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                AccountItemViewModel item = list[i];
+                await ValidateAndUpdateAccountAsync(item.Account, ct);
+                completed++;
+                if (System.Windows.Application.Current?.Dispatcher != null)
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        CheckAllProgressText = $"{completed} / {total}";
+                    });
+                }
+                else
+                {
+                    CheckAllProgressText = $"{completed} / {total}";
+                }
+
+                if (i < list.Count - 1 && !ct.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), _timeProvider, ct);
+                }
+            }
         }
         catch (OperationCanceledException)
         {
@@ -607,7 +566,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         {
             IsCheckingAll = false;
             CheckAllProgressText = string.Empty;
-            _checkAllCts.Dispose();
+            _checkAllCts?.Dispose();
             _checkAllCts = null;
             await LoadAccountsAsync();
         }
@@ -689,7 +648,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     private async Task ValidateAndUpdateAccountAsync(Account account, CancellationToken ct = default)
     {
-        Result<RobloxUser> validation = await _authService.ValidateCookieAsync(account.Cookie, account.Proxy, ct);
+        Result<RobloxUser> validation = await _authService.ValidateCookieAsync(account.Cookie, ct);
 
         AccountStatus newStatus;
         string? username = account.Username;
@@ -704,10 +663,17 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         else if (string.Equals(validation.ErrorCode, AuthErrorCodes.Expired, StringComparison.OrdinalIgnoreCase))
         {
             newStatus = AccountStatus.Expired;
-            Application.Current.Dispatcher.Invoke(() =>
+            if (System.Windows.Application.Current?.Dispatcher != null)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    _snackbarService.Show(account.Alias, Strings.ExpiredHint, ControlAppearance.Caution);
+                });
+            }
+            else
             {
                 _snackbarService.Show(account.Alias, Strings.ExpiredHint, ControlAppearance.Caution);
-            });
+            }
         }
         else
         {
@@ -967,47 +933,69 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _bulkLaunchCts = new CancellationTokenSource();
         int successCount = 0;
         int failCount = 0;
-        int delayMs = _settingsService?.CurrentSettings.LaunchDelayMs ?? 3000;
+        IsBulkLaunching = true;
+        int delaySeconds = _settingsService?.CurrentSettings.LaunchDelaySeconds ?? AppSettings.DefaultLaunchDelaySeconds;
 
-        for (int i = 0; i < accounts.Count; i++)
+        try
         {
-            if (_bulkLaunchCts.IsCancellationRequested)
+            for (int i = 0; i < accounts.Count; i++)
             {
-                _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
-                return;
-            }
-
-            AccountItemViewModel account = accounts[i];
-            LaunchRequest req = new(account.Id, placeId, jobId);
-            Result launchResult = await _launcher.LaunchAsync(req, _bulkLaunchCts.Token);
-
-            if (launchResult.IsSuccess)
-            {
-                successCount++;
-            }
-            else
-            {
-                failCount++;
-                _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
-            }
-
-            if (i < accounts.Count - 1 && delayMs > 0)
-            {
-                try
-                {
-                    await Task.Delay(delayMs, _bulkLaunchCts.Token);
-                }
-                catch (OperationCanceledException)
+                if (_bulkLaunchCts.IsCancellationRequested)
                 {
                     _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
                     return;
                 }
-            }
-        }
 
-        CompositeFormat bulkFormat = CompositeFormat.Parse(Strings.BulkLaunchCompleted);
-        string summary = string.Format(CultureInfo.CurrentCulture, bulkFormat, successCount, failCount);
-        _snackbarService.Show(Strings.SuccessTitle, summary, ControlAppearance.Success);
+                AccountItemViewModel account = accounts[i];
+                BulkLaunchQueueText = $"{account.Alias} ({i + 1} / {accounts.Count})";
+
+                LaunchRequest req = new(account.Id, placeId, jobId);
+                Result launchResult = await _launcher.LaunchAsync(req, _bulkLaunchCts.Token);
+
+                if (launchResult.IsSuccess)
+                {
+                    successCount++;
+                }
+                else
+                {
+                    failCount++;
+                    _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
+                }
+
+                if (i < accounts.Count - 1 && !_bulkLaunchCts.IsCancellationRequested)
+                {
+                    CompositeFormat nextAccountFormat = CompositeFormat.Parse(Strings.NextAccountCountdown);
+                    for (int sec = delaySeconds; sec > 0; sec--)
+                    {
+                        BulkLaunchCountdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, sec);
+                        await Task.Delay(TimeSpan.FromSeconds(1), _timeProvider, _bulkLaunchCts.Token);
+                    }
+                    BulkLaunchCountdownText = string.Empty;
+                }
+            }
+
+            CompositeFormat bulkFormat = CompositeFormat.Parse(Strings.BulkLaunchCompleted);
+            string summary = string.Format(CultureInfo.CurrentCulture, bulkFormat, successCount, failCount);
+            _snackbarService.Show(Strings.SuccessTitle, summary, ControlAppearance.Success);
+        }
+        catch (OperationCanceledException)
+        {
+            _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
+        }
+        finally
+        {
+            IsBulkLaunching = false;
+            BulkLaunchCountdownText = string.Empty;
+            BulkLaunchQueueText = string.Empty;
+            _bulkLaunchCts?.Dispose();
+            _bulkLaunchCts = null;
+        }
+    }
+
+    [RelayCommand]
+    public void CancelBulkLaunch()
+    {
+        _bulkLaunchCts?.Cancel();
     }
 
     [RelayCommand]

@@ -117,7 +117,7 @@ internal static class UiTestHooks
 
 internal sealed class FakeRobloxAuthService : IRobloxAuthService
 {
-    public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
+    public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default)
     {
         if (!cookie.HasContent)
         {
@@ -126,7 +126,7 @@ internal sealed class FakeRobloxAuthService : IRobloxAuthService
         return Task.FromResult(Result.Success(new RobloxUser(9999001, "UiTestUser", "UI Test Agent")));
     }
 
-    public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, ProxyConfig? proxy = null, CancellationToken ct = default)
+    public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
     {
         return Task.FromResult(Result.Success(SecretValue.FromString("fake-test-ticket-9999001")));
     }

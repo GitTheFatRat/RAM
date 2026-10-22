@@ -14,21 +14,21 @@ using RbxManager.Core.Instance;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
+using RbxManager.Core.Settings;
 using RbxManager.Core.Storage;
 
 public sealed partial class RobloxLauncher : ILauncher, IDisposable
 {
-    private const int MinimumLaunchIntervalMs = 3000;
-
     private readonly IAccountStore _accountStore;
     private readonly IRobloxAuthService _authService;
     private readonly IProcessStarter _processStarter;
     private readonly IProcessProvider _processProvider;
     private readonly IInstanceGate _instanceGate;
-    private readonly Core.Settings.ISettingsService? _settingsService;
+    private readonly ISettingsService? _settingsService;
     private readonly ILogger<RobloxLauncher> _logger;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private DateTimeOffset _lastLaunchTime = DateTimeOffset.MinValue;
+    private readonly TimeProvider _timeProvider;
+    private readonly SemaphoreSlim _launchGate = new(1, 1);
+    private DateTimeOffset? _lastLaunchStartTime;
     private bool _disposed;
 
     public RobloxLauncher(
@@ -38,7 +38,8 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         IProcessProvider processProvider,
         IInstanceGate instanceGate,
         ILogger<RobloxLauncher>? logger = null,
-        Core.Settings.ISettingsService? settingsService = null)
+        ISettingsService? settingsService = null,
+        TimeProvider? timeProvider = null)
     {
         _accountStore = accountStore;
         _authService = authService;
@@ -47,6 +48,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         _instanceGate = instanceGate;
         _logger = logger ?? NullLogger<RobloxLauncher>.Instance;
         _settingsService = settingsService;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<Result> LaunchAsync(LaunchRequest request, CancellationToken ct = default)
@@ -57,42 +59,50 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
             return validationResult;
         }
 
-        if (!_instanceGate.IsMultiInstanceEnabled)
-        {
-            IReadOnlyList<ProcessSnapshot> running = _processProvider.GetRobloxProcesses();
-            if (running.Count > 0)
-            {
-                LogRobloxAlreadyRunning();
-                return Result.Failure("Roblox is already running; enable multi-instance in Settings.", "RobloxAlreadyRunning");
-            }
-        }
-
-        IReadOnlyList<Account> accounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
+        await _launchGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            Account? account = accounts.FirstOrDefault(a => a.Id == request.AccountId);
-            if (account == null)
+            int delaySeconds = _settingsService?.CurrentSettings.LaunchDelaySeconds ?? AppSettings.DefaultLaunchDelaySeconds;
+            TimeSpan minInterval = TimeSpan.FromSeconds(delaySeconds);
+
+            if (_lastLaunchStartTime.HasValue)
             {
-                return Result.Failure("Account was not found.", "AccountNotFound");
+                DateTimeOffset now = _timeProvider.GetUtcNow();
+                TimeSpan elapsed = now - _lastLaunchStartTime.Value;
+                if (elapsed < minInterval)
+                {
+                    TimeSpan remaining = minInterval - elapsed;
+                    if (remaining > TimeSpan.Zero)
+                    {
+                        await Task.Delay(remaining, _timeProvider, ct).ConfigureAwait(false);
+                    }
+                }
             }
 
-            await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+            _lastLaunchStartTime = _timeProvider.GetUtcNow();
+
+            if (!_instanceGate.IsMultiInstanceEnabled)
+            {
+                IReadOnlyList<ProcessSnapshot> running = _processProvider.GetRobloxProcesses();
+                if (running.Count > 0)
+                {
+                    LogRobloxAlreadyRunning();
+                    return Result.Failure("Roblox is already running; enable multi-instance in Settings.", "RobloxAlreadyRunning");
+                }
+            }
+
+            IReadOnlyList<Account> accounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
             try
             {
-                int minInterval = _settingsService?.CurrentSettings.LaunchDelayMs ?? MinimumLaunchIntervalMs;
-                TimeSpan elapsed = DateTimeOffset.UtcNow - _lastLaunchTime;
-                if (elapsed.TotalMilliseconds < minInterval)
+                Account? account = accounts.FirstOrDefault(a => a.Id == request.AccountId);
+                if (account == null)
                 {
-                    int delayMs = minInterval - (int)elapsed.TotalMilliseconds;
-                    if (delayMs > 0)
-                    {
-                        await Task.Delay(delayMs, ct).ConfigureAwait(false);
-                    }
+                    return Result.Failure("Account was not found.", "AccountNotFound");
                 }
 
                 LogRequestingTicketForLaunch(account.Id.Value);
 
-                Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, account.Proxy, ct).ConfigureAwait(false);
+                Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, ct).ConfigureAwait(false);
                 if (!ticketResult.IsSuccess)
                 {
                     LogLaunchFailed(ticketResult.ErrorCode ?? "TicketFailed");
@@ -102,7 +112,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
                 using SecretValue ticketSecret = ticketResult.Value!;
                 string ticket = ticketSecret.Reveal();
                 string trackerId = Random.Shared.Next(100000000, 999999999).ToString(CultureInfo.InvariantCulture);
-                long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                long unixMs = _timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
 
                 string? launchUriTemplate = _settingsService?.CurrentSettings.Advanced?.LaunchUriTemplate;
                 string? placeLauncherUrlTemplate = _settingsService?.CurrentSettings.Advanced?.PlaceLauncherUrlTemplate;
@@ -129,7 +139,6 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
                     placeLauncherUrlTemplate);
 
                 bool started = _processStarter.Start(launchUri);
-                _lastLaunchTime = DateTimeOffset.UtcNow;
 
                 if (!started)
                 {
@@ -140,31 +149,31 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
                 LogLaunchSuccess(account.Id.Value, request.PlaceId);
                 return Result.Success();
             }
-            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode is 1155 or 2)
-            {
-                LogLaunchFailed("RobloxNotInstalledOrRegistered");
-                return Result.Failure("Roblox player is not installed or protocol is not registered on this system.", "RobloxNotInstalledOrRegistered");
-            }
-            catch (TaskCanceledException) when (ct.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LogLaunchError(ex.GetType().Name);
-                return Result.Failure("An error occurred launching Roblox.", "LaunchError");
-            }
             finally
             {
-                _semaphore.Release();
+                foreach (Account a in accounts)
+                {
+                    a.Cookie.Dispose();
+                }
             }
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode is 1155 or 2)
+        {
+            LogLaunchFailed("RobloxNotInstalledOrRegistered");
+            return Result.Failure("Roblox player is not installed or protocol is not registered on this system.", "RobloxNotInstalledOrRegistered");
+        }
+        catch (TaskCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LogLaunchError(ex.GetType().Name);
+            return Result.Failure("An error occurred launching Roblox.", "LaunchError");
         }
         finally
         {
-            foreach (Account a in accounts)
-            {
-                a.Cookie.Dispose();
-            }
+            _launchGate.Release();
         }
     }
 
@@ -176,7 +185,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         }
 
         _disposed = true;
-        _semaphore.Dispose();
+        _launchGate.Dispose();
     }
 
     [LoggerMessage(EventId = 301, Level = LogLevel.Warning, Message = "Roblox player registry check failed: not installed.")]
