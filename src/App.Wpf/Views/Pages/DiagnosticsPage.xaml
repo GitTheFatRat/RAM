@@ -7,63 +7,92 @@
     <Page.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Page.Resources>
-    <Grid Margin="24">
+    <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0"
-                   Text="{x:Static resources:Strings.DiagnosticsTitle}"
-                   FontSize="24"
-                   FontWeight="SemiBold"
-                   Margin="0,0,0,16" />
+        <!-- Page Header -->
+        <StackPanel Grid.Row="0" Margin="{StaticResource MarginBottomMedium}">
+            <TextBlock Text="{x:Static resources:Strings.DiagnosticsTitle}"
+                       Style="{StaticResource PageTitleStyle}" />
+            <TextBlock Text="{x:Static resources:Strings.NavDiagnostics}"
+                       Style="{StaticResource PageSubtitleStyle}"
+                       Visibility="Collapsed" />
+        </StackPanel>
 
         <!-- Controls Toolbar -->
-        <StackPanel Grid.Row="1"
-                    Orientation="Horizontal"
-                    Margin="0,0,0,16">
-            <TextBlock Text="{x:Static resources:Strings.AccountPickerLabel}"
+        <Grid Grid.Row="1" Margin="{StaticResource MarginBottomMedium}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="{x:Static resources:Strings.AccountPickerLabel}"
                        VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       FontSize="{StaticResource FontSizeBody}"
                        Margin="0,0,8,0" />
-            <ComboBox ItemsSource="{Binding Accounts}"
+
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding Accounts}"
                       AutomationProperties.AutomationId="Diagnostics_AccountsComboBox"
                       SelectedItem="{Binding SelectedAccount, Mode=TwoWay}"
                       DisplayMemberPath="Alias"
-                      Width="180"
+                      Width="200"
                       Margin="0,0,12,0" />
 
-            <ui:Button Appearance="Primary"
+            <Border Grid.Column="2" Style="{StaticResource ToolbarSeparatorStyle}" />
+
+            <ui:Button Grid.Column="3"
+                       Appearance="Primary"
                        AutomationProperties.AutomationId="Diagnostics_RunButton"
                        Content="{x:Static resources:Strings.RunDiagnostics}"
+                       Icon="{ui:SymbolIcon Stethoscope24}"
                        Command="{Binding RunDiagnosticsCommand}"
                        IsEnabled="{Binding IsNotRunning}"
                        Margin="0,0,8,0" />
 
-            <ui:Button Appearance="Secondary"
+            <ui:Button Grid.Column="4"
+                       Appearance="Secondary"
                        AutomationProperties.AutomationId="Diagnostics_CopyReportButton"
                        Content="{x:Static resources:Strings.CopyReport}"
+                       Icon="{ui:SymbolIcon Copy24}"
                        Command="{Binding CopyReportCommand}"
                        IsEnabled="{Binding IsNotRunning}"
+                       HorizontalAlignment="Left"
                        Margin="0,0,12,0" />
 
-            <ui:ProgressRing IsIndeterminate="True"
+            <ui:ProgressRing Grid.Column="5"
+                             IsIndeterminate="True"
                              Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}"
                              Width="24"
                              Height="24"
                              VerticalAlignment="Center" />
-        </StackPanel>
+        </Grid>
 
-        <!-- Report Text Area -->
-        <ui:TextBox Grid.Row="2"
-                    AutomationProperties.AutomationId="Diagnostics_ReportTextBox"
-                    Text="{Binding ReportText, Mode=OneWay}"
-                    IsReadOnly="True"
-                    TextWrapping="Wrap"
-                    FontFamily="{StaticResource FontFamilyMonospace}"
-                    VerticalScrollBarVisibility="Auto"
-                    HorizontalScrollBarVisibility="Auto" />
+        <!-- Report Output — Terminal-style Card -->
+        <Border Grid.Row="2"
+                Style="{StaticResource ElevatedContainerStyle}"
+                Background="{DynamicResource TerminalBackgroundBrush}">
+            <ui:TextBox AutomationProperties.AutomationId="Diagnostics_ReportTextBox"
+                        Text="{Binding ReportText, Mode=OneWay}"
+                        IsReadOnly="True"
+                        TextWrapping="Wrap"
+                        FontFamily="{StaticResource FontFamilyMonospace}"
+                        FontSize="{StaticResource FontSizeCaption}"
+                        Foreground="{DynamicResource TerminalForegroundBrush}"
+                        Background="{DynamicResource TerminalBackgroundBrush}"
+                        BorderThickness="0"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Auto" />
+        </Border>
     </Grid>
 </Page>

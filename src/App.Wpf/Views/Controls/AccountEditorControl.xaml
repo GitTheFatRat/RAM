@@ -13,13 +13,13 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </UserControl.Resources>
 
-    <StackPanel Margin="0,8,0,0">
-        <TabControl Margin="0,0,0,12">
+    <StackPanel Margin="{StaticResource MarginTopBase}">
+        <TabControl Margin="{StaticResource MarginFieldGap}">
             <!-- General Tab -->
             <TabItem Header="{x:Static resources:Strings.TabGeneral}">
-                <StackPanel Margin="0,12,0,0">
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                <StackPanel Margin="{StaticResource MarginFieldGap}">
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.FieldAlias}"
                                    FontWeight="SemiBold" />
                         <ui:TextBox AutomationProperties.AutomationId="AccountEditor_AliasBox"
@@ -27,8 +27,8 @@
                                     MaxLength="50" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.FieldGroup}"
                                    FontWeight="SemiBold" />
                         <ComboBox AutomationProperties.AutomationId="AccountEditor_GroupBox"
@@ -37,8 +37,8 @@
                                   IsEditable="True" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.FieldNote}"
                                    FontWeight="SemiBold" />
                         <ui:TextBox AutomationProperties.AutomationId="AccountEditor_NoteBox"
@@ -46,8 +46,8 @@
                                     MaxLength="200" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.FieldCookie}"
                                    FontWeight="SemiBold" />
                         <ui:PasswordBox x:Name="CookieBox"
@@ -58,9 +58,9 @@
 
             <!-- Proxy Tab -->
             <TabItem Header="{x:Static resources:Strings.TabProxy}">
-                <StackPanel Margin="0,12,0,0">
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                <StackPanel Margin="{StaticResource MarginFieldGap}">
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.ProxyType}"
                                    FontWeight="SemiBold" />
                         <ComboBox AutomationProperties.AutomationId="AccountEditor_ProxyTypeBox"
@@ -68,8 +68,8 @@
                                   SelectedItem="{Binding SelectedProxyType}" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.ProxyHost}"
                                    FontWeight="SemiBold" />
                         <ui:TextBox AutomationProperties.AutomationId="AccountEditor_ProxyHostBox"
@@ -77,8 +77,8 @@
                                     PlaceholderText="127.0.0.1 or proxy.example.com" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.ProxyPort}"
                                    FontWeight="SemiBold" />
                         <ui:TextBox AutomationProperties.AutomationId="AccountEditor_ProxyPortBox"
@@ -86,16 +86,16 @@
                                     MaxLength="5" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.ProxyUsername}"
                                    FontWeight="SemiBold" />
                         <ui:TextBox AutomationProperties.AutomationId="AccountEditor_ProxyUsernameBox"
                                     Text="{Binding ProxyUsername, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,12">
-                        <TextBlock Margin="0,0,0,4"
+                    <StackPanel Margin="{StaticResource MarginFieldGap}">
+                        <TextBlock Margin="{StaticResource MarginLabelGap}"
                                    Text="{x:Static resources:Strings.ProxyPassword}"
                                    FontWeight="SemiBold" />
                         <ui:PasswordBox x:Name="ProxyPasswordBox"

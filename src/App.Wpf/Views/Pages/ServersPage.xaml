@@ -21,17 +21,16 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Title -->
+        <!-- Page Header -->
         <TextBlock Grid.Row="0"
                    Text="{x:Static res:Strings.ServersPageTitle}"
-                   FontSize="{StaticResource FontSizeTitle}"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                   Margin="{StaticResource MarginMedium}" />
+                   Style="{StaticResource PageTitleStyle}"
+                   Margin="{StaticResource MarginBottomMedium}" />
 
-        <!-- Controls -->
+        <!-- Controls Toolbar -->
         <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -55,7 +54,9 @@
                 <ComboBoxItem Content="{x:Static res:Strings.SortDescending}" />
             </ComboBox>
 
-            <ui:Button Grid.Column="2"
+            <Border Grid.Column="2" Style="{StaticResource ToolbarSeparatorStyle}" />
+
+            <ui:Button Grid.Column="3"
                        AutomationProperties.AutomationId="Servers_RefreshButton"
                        Content="{x:Static res:Strings.Refresh}"
                        Icon="{ui:SymbolIcon ArrowSync24}"
@@ -63,7 +64,7 @@
                        Margin="{StaticResource MarginTight}"
                        Command="{Binding RefreshCommand}" />
 
-            <ui:Button Grid.Column="4"
+            <ui:Button Grid.Column="5"
                        AutomationProperties.AutomationId="Servers_LoadMoreButton"
                        Content="{x:Static res:Strings.LoadMore}"
                        Icon="{ui:SymbolIcon ArrowDown24}"
@@ -72,13 +73,7 @@
         </Grid>
 
         <!-- Data Grid Area: Elevated Container -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource CardBackgroundBrush}"
-                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMedium}"
-                Margin="{StaticResource MarginBase}"
-                ClipToBounds="True">
+        <Border Grid.Row="2" Style="{StaticResource ElevatedContainerStyle}">
             <Grid>
                 <ui:DataGrid ItemsSource="{Binding Servers}"
                              AutomationProperties.AutomationId="Servers_DataGrid"
@@ -108,9 +103,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Id}"
-                                           FontFamily="{StaticResource FontFamilyMonospace}"
-                                           FontSize="{StaticResource FontSizeCaption}"
-                                           VerticalAlignment="Center" />
+                                           Style="{StaticResource MonospaceTextStyle}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -159,61 +152,49 @@
                 </ui:DataGrid.Columns>
             </ui:DataGrid>
 
-            <!-- Loading indicator -->
-            <ProgressBar IsIndeterminate="True"
-                         Height="4"
-                         VerticalAlignment="Top"
-                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
+                <!-- Loading indicator -->
+                <ProgressBar IsIndeterminate="True"
+                             Height="4"
+                             VerticalAlignment="Top"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
 
-            <!-- Empty State Overlay -->
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
-                <ui:SymbolIcon Symbol="Server24"
-                               FontSize="48"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               HorizontalAlignment="Center"
-                               Margin="{StaticResource MarginMedium}" />
-                <TextBlock Text="{x:Static res:Strings.NoServersFound}"
-                           FontSize="{StaticResource FontSizeSubtitle}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginTight}" />
-                <TextBlock Text="{x:Static res:Strings.Servers_EmptyHint}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           HorizontalAlignment="Center" />
-            </StackPanel>
+                <!-- Empty State Overlay -->
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
+                    <ui:SymbolIcon Symbol="Server24"
+                                   FontSize="48"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="{StaticResource MarginMedium}"
+                                   Opacity="0.6" />
+                    <TextBlock Text="{x:Static res:Strings.NoServersFound}"
+                               Style="{StaticResource EmptyStateTitleStyle}" />
+                    <TextBlock Text="{x:Static res:Strings.Servers_EmptyHint}"
+                               Style="{StaticResource EmptyStateHintStyle}" />
+                </StackPanel>
 
-            <!-- Error State with Retry Button -->
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
-                <ui:SymbolIcon Symbol="Warning24"
-                               FontSize="48"
-                               Foreground="{DynamicResource StatusErrorForegroundBrush}"
+                <!-- Error State with Retry Button -->
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                    <ui:SymbolIcon Symbol="Warning24"
+                                   FontSize="48"
+                                   Foreground="{DynamicResource StatusErrorForegroundBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="{StaticResource MarginMedium}" />
+                    <TextBlock Text="{Binding ErrorMessage}"
+                               Style="{StaticResource EmptyStateTitleStyle}" />
+                    <TextBlock Text="{x:Static res:Strings.Servers_ErrorHint}"
+                               Style="{StaticResource EmptyStateHintStyle}" />
+                    <ui:Button Content="{x:Static res:Strings.Retry}"
+                               AutomationProperties.AutomationId="Servers_RetryButton"
+                               Icon="{ui:SymbolIcon ArrowSync24}"
+                               Appearance="Primary"
                                HorizontalAlignment="Center"
-                               Margin="{StaticResource MarginMedium}" />
-                <TextBlock Text="{Binding ErrorMessage}"
-                           FontSize="{StaticResource FontSizeSubtitle}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginTight}" />
-                <TextBlock Text="{x:Static res:Strings.Servers_ErrorHint}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginTight}" />
-                <ui:Button Content="{x:Static res:Strings.Retry}"
-                           AutomationProperties.AutomationId="Servers_RetryButton"
-                           Icon="{ui:SymbolIcon ArrowSync24}"
-                           Appearance="Primary"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginBase}"
-                           Command="{Binding RefreshCommand}" />
-            </StackPanel>
+                               Margin="{StaticResource MarginBase}"
+                               Command="{Binding RefreshCommand}" />
+                </StackPanel>
         </Grid>
     </Border>
 </Grid>

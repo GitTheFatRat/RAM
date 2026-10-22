@@ -4,9 +4,9 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:res="clr-namespace:RbxManager.App.Resources"
              MinWidth="400">
-    <StackPanel Margin="0,8,0,0">
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4"
+    <StackPanel Margin="{StaticResource MarginTopBase}">
+        <StackPanel Margin="{StaticResource MarginFieldGap}">
+            <TextBlock Margin="{StaticResource MarginLabelGap}"
                        Text="{x:Static res:Strings.PlaceIdLabel}"
                        FontWeight="SemiBold" />
             <ui:TextBox x:Name="PlaceIdTextBox"
@@ -14,8 +14,8 @@
                         PreviewTextInput="OnPlaceIdPreviewTextInput" />
         </StackPanel>
 
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4"
+        <StackPanel Margin="{StaticResource MarginFieldGap}">
+            <TextBlock Margin="{StaticResource MarginLabelGap}"
                        Text="{x:Static res:Strings.JobIdLabel}"
                        FontWeight="SemiBold" />
             <ui:TextBox x:Name="JobIdTextBox"
@@ -26,12 +26,12 @@
                    AutomationProperties.AutomationId="LaunchDialog_DryRunButton"
                    Content="{x:Static res:Strings.DryRun}"
                    Click="OnDryRunButtonClick"
-                   Margin="0,0,0,12" />
+                   Margin="{StaticResource MarginFieldGap}" />
 
         <StackPanel x:Name="DryRunResultPanel"
-                    Margin="0,0,0,12"
+                    Margin="{StaticResource MarginFieldGap}"
                     Visibility="Collapsed">
-            <TextBlock Margin="0,0,0,4"
+            <TextBlock Margin="{StaticResource MarginLabelGap}"
                        Text="{x:Static res:Strings.DryRunResultTitle}"
                        FontWeight="SemiBold" />
             <ui:TextBox x:Name="DryRunResultTextBox"

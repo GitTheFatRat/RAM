@@ -2,12 +2,20 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
-    <!-- Spacing Scale (8px grid, 4px tight) -->
+    <!-- ══════════════════════════════════════════════════════════════════
+         MODULE 1: GLOBAL DESIGN SYSTEM — Spacing, Typography, Shape
+         8px baseline grid (4px tight, 2px micro)
+         ══════════════════════════════════════════════════════════════════ -->
+
+    <!-- Spacing Scale -->
     <sys:Double x:Key="SpacingTight">4</sys:Double>
     <sys:Double x:Key="SpacingBase">8</sys:Double>
     <sys:Double x:Key="SpacingMedium">16</sys:Double>
     <sys:Double x:Key="SpacingLarge">24</sys:Double>
     <sys:Double x:Key="SpacingXLarge">32</sys:Double>
+    <sys:Double x:Key="SpacingCompact">2</sys:Double>
+    <sys:Double x:Key="SpacingRelaxed">6</sys:Double>
+    <sys:Double x:Key="SpacingSection">10</sys:Double>
 
     <Thickness x:Key="PaddingTight">4</Thickness>
     <Thickness x:Key="PaddingBase">8</Thickness>
@@ -18,11 +26,18 @@
     <Thickness x:Key="MarginMedium">16</Thickness>
     <Thickness x:Key="MarginBottomMedium">0,0,0,16</Thickness>
     <Thickness x:Key="MarginLarge">24</Thickness>
+    <Thickness x:Key="MarginTopSection">0,12,0,0</Thickness>
+    <Thickness x:Key="MarginBottomSection">0,0,0,12</Thickness>
+    <Thickness x:Key="MarginTopBase">0,8,0,0</Thickness>
+    <Thickness x:Key="MarginFieldGap">0,0,0,12</Thickness>
+    <Thickness x:Key="MarginLabelGap">0,0,0,4</Thickness>
+    <Thickness x:Key="PaddingDialog">16</Thickness>
 
     <!-- Corner Radii -->
     <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
     <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
     <CornerRadius x:Key="RadiusLarge">12</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">9999</CornerRadius>
 
     <!-- Typography Scale: 12 / 14 / 16 / 20 / 28 -->
     <sys:Double x:Key="FontSizeCaption">12</sys:Double>
@@ -34,106 +49,284 @@
     <FontFamily x:Key="FontFamilyPrimary">Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
     <FontFamily x:Key="FontFamilyMonospace">Cascadia Mono, Consolas, Courier New, monospace</FontFamily>
 
-    <!-- Theme Contrast Colors (Dark Palette: Default) -->
-    <Color x:Key="ApplicationBackgroundDarkColor">#111111</Color>
-    <Color x:Key="CardBackgroundDarkColor">#2D2D2D</Color>
-    <Color x:Key="ControlFillColorDefaultDarkColor">#2D2D2D</Color>
-    <Color x:Key="ControlFillColorSecondaryDarkColor">#363636</Color>
-    <Color x:Key="ControlFillColorTertiaryDarkColor">#444444</Color>
-    <Color x:Key="TextFillColorPrimaryDarkColor">#FFFFFF</Color>
-    <Color x:Key="TextFillColorSecondaryDarkColor">#CCCCCC</Color>
-    <Color x:Key="DataGridRowAlternatingDarkColor">#222222</Color>
-    <Color x:Key="DataGridHeaderBorderDarkColor">#383838</Color>
-    <Color x:Key="DividerStrokeColorDefaultDarkColor">#383838</Color>
+    <!-- DataGrid compact row height -->
+    <sys:Double x:Key="DataGridRowHeightCompact">36</sys:Double>
 
-    <!-- Status Colors (Dark Palette: High Contrast) -->
-    <Color x:Key="StatusValidForegroundDarkColor">#FFFFFF</Color>
-    <Color x:Key="StatusValidBackgroundDarkColor">#1B5E20</Color>
-    <Color x:Key="StatusValidBorderDarkColor">#4CAF50</Color>
+    <!-- ══════════════════════════════════════════════════════════════════
+         DARK PALETTE — Premium Blue-Slate Foundation
+         Cooler undertones for depth and sophistication
+         ══════════════════════════════════════════════════════════════════ -->
 
-    <Color x:Key="StatusExpiredForegroundDarkColor">#FFFFFF</Color>
-    <Color x:Key="StatusExpiredBackgroundDarkColor">#B71C1C</Color>
-    <Color x:Key="StatusExpiredBorderDarkColor">#EF5350</Color>
+    <!-- Surface Hierarchy (Dark) -->
+    <Color x:Key="ApplicationBackgroundDarkColor">#0A0E1A</Color>
+    <Color x:Key="CardBackgroundDarkColor">#151C2C</Color>
+    <Color x:Key="ControlFillColorDefaultDarkColor">#151C2C</Color>
+    <Color x:Key="ControlFillColorSecondaryDarkColor">#1E293B</Color>
+    <Color x:Key="ControlFillColorTertiaryDarkColor">#334155</Color>
+    <Color x:Key="NavigationPaneBackgroundDarkColor">#070B14</Color>
+    <Color x:Key="SurfaceElevatedDarkColor">#1E293B</Color>
 
-    <Color x:Key="StatusErrorForegroundDarkColor">#FFFFFF</Color>
-    <Color x:Key="StatusErrorBackgroundDarkColor">#B71C1C</Color>
-    <Color x:Key="StatusErrorBorderDarkColor">#EF5350</Color>
+    <!-- Text (Dark) -->
+    <Color x:Key="TextFillColorPrimaryDarkColor">#F1F5F9</Color>
+    <Color x:Key="TextFillColorSecondaryDarkColor">#94A3B8</Color>
 
-    <Color x:Key="StatusUnknownForegroundDarkColor">#FFFFFF</Color>
-    <Color x:Key="StatusUnknownBackgroundDarkColor">#37474F</Color>
-    <Color x:Key="StatusUnknownBorderDarkColor">#78909C</Color>
+    <!-- Borders & Dividers (Dark) -->
+    <Color x:Key="DataGridRowAlternatingDarkColor">#111827</Color>
+    <Color x:Key="DataGridHeaderBorderDarkColor">#1E293B</Color>
+    <Color x:Key="DividerStrokeColorDefaultDarkColor">#1E293B</Color>
 
-    <Color x:Key="StatusRunningForegroundDarkColor">#FFFFFF</Color>
-    <Color x:Key="StatusRunningBackgroundDarkColor">#0D47A1</Color>
-    <Color x:Key="StatusRunningBorderDarkColor">#42A5F5</Color>
+    <!-- Accent (Dark) -->
+    <Color x:Key="AccentDarkColor">#6366F1</Color>
+    <Color x:Key="AccentHoverDarkColor">#4F46E5</Color>
+    <Color x:Key="AccentSubtleDarkColor">#1E1B4B</Color>
+    <Color x:Key="AccentForegroundDarkColor">#FFFFFF</Color>
 
-    <!-- Theme Contrast Colors (Light Palette) -->
-    <Color x:Key="ApplicationBackgroundLightColor">#F4F4F4</Color>
+    <!-- Status: Valid / Success — Emerald (Dark) -->
+    <Color x:Key="StatusValidForegroundDarkColor">#34D399</Color>
+    <Color x:Key="StatusValidBackgroundDarkColor">#052E16</Color>
+    <Color x:Key="StatusValidBorderDarkColor">#059669</Color>
+
+    <!-- Status: Expired / Warning — Amber (Dark) -->
+    <Color x:Key="StatusExpiredForegroundDarkColor">#FBBF24</Color>
+    <Color x:Key="StatusExpiredBackgroundDarkColor">#451A03</Color>
+    <Color x:Key="StatusExpiredBorderDarkColor">#D97706</Color>
+
+    <!-- Status: Error / Danger — Rose (Dark) -->
+    <Color x:Key="StatusErrorForegroundDarkColor">#FB7185</Color>
+    <Color x:Key="StatusErrorBackgroundDarkColor">#4C0519</Color>
+    <Color x:Key="StatusErrorBorderDarkColor">#E11D48</Color>
+
+    <!-- Status: Unknown — Slate Neutral (Dark) -->
+    <Color x:Key="StatusUnknownForegroundDarkColor">#94A3B8</Color>
+    <Color x:Key="StatusUnknownBackgroundDarkColor">#1E293B</Color>
+    <Color x:Key="StatusUnknownBorderDarkColor">#475569</Color>
+
+    <!-- Status: Running — Sky Blue (Dark) -->
+    <Color x:Key="StatusRunningForegroundDarkColor">#38BDF8</Color>
+    <Color x:Key="StatusRunningBackgroundDarkColor">#0C2D57</Color>
+    <Color x:Key="StatusRunningBorderDarkColor">#0284C7</Color>
+
+    <!-- Terminal / Log viewer (Dark) -->
+    <Color x:Key="TerminalBackgroundDarkColor">#070B14</Color>
+    <Color x:Key="TerminalForegroundDarkColor">#CBD5E1</Color>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         LIGHT PALETTE — Cool Modern White
+         ══════════════════════════════════════════════════════════════════ -->
+
+    <!-- Surface Hierarchy (Light) -->
+    <Color x:Key="ApplicationBackgroundLightColor">#F8FAFC</Color>
     <Color x:Key="CardBackgroundLightColor">#FFFFFF</Color>
     <Color x:Key="ControlFillColorDefaultLightColor">#FFFFFF</Color>
-    <Color x:Key="ControlFillColorSecondaryLightColor">#E8E8E8</Color>
-    <Color x:Key="ControlFillColorTertiaryLightColor">#DCDCDC</Color>
-    <Color x:Key="TextFillColorPrimaryLightColor">#161616</Color>
-    <Color x:Key="TextFillColorSecondaryLightColor">#5C5C5C</Color>
-    <Color x:Key="DataGridRowAlternatingLightColor">#FAFAFA</Color>
-    <Color x:Key="DataGridHeaderBorderLightColor">#D0D0D0</Color>
-    <Color x:Key="DividerStrokeColorDefaultLightColor">#E0E0E0</Color>
+    <Color x:Key="ControlFillColorSecondaryLightColor">#F1F5F9</Color>
+    <Color x:Key="ControlFillColorTertiaryLightColor">#E2E8F0</Color>
+    <Color x:Key="NavigationPaneBackgroundLightColor">#F1F5F9</Color>
+    <Color x:Key="SurfaceElevatedLightColor">#FFFFFF</Color>
 
-    <!-- Status Colors (Light Palette) -->
-    <Color x:Key="StatusValidForegroundLightColor">#1B5E20</Color>
-    <Color x:Key="StatusValidBackgroundLightColor">#E8F5E9</Color>
-    <Color x:Key="StatusValidBorderLightColor">#A5D6A7</Color>
+    <!-- Text (Light) -->
+    <Color x:Key="TextFillColorPrimaryLightColor">#0F172A</Color>
+    <Color x:Key="TextFillColorSecondaryLightColor">#64748B</Color>
 
-    <Color x:Key="StatusExpiredForegroundLightColor">#993D00</Color>
-    <Color x:Key="StatusExpiredBackgroundLightColor">#FFF3E0</Color>
-    <Color x:Key="StatusExpiredBorderLightColor">#FFCC80</Color>
+    <!-- Borders & Dividers (Light) -->
+    <Color x:Key="DataGridRowAlternatingLightColor">#F8FAFC</Color>
+    <Color x:Key="DataGridHeaderBorderLightColor">#E2E8F0</Color>
+    <Color x:Key="DividerStrokeColorDefaultLightColor">#E2E8F0</Color>
 
-    <Color x:Key="StatusErrorForegroundLightColor">#B71C1C</Color>
-    <Color x:Key="StatusErrorBackgroundLightColor">#FFEBEE</Color>
-    <Color x:Key="StatusErrorBorderLightColor">#EF9A9A</Color>
+    <!-- Accent (Light) -->
+    <Color x:Key="AccentLightColor">#4F46E5</Color>
+    <Color x:Key="AccentHoverLightColor">#4338CA</Color>
+    <Color x:Key="AccentSubtleLightColor">#EEF2FF</Color>
+    <Color x:Key="AccentForegroundLightColor">#FFFFFF</Color>
 
-    <Color x:Key="StatusUnknownForegroundLightColor">#37474F</Color>
-    <Color x:Key="StatusUnknownBackgroundLightColor">#ECEFF1</Color>
-    <Color x:Key="StatusUnknownBorderLightColor">#B0BEC5</Color>
+    <!-- Status: Valid (Light) -->
+    <Color x:Key="StatusValidForegroundLightColor">#065F46</Color>
+    <Color x:Key="StatusValidBackgroundLightColor">#ECFDF5</Color>
+    <Color x:Key="StatusValidBorderLightColor">#A7F3D0</Color>
 
-    <Color x:Key="StatusRunningForegroundLightColor">#0D47A1</Color>
-    <Color x:Key="StatusRunningBackgroundLightColor">#E3F2FD</Color>
-    <Color x:Key="StatusRunningBorderLightColor">#90CAF9</Color>
+    <!-- Status: Expired (Light) -->
+    <Color x:Key="StatusExpiredForegroundLightColor">#92400E</Color>
+    <Color x:Key="StatusExpiredBackgroundLightColor">#FFFBEB</Color>
+    <Color x:Key="StatusExpiredBorderLightColor">#FDE68A</Color>
 
-    <!-- Active Dynamic Brushes (Default to Dark) -->
+    <!-- Status: Error (Light) -->
+    <Color x:Key="StatusErrorForegroundLightColor">#9F1239</Color>
+    <Color x:Key="StatusErrorBackgroundLightColor">#FFF1F2</Color>
+    <Color x:Key="StatusErrorBorderLightColor">#FECDD3</Color>
+
+    <!-- Status: Unknown (Light) -->
+    <Color x:Key="StatusUnknownForegroundLightColor">#475569</Color>
+    <Color x:Key="StatusUnknownBackgroundLightColor">#F1F5F9</Color>
+    <Color x:Key="StatusUnknownBorderLightColor">#CBD5E1</Color>
+
+    <!-- Status: Running (Light) -->
+    <Color x:Key="StatusRunningForegroundLightColor">#1E40AF</Color>
+    <Color x:Key="StatusRunningBackgroundLightColor">#EFF6FF</Color>
+    <Color x:Key="StatusRunningBorderLightColor">#93C5FD</Color>
+
+    <!-- Terminal / Log viewer (Light) -->
+    <Color x:Key="TerminalBackgroundLightColor">#1E293B</Color>
+    <Color x:Key="TerminalForegroundLightColor">#E2E8F0</Color>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         ACTIVE DYNAMIC BRUSHES (Default to Dark)
+         ══════════════════════════════════════════════════════════════════ -->
+
+    <!-- Surface Brushes -->
     <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="{StaticResource ApplicationBackgroundDarkColor}" />
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundDarkColor}" />
     <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="{StaticResource CardBackgroundDarkColor}" />
     <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="{StaticResource ControlFillColorDefaultDarkColor}" />
     <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="{StaticResource ControlFillColorSecondaryDarkColor}" />
     <SolidColorBrush x:Key="ControlFillColorTertiaryBrush" Color="{StaticResource ControlFillColorTertiaryDarkColor}" />
+    <SolidColorBrush x:Key="NavigationPaneBackgroundBrush" Color="{StaticResource NavigationPaneBackgroundDarkColor}" />
+    <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="{StaticResource SurfaceElevatedDarkColor}" />
+
+    <!-- Text Brushes -->
     <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="{StaticResource TextFillColorPrimaryDarkColor}" />
     <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="{StaticResource TextFillColorSecondaryDarkColor}" />
+
+    <!-- DataGrid & Divider Brushes -->
     <SolidColorBrush x:Key="DataGridRowAlternatingBrush" Color="{StaticResource DataGridRowAlternatingDarkColor}" />
     <SolidColorBrush x:Key="DataGridHeaderBorderBrush" Color="{StaticResource DataGridHeaderBorderDarkColor}" />
     <SolidColorBrush x:Key="DividerStrokeColorDefaultBrush" Color="{StaticResource DividerStrokeColorDefaultDarkColor}" />
 
+    <!-- Accent Brushes -->
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentDarkColor}" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverDarkColor}" />
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource AccentSubtleDarkColor}" />
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="{StaticResource AccentForegroundDarkColor}" />
+
+    <!-- Status Brushes: Valid -->
     <SolidColorBrush x:Key="StatusValidForegroundBrush" Color="{StaticResource StatusValidForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusValidBackgroundBrush" Color="{StaticResource StatusValidBackgroundDarkColor}" />
     <SolidColorBrush x:Key="StatusValidBorderBrush" Color="{StaticResource StatusValidBorderDarkColor}" />
 
+    <!-- Status Brushes: Expired -->
     <SolidColorBrush x:Key="StatusExpiredForegroundBrush" Color="{StaticResource StatusExpiredForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusExpiredBackgroundBrush" Color="{StaticResource StatusExpiredBackgroundDarkColor}" />
     <SolidColorBrush x:Key="StatusExpiredBorderBrush" Color="{StaticResource StatusExpiredBorderDarkColor}" />
 
+    <!-- Status Brushes: Error -->
     <SolidColorBrush x:Key="StatusErrorForegroundBrush" Color="{StaticResource StatusErrorForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusErrorBackgroundBrush" Color="{StaticResource StatusErrorBackgroundDarkColor}" />
     <SolidColorBrush x:Key="StatusErrorBorderBrush" Color="{StaticResource StatusErrorBorderDarkColor}" />
 
+    <!-- Status Brushes: Unknown -->
     <SolidColorBrush x:Key="StatusUnknownForegroundBrush" Color="{StaticResource StatusUnknownForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusUnknownBackgroundBrush" Color="{StaticResource StatusUnknownBackgroundDarkColor}" />
     <SolidColorBrush x:Key="StatusUnknownBorderBrush" Color="{StaticResource StatusUnknownBorderDarkColor}" />
 
+    <!-- Status Brushes: Running -->
     <SolidColorBrush x:Key="StatusRunningForegroundBrush" Color="{StaticResource StatusRunningForegroundDarkColor}" />
     <SolidColorBrush x:Key="StatusRunningBackgroundBrush" Color="{StaticResource StatusRunningBackgroundDarkColor}" />
     <SolidColorBrush x:Key="StatusRunningBorderBrush" Color="{StaticResource StatusRunningBorderDarkColor}" />
 
-    <!-- DataGrid Column Header High Legibility Style -->
+    <!-- Terminal Brushes -->
+    <SolidColorBrush x:Key="TerminalBackgroundBrush" Color="{StaticResource TerminalBackgroundDarkColor}" />
+    <SolidColorBrush x:Key="TerminalForegroundBrush" Color="{StaticResource TerminalForegroundDarkColor}" />
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         MODULE 3: REUSABLE COMPONENT STYLES
+         ══════════════════════════════════════════════════════════════════ -->
+
+    <!-- Page Title TextBlock Style -->
+    <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <!-- Page Subtitle / Description TextBlock -->
+    <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
+    <!-- Section Header within cards -->
+    <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSubtitle}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Margin" Value="{StaticResource MarginTight}" />
+    </Style>
+
+    <!-- Setting Description / Helper text -->
+    <Style x:Key="DescriptionTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="{StaticResource MarginTight}" />
+    </Style>
+
+    <!-- Monospace text for IDs, PIDs, technical values -->
+    <Style x:Key="MonospaceTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilyMonospace}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Premium Settings Card Border Style -->
+    <Style x:Key="SettingsCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+        <Setter Property="Padding" Value="{StaticResource PaddingMedium}" />
+        <Setter Property="Margin" Value="{StaticResource MarginBottomMedium}" />
+    </Style>
+
+    <!-- Elevated Content Container (DataGrid wrapper, report viewer) -->
+    <Style x:Key="ElevatedContainerStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+        <Setter Property="Margin" Value="{StaticResource MarginBase}" />
+        <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+
+    <!-- Empty State Icon Style -->
+    <Style x:Key="EmptyStateIconStyle" TargetType="ContentControl">
+        <Setter Property="FontSize" Value="48" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="{StaticResource MarginMedium}" />
+        <Setter Property="Opacity" Value="0.6" />
+    </Style>
+
+    <!-- Empty State Title -->
+    <Style x:Key="EmptyStateTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSubtitle}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="{StaticResource MarginTight}" />
+    </Style>
+
+    <!-- Empty State Hint -->
+    <Style x:Key="EmptyStateHintStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="{StaticResource MarginMedium}" />
+    </Style>
+
+    <!-- Toolbar Visual Separator -->
+    <Style x:Key="ToolbarSeparatorStyle" TargetType="Border">
+        <Setter Property="Width" Value="1" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Background" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+        <Setter Property="Margin" Value="8,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         DataGrid Column Header — High Legibility with Accent Sort
+         ══════════════════════════════════════════════════════════════════ -->
+
     <Style x:Key="HighContrastColumnHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -154,7 +347,7 @@
 
     <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HighContrastColumnHeaderStyle}" />
 
-    <!-- DataGrid Row Style: Force Dark Elevated Background & High Legibility Foreground -->
+    <!-- DataGrid Row — Premium Dark Elevated with Smooth Hover -->
     <Style x:Key="HighContrastDataGridRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
         <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -175,7 +368,7 @@
 
     <Style TargetType="DataGridRow" BasedOn="{StaticResource HighContrastDataGridRowStyle}" />
 
-    <!-- DataGrid Cell Style: Ensure Text Color is Legible on Dark -->
+    <!-- DataGrid Cell — Clean Transparent with Legible Text -->
     <Style x:Key="HighContrastDataGridCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         <Setter Property="Background" Value="Transparent" />

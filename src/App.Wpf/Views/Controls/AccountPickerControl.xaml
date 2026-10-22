@@ -4,7 +4,7 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              MinWidth="380"
              MaxHeight="400">
-    <Grid Margin="0,8,0,0">
+    <Grid Margin="{StaticResource MarginTopBase}">
         <ListView x:Name="AccountsListView"
                   AutomationProperties.AutomationId="AccountPicker_ListView"
                   SelectionMode="Multiple"
@@ -14,9 +14,9 @@
                     <CheckBox IsChecked="{Binding IsSelected}"
                               AutomationProperties.AutomationId="AccountPicker_ItemCheckBox"
                               AutomationProperties.Name="{Binding Account.Alias}"
-                              Margin="0,4">
+                              Margin="{StaticResource MarginTight}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding Account.Alias}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                            <TextBlock Text="{Binding Account.Alias}" FontWeight="SemiBold" Margin="{StaticResource MarginBase}" />
                             <TextBlock Text="{Binding Account.Username}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                     </CheckBox>

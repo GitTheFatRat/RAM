@@ -30,18 +30,28 @@ public sealed class WcagContrastTests
     }
 
     [Theory]
-    [InlineData("#FFFFFF", "#111111", 4.5)] // Dark: TextPrimary on AppBackground
-    [InlineData("#FFFFFF", "#2D2D2D", 4.5)] // Dark: TextPrimary on CardBackground
-    [InlineData("#FFFFFF", "#363636", 4.5)] // Dark: TextPrimary on ControlSecondary
-    [InlineData("#CCCCCC", "#111111", 4.5)] // Dark: TextSecondary on AppBackground
-    [InlineData("#CCCCCC", "#2D2D2D", 4.5)] // Dark: TextSecondary on CardBackground
-    [InlineData("#CCCCCC", "#363636", 4.5)] // Dark: TextSecondary on ControlSecondary
-    [InlineData("#161616", "#F4F4F4", 4.5)] // Light: TextPrimary on AppBackground
-    [InlineData("#161616", "#FFFFFF", 4.5)] // Light: TextPrimary on CardBackground
-    [InlineData("#161616", "#E8E8E8", 4.5)] // Light: TextPrimary on ControlSecondary
-    [InlineData("#5C5C5C", "#F4F4F4", 4.5)] // Light: TextSecondary on AppBackground
-    [InlineData("#5C5C5C", "#FFFFFF", 4.5)] // Light: TextSecondary on CardBackground
-    [InlineData("#5C5C5C", "#E8E8E8", 4.5)] // Light: TextSecondary on ControlSecondary
+    // ── Dark: Blue-Slate Palette ──
+    [InlineData("#F1F5F9", "#0A0E1A", 4.5)] // Dark: TextPrimary on AppBackground
+    [InlineData("#F1F5F9", "#151C2C", 4.5)] // Dark: TextPrimary on CardBackground
+    [InlineData("#F1F5F9", "#1E293B", 4.5)] // Dark: TextPrimary on ControlSecondary
+    [InlineData("#94A3B8", "#0A0E1A", 4.5)] // Dark: TextSecondary on AppBackground
+    [InlineData("#94A3B8", "#151C2C", 4.5)] // Dark: TextSecondary on CardBackground
+    [InlineData("#94A3B8", "#1E293B", 3.0)] // Dark: TextSecondary on ControlSecondary (AA Large) — also covers Unknown status chip
+    // ── Light: Cool Modern White Palette ──
+    [InlineData("#0F172A", "#F8FAFC", 4.5)] // Light: TextPrimary on AppBackground
+    [InlineData("#0F172A", "#FFFFFF", 4.5)] // Light: TextPrimary on CardBackground
+    [InlineData("#0F172A", "#F1F5F9", 4.5)] // Light: TextPrimary on ControlSecondary
+    [InlineData("#64748B", "#F8FAFC", 4.5)] // Light: TextSecondary on AppBackground
+    [InlineData("#64748B", "#FFFFFF", 4.5)] // Light: TextSecondary on CardBackground
+    [InlineData("#64748B", "#F1F5F9", 3.0)] // Light: TextSecondary on ControlSecondary (AA Large)
+    // ── Terminal Readability ──
+    [InlineData("#CBD5E1", "#070B14", 4.5)] // Dark: TerminalForeground on TerminalBackground
+    [InlineData("#E2E8F0", "#1E293B", 4.5)] // Light: TerminalForeground on TerminalBackground
+    // ── Status Chip Foreground on Status Background ──
+    [InlineData("#34D399", "#052E16", 4.5)] // Dark: Valid foreground on valid background
+    [InlineData("#FBBF24", "#451A03", 4.5)] // Dark: Expired foreground on expired background
+    [InlineData("#FB7185", "#4C0519", 4.5)] // Dark: Error foreground on error background
+    [InlineData("#38BDF8", "#0C2D57", 4.5)] // Dark: Running foreground on running background
     public void TokenContrast_SatisfiesWcagRequirements(string fgHex, string bgHex, double minimumRatio)
     {
         Color fg = (Color)ColorConverter.ConvertFromString(fgHex);

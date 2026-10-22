@@ -8,26 +8,17 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="{StaticResource MarginLarge}" MaxWidth="720" HorizontalAlignment="Left">
             <TextBlock Text="{x:Static resources:Strings.SettingsPageTitle}"
-                       FontSize="{StaticResource FontSizeTitle}"
-                       FontWeight="SemiBold"
-                       Margin="{StaticResource MarginMedium}" />
+                       Style="{StaticResource PageTitleStyle}"
+                       Margin="{StaticResource MarginBottomMedium}" />
 
             <!-- Card 1: Appearance -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.AppearanceSectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.AppearanceSectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <!-- Language Setting -->
                     <TextBlock Text="{x:Static resources:Strings.LanguageLabel}"
@@ -64,21 +55,13 @@
             </Border>
 
             <!-- Card 2: Launching -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.LaunchingSectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.LaunchingSectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <!-- Launch Delay Setting -->
                     <TextBlock Text="{x:Static resources:Strings.LaunchDelayLabel}"
@@ -95,21 +78,13 @@
             </Border>
 
             <!-- Card 3: Auto-rejoin -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <!-- Rejoin Delay Setting -->
                     <TextBlock Text="{x:Static resources:Strings.RejoinDelayLabel}"
@@ -144,10 +119,7 @@
                                      Margin="{StaticResource MarginBase}" />
 
                     <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHoppingDescription}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginTight}"
-                               TextWrapping="Wrap" />
+                               Style="{StaticResource DescriptionTextStyle}" />
 
                     <!-- Ghost Disconnect Detection -->
                     <TextBlock Text="{x:Static resources:Strings.GhostDisconnectMode}"
@@ -166,29 +138,18 @@
                     </ComboBox>
 
                     <TextBlock Text="{x:Static resources:Strings.GhostDisconnectModeDescription}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginTight}"
-                               TextWrapping="Wrap" />
+                               Style="{StaticResource DescriptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <!-- Card 4: Multi-Instance -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <CheckBox Content="{x:Static resources:Strings.MultiInstanceLabel}"
                               AutomationProperties.AutomationId="Settings_MultiInstanceToggle"
@@ -196,7 +157,7 @@
                               IsEnabled="{Binding IsMultiInstanceAvailable}"
                               Margin="{StaticResource MarginBase}" />
 
-                    <!-- Risk text next to toggle -->
+                    <!-- Risk warning banner -->
                     <Border Background="{DynamicResource StatusExpiredBackgroundBrush}"
                             BorderBrush="{DynamicResource StatusExpiredBorderBrush}"
                             BorderThickness="1"
@@ -212,21 +173,13 @@
             </Border>
 
             <!-- Card: Security -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.SecuritySectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.SecuritySectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <CheckBox Content="{x:Static resources:Strings.EnableMasterPassword}"
                               AutomationProperties.AutomationId="Settings_MasterPasswordToggle"
@@ -236,29 +189,18 @@
                               Margin="{StaticResource MarginTight}" />
 
                     <TextBlock Text="{x:Static resources:Strings.EnableMasterPasswordDescription}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginTight}"
-                               TextWrapping="Wrap" />
+                               Style="{StaticResource DescriptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <!-- Card: Performance & Optimization -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <CheckBox Content="{x:Static resources:Strings.ThrottleBackgroundRoblox}"
                               AutomationProperties.AutomationId="Settings_ThrottleRobloxCheckbox"
@@ -268,10 +210,7 @@
                               Margin="{StaticResource MarginTight}" />
 
                     <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRobloxDescription}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginTight}"
-                               TextWrapping="Wrap" />
+                               Style="{StaticResource DescriptionTextStyle}" />
 
                     <!-- Smart RAM Cleaner -->
                     <ui:ToggleSwitch Content="{x:Static resources:Strings.EnableRamCleaner}"
@@ -282,10 +221,7 @@
                                      Margin="{StaticResource MarginBase}" />
 
                     <TextBlock Text="{x:Static resources:Strings.EnableRamCleanerDescription}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginTight}"
-                               TextWrapping="Wrap" />
+                               Style="{StaticResource DescriptionTextStyle}" />
 
                     <TextBlock Text="{x:Static resources:Strings.RamCleanerInterval}"
                                FontWeight="Medium"
@@ -308,29 +244,18 @@
                     </StackPanel>
 
                     <TextBlock Text="{x:Static resources:Strings.RamCleanerIntervalDescription}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginTight}"
-                               TextWrapping="Wrap" />
+                               Style="{StaticResource DescriptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <!-- Card: Backup & Restore -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.BackupSectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.BackupSectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <StackPanel Orientation="Horizontal" Margin="{StaticResource MarginTight}">
                         <ui:Button Content="{x:Static resources:Strings.ExportBackup}"
@@ -347,31 +272,21 @@
                 </StackPanel>
             </Border>
 
-            <!-- Card 6: Advanced -->
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusMedium}"
-                    Padding="{StaticResource PaddingMedium}"
-                    Margin="0,0,0,16">
+            <!-- Card: Advanced -->
+            <Border Style="{StaticResource SettingsCardStyle}">
                 <StackPanel>
                     <TextBlock Text="{x:Static resources:Strings.AdvancedSectionTitle}"
-                               FontSize="{StaticResource FontSizeSubtitle}"
-                               FontWeight="SemiBold"
-                               Margin="{StaticResource MarginTight}" />
+                               Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock Text="{x:Static resources:Strings.AdvancedSectionSubtitle}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="{StaticResource MarginMedium}" />
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Margin="{StaticResource MarginBottomMedium}" />
 
                     <TextBlock Text="{x:Static resources:Strings.LaunchUriTemplateStatus}"
                                FontWeight="SemiBold"
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginTight}" />
                     <TextBlock Text="{Binding LaunchUriTemplateStatus}"
-                               FontFamily="{StaticResource FontFamilyMonospace}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Style="{StaticResource MonospaceTextStyle}"
                                Margin="{StaticResource MarginBase}" />
 
                     <TextBlock Text="{x:Static resources:Strings.PlaceLauncherUrlTemplateStatus}"
@@ -379,9 +294,7 @@
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="{StaticResource MarginTight}" />
                     <TextBlock Text="{Binding PlaceLauncherUrlTemplateStatus}"
-                               FontFamily="{StaticResource FontFamilyMonospace}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Style="{StaticResource MonospaceTextStyle}"
                                Margin="{StaticResource MarginTight}" />
                 </StackPanel>
             </Border>

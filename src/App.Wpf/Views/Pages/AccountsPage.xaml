@@ -24,13 +24,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Title Header -->
+        <!-- Page Header -->
         <TextBlock Grid.Row="0"
                    Text="{x:Static resources:Strings.AccountsPageTitle}"
-                   FontSize="{StaticResource FontSizeTitle}"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                   Margin="{StaticResource MarginMedium}" />
+                   Style="{StaticResource PageTitleStyle}"
+                   Margin="{StaticResource MarginBottomMedium}" />
 
         <!-- Controls Bar 1: Search + Primary & More Toolbar -->
         <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
@@ -53,7 +51,7 @@
             <!-- Toolbar Actions -->
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
-                        Margin="{StaticResource MarginMedium}">
+                        VerticalAlignment="Center">
                 <!-- Primary Action: Launch (Accent) -->
                 <ui:Button Content="{x:Static resources:Strings.Launch}"
                            AutomationProperties.AutomationId="Accounts_LaunchButton"
@@ -62,6 +60,8 @@
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchAccountCommand}"
                            IsEnabled="{Binding IsAccountSelected}" />
+
+                <Border Style="{StaticResource ToolbarSeparatorStyle}" />
 
                 <!-- Add Split Button (Add via Login default + Options) -->
                 <Grid Margin="{StaticResource MarginTight}">
@@ -100,6 +100,8 @@
                         </ui:Button.ContextMenu>
                     </ui:Button>
                 </Grid>
+
+                <Border Style="{StaticResource ToolbarSeparatorStyle}" />
 
                 <!-- More Actions Menu -->
                 <ui:Button Content="{x:Static resources:Strings.MoreActions}"
@@ -220,7 +222,7 @@
             <!-- Bulk Launch Actions -->
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
-                        Margin="{StaticResource MarginMedium}">
+                        VerticalAlignment="Center">
                 <ui:Button Content="{x:Static resources:Strings.LaunchSelected}"
                            AutomationProperties.AutomationId="Accounts_LaunchSelectedButton"
                            Icon="{ui:SymbolIcon PlayCircle24}"
@@ -256,13 +258,7 @@
         </Grid>
 
         <!-- Main Content Area: High-Density Virtualized DataGrid Elevated Card -->
-        <Border Grid.Row="4"
-                Background="{DynamicResource CardBackgroundBrush}"
-                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMedium}"
-                Margin="{StaticResource MarginBase}"
-                ClipToBounds="True">
+        <Border Grid.Row="4" Style="{StaticResource ElevatedContainerStyle}">
             <Grid>
                 <ui:DataGrid x:Name="AccountsDataGrid"
                              AutomationProperties.AutomationId="Accounts_DataGrid"
@@ -374,7 +370,6 @@
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="BorderThickness" Value="1" />
-                                            <!-- Default Unknown -->
                                             <Setter Property="Background" Value="{DynamicResource StatusUnknownBackgroundBrush}" />
                                             <Setter Property="BorderBrush" Value="{DynamicResource StatusUnknownBorderBrush}" />
                                             <Style.Triggers>
@@ -463,70 +458,58 @@
                 </ui:DataGrid.Columns>
             </ui:DataGrid>
 
-            <!-- Empty State 1: No Accounts in Vault -->
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Visibility="{Binding IsNoAccounts, Converter={StaticResource BoolToVis}}">
-                <ui:SymbolIcon Symbol="PersonQuestionMark24"
-                               FontSize="48"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               HorizontalAlignment="Center"
-                               Margin="{StaticResource MarginMedium}" />
-                <TextBlock Text="{x:Static resources:Strings.EmptyAccountsList}"
-                           FontSize="{StaticResource FontSizeSubtitle}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginTight}" />
-                <TextBlock Text="{x:Static resources:Strings.EmptyAccountsHint}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginMedium}" />
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            Margin="{StaticResource MarginBase}">
-                    <ui:Button Content="{x:Static resources:Strings.AddViaLogin}"
-                               AutomationProperties.AutomationId="Accounts_EmptyAddViaLoginButton"
-                               Icon="{ui:SymbolIcon PersonAdd24}"
-                               Appearance="Primary"
-                               Margin="{StaticResource MarginTight}"
-                               Command="{Binding AddViaLoginCommand}" />
-                    <ui:Button Content="{x:Static resources:Strings.AddViaCookie}"
-                               AutomationProperties.AutomationId="Accounts_EmptyAddViaCookieButton"
-                               Icon="{ui:SymbolIcon Key24}"
-                               Margin="{StaticResource MarginTight}"
-                               Command="{Binding AddAccountCommand}" />
+                <!-- Empty State 1: No Accounts in Vault -->
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsNoAccounts, Converter={StaticResource BoolToVis}}">
+                    <ui:SymbolIcon Symbol="PersonQuestionMark24"
+                                   FontSize="48"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="{StaticResource MarginMedium}"
+                                   Opacity="0.6" />
+                    <TextBlock Text="{x:Static resources:Strings.EmptyAccountsList}"
+                               Style="{StaticResource EmptyStateTitleStyle}" />
+                    <TextBlock Text="{x:Static resources:Strings.EmptyAccountsHint}"
+                               Style="{StaticResource EmptyStateHintStyle}" />
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="{StaticResource MarginBase}">
+                        <ui:Button Content="{x:Static resources:Strings.AddViaLogin}"
+                                   AutomationProperties.AutomationId="Accounts_EmptyAddViaLoginButton"
+                                   Icon="{ui:SymbolIcon PersonAdd24}"
+                                   Appearance="Primary"
+                                   Margin="{StaticResource MarginTight}"
+                                   Command="{Binding AddViaLoginCommand}" />
+                        <ui:Button Content="{x:Static resources:Strings.AddViaCookie}"
+                                   AutomationProperties.AutomationId="Accounts_EmptyAddViaCookieButton"
+                                   Icon="{ui:SymbolIcon Key24}"
+                                   Margin="{StaticResource MarginTight}"
+                                   Command="{Binding AddAccountCommand}" />
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
 
-            <!-- Empty State 2: No Search Results Found -->
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Visibility="{Binding IsNoSearchResults, Converter={StaticResource BoolToVis}}">
-                <ui:SymbolIcon Symbol="Search24"
-                               FontSize="48"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                <!-- Empty State 2: No Search Results Found -->
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsNoSearchResults, Converter={StaticResource BoolToVis}}">
+                    <ui:SymbolIcon Symbol="Search24"
+                                   FontSize="48"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="{StaticResource MarginMedium}"
+                                   Opacity="0.6" />
+                    <TextBlock Text="{x:Static resources:Strings.NoSearchResults}"
+                               Style="{StaticResource EmptyStateTitleStyle}" />
+                    <TextBlock Text="{x:Static resources:Strings.NoSearchResultsHint}"
+                               Style="{StaticResource EmptyStateHintStyle}" />
+                    <ui:Button Content="{x:Static resources:Strings.ClearSearch}"
+                               AutomationProperties.AutomationId="Accounts_ClearSearchButton"
+                               Icon="{ui:SymbolIcon Dismiss24}"
                                HorizontalAlignment="Center"
-                               Margin="{StaticResource MarginMedium}" />
-                <TextBlock Text="{x:Static resources:Strings.NoSearchResults}"
-                           FontSize="{StaticResource FontSizeSubtitle}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginTight}" />
-                <TextBlock Text="{x:Static resources:Strings.NoSearchResultsHint}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginMedium}" />
-                <ui:Button Content="{x:Static resources:Strings.ClearSearch}"
-                           AutomationProperties.AutomationId="Accounts_ClearSearchButton"
-                           Icon="{ui:SymbolIcon Dismiss24}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginBase}"
-                           Command="{Binding ClearSearchCommand}" />
-            </StackPanel>
+                               Margin="{StaticResource MarginBase}"
+                               Command="{Binding ClearSearchCommand}" />
+                </StackPanel>
         </Grid>
     </Border>
 </Grid>

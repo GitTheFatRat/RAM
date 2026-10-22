@@ -21,13 +21,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Title -->
+        <!-- Page Header -->
         <TextBlock Grid.Row="0"
                    Text="{x:Static res:Strings.RunningPageTitle}"
-                   FontSize="{StaticResource FontSizeTitle}"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                   Margin="{StaticResource MarginMedium}" />
+                   Style="{StaticResource PageTitleStyle}"
+                   Margin="{StaticResource MarginBottomMedium}" />
 
         <!-- Controls Bar -->
         <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
@@ -46,13 +44,7 @@
         </Grid>
 
         <!-- Main Content Area: Elevated Container -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource CardBackgroundBrush}"
-                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMedium}"
-                Margin="{StaticResource MarginBase}"
-                ClipToBounds="True">
+        <Border Grid.Row="2" Style="{StaticResource ElevatedContainerStyle}">
             <Grid>
                 <!-- Data Grid -->
                 <ui:DataGrid ItemsSource="{Binding Sessions}"
@@ -87,9 +79,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Pid}"
-                                           FontFamily="{StaticResource FontFamilyMonospace}"
-                                           FontSize="{StaticResource FontSizeCaption}"
-                                           VerticalAlignment="Center" />
+                                           Style="{StaticResource MonospaceTextStyle}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -99,9 +89,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding PlaceId}"
-                                           FontFamily="{StaticResource FontFamilyMonospace}"
-                                           FontSize="{StaticResource FontSizeCaption}"
-                                           VerticalAlignment="Center" />
+                                           Style="{StaticResource MonospaceTextStyle}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -148,26 +136,21 @@
                 </ui:DataGrid.Columns>
             </ui:DataGrid>
 
-            <!-- Empty State Overlay -->
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
-                <ui:SymbolIcon Symbol="AppGeneric24"
-                               FontSize="48"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               HorizontalAlignment="Center"
-                               Margin="{StaticResource MarginMedium}" />
-                <TextBlock Text="{x:Static res:Strings.NoRunningSessions}"
-                           FontSize="{StaticResource FontSizeSubtitle}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="{StaticResource MarginTight}" />
-                <TextBlock Text="{x:Static res:Strings.Running_EmptyHint}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           HorizontalAlignment="Center" />
-            </StackPanel>
+                <!-- Empty State Overlay -->
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
+                    <ui:SymbolIcon Symbol="AppGeneric24"
+                                   FontSize="48"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="{StaticResource MarginMedium}"
+                                   Opacity="0.6" />
+                    <TextBlock Text="{x:Static res:Strings.NoRunningSessions}"
+                               Style="{StaticResource EmptyStateTitleStyle}" />
+                    <TextBlock Text="{x:Static res:Strings.Running_EmptyHint}"
+                               Style="{StaticResource EmptyStateHintStyle}" />
+                </StackPanel>
         </Grid>
     </Border>
 </Grid>
