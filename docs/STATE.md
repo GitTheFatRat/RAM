@@ -16,4 +16,5 @@
 - M12: done (1d71723) - smart server hopping on auto-rejoin
 - M13: done (7b3a93d) - ghost disconnect detection via log tailing
 - M14: done (e3ea5a0) - UI/UX polish and contrast enhancement
-- M14.1: done (f0fd208) - resolve illegal Binding on ConverterParameter in ServersPage
+- M14.1: done (a1aa558) - resolve illegal Binding on ConverterParameter in ServersPage
+- M14.2: done (6bbf92a) - robust check for Roblox Player installation across multiple registry hives

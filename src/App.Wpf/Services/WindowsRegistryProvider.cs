@@ -3,6 +3,7 @@ namespace RbxManager.App.Services;
 using System;
 using System.IO;
 using System.Runtime.Versioning;
+using System.Security;
 using System.Security.Principal;
 using Microsoft.Win32;
 using RbxManager.Core.Diagnostics;
@@ -12,28 +13,63 @@ public sealed class WindowsRegistryProvider : IRegistryProvider
 {
     public bool ProtocolHandlerExists(string protocol)
     {
-        try
+        (RegistryKey hive, string subKey)[] locations =
+        [
+            (Registry.CurrentUser, $@"Software\Classes\{protocol}"),
+            (Registry.LocalMachine, $@"Software\Classes\{protocol}"),
+            (Registry.ClassesRoot, $@"{protocol}")
+        ];
+
+        foreach (var (hive, subKey) in locations)
         {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey($@"Software\Classes\{protocol}");
-            return key != null;
+            try
+            {
+                using RegistryKey? key = hive.OpenSubKey(subKey);
+                if (key != null)
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException)
+            {
+            }
+            catch
+            {
+            }
         }
-        catch
-        {
-            return false;
-        }
+
+        return false;
     }
 
     public string? GetProtocolHandlerCommand(string protocol)
     {
-        try
+        (RegistryKey hive, string subKey)[] locations =
+        [
+            (Registry.CurrentUser, $@"Software\Classes\{protocol}\shell\open\command"),
+            (Registry.LocalMachine, $@"Software\Classes\{protocol}\shell\open\command"),
+            (Registry.ClassesRoot, $@"{protocol}\shell\open\command")
+        ];
+
+        foreach (var (hive, subKey) in locations)
         {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey($@"Software\Classes\{protocol}\shell\open\command");
-            return key?.GetValue(string.Empty) as string;
+            try
+            {
+                using RegistryKey? key = hive.OpenSubKey(subKey);
+                string? command = key?.GetValue(string.Empty) as string;
+                if (!string.IsNullOrEmpty(command))
+                {
+                    return command;
+                }
+            }
+            catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException)
+            {
+            }
+            catch
+            {
+            }
         }
-        catch
-        {
-            return null;
-        }
+
+        return null;
     }
 
     public bool StandardRobloxInstallFolderExists()
@@ -42,7 +78,21 @@ public sealed class WindowsRegistryProvider : IRegistryProvider
         {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string robloxDir = Path.Combine(localAppData, "Roblox", "Versions");
-            return Directory.Exists(robloxDir);
+            if (Directory.Exists(robloxDir))
+            {
+                return true;
+            }
+
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string pfRobloxDir = Path.Combine(programFiles, "Roblox", "Versions");
+            if (Directory.Exists(pfRobloxDir))
+            {
+                return true;
+            }
+
+            string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            string pfX86RobloxDir = Path.Combine(programFilesX86, "Roblox", "Versions");
+            return Directory.Exists(pfX86RobloxDir);
         }
         catch
         {
