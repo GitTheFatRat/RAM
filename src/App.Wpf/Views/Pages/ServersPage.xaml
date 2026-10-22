@@ -95,9 +95,22 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnPlayers}"
-                                        Binding="{Binding StringFormat='{}{0}/{1}', Path=Playing, ConverterParameter={Binding MaxPlayers}}"
-                                        Width="120" />
+                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPlayers}"
+                                            SortMemberPath="Playing"
+                                            Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock VerticalAlignment="Center">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0}/{1}">
+                                            <Binding Path="Playing" />
+                                            <Binding Path="MaxPlayers" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnFps}"
                                         Binding="{Binding Fps, StringFormat='{}{0:F1}'}"
                                         Width="100" />

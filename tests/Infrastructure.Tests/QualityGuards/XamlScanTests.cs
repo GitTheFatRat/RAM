@@ -206,4 +206,31 @@ public sealed partial class XamlScanTests
 
         return symbols;
     }
+
+    [Fact]
+    public void NoBindingOnConverterParameter_InAnyXamlFile()
+    {
+        string root = FindRepoRoot();
+        string wpfDir = Path.Combine(root, "src", "App.Wpf");
+        string[] xamlFiles = Directory.GetFiles(wpfDir, "*.xaml", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) &&
+                        !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
+            .ToArray();
+
+        List<string> violations = new();
+
+        foreach (string file in xamlFiles)
+        {
+            string content = File.ReadAllText(file);
+            if (content.Contains("ConverterParameter={Binding") || content.Contains("ConverterParameter = {Binding") ||
+                content.Contains("ConverterParameter=\"{Binding") || content.Contains("ConverterParameter = \"{Binding"))
+            {
+                string relativePath = Path.GetRelativePath(root, file);
+                violations.Add($"{relativePath}: contains illegal Binding on ConverterParameter");
+            }
+        }
+
+        Assert.True(violations.Count == 0,
+            $"Found illegal Binding on ConverterParameter:\n{string.Join("\n", violations)}");
+    }
 }
