@@ -78,6 +78,11 @@ public sealed class IgnoredSourceFilesTests
             if (trimmed.StartsWith("!!", StringComparison.Ordinal))
             {
                 string path = trimmed[2..].Trim();
+                if (path.Contains("_wpftmp", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 if (sourceExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
                 {
                     ignoredSourceFiles.Add(path);

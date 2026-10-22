@@ -51,3 +51,9 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 3. **Clean Code**: Descriptive naming, file-scoped namespaces, and 4-space indentation.
 
 When unsure about a .NET, WPF, WebView2 or cryptography API, query the Microsoft Learn MCP before writing code. For third-party libraries (WPF-UI, CommunityToolkit.Mvvm, Polly, Serilog) use Context7. If an MCP is unavailable, continue without it and never guess silently.
+
+## Standing agent rules (all sessions)
+- Docs lookup: when unsure about a .NET, WPF, WebView2 or cryptography API, query the Microsoft Learn MCP before writing code. For third-party libraries (WPF-UI, CommunityToolkit.Mvvm, Polly, Serilog) use Context7. If an MCP is unavailable, continue and never guess silently.
+- Never use a desktop-control or browser-control MCP (screen capture, mouse, keyboard, Chrome DevTools, Playwright) on this project: the desktop may show logged-in Roblox, Discord or browser sessions.
+- UI verification (available after M16): after any change to XAML, themes or view models, run tools/run-ui-tests.ps1, open the PNGs in artifacts/ui/, list visible defects in the milestone report, and fix the obvious ones. The harness uses a throwaway data directory and fake data only.
+- Never run the app against the real data directory (%LOCALAPPDATA%\RbxManager) from an agent session, and never start a real Roblox launch from an agent session.

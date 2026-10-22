@@ -34,6 +34,10 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     public const int Argon2SaltLength = 16;
     public const int DerivedKeyLength = 32;
 
+    public const int MinimumArgon2MemorySizeKb = 65536; // 64 MiB
+    public const int MinimumArgon2Iterations = 3;
+    public const int MinimumArgon2Parallelism = 1;
+
     public static readonly string DefaultPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "RbxManager",
@@ -216,7 +220,12 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
     }
 
-    public static byte[] DeriveKey(SecretValue password, byte[] salt)
+    public static byte[] DeriveKey(
+        SecretValue password,
+        byte[] salt,
+        int memorySizeKb = Argon2MemorySizeKb,
+        int iterations = Argon2Iterations,
+        int parallelism = Argon2Parallelism)
     {
         ArgumentNullException.ThrowIfNull(password);
         ArgumentNullException.ThrowIfNull(salt);
@@ -228,9 +237,9 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             using Argon2id argon2 = new(passwordBytes)
             {
                 Salt = salt,
-                DegreeOfParallelism = Argon2Parallelism,
-                MemorySize = Argon2MemorySizeKb,
-                Iterations = Argon2Iterations
+                DegreeOfParallelism = parallelism,
+                MemorySize = memorySizeKb,
+                Iterations = iterations
             };
             return argon2.GetBytes(DerivedKeyLength);
         }
@@ -437,19 +446,41 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
         else if (kdfType == KdfTypeArgon2idDpapi)
         {
-            if (fileBytes.Length < 24)
+            // Magic (4) + Version (1) + KdfType (1) + Memory (4) + Iterations (4) + Parallelism (4) + Salt (16) = 34 bytes
+            // + WrappedKeyLength (2 bytes) = 36 bytes minimum before wrapped key
+            if (fileBytes.Length < 36)
             {
-                throw new VaultCorruptedException("Vault file is too short to contain a valid header.");
+                throw new VaultCorruptedException("Vault file is too short to contain a valid Argon2 header.");
             }
 
-            byte[] argonSalt = fileBytes.AsSpan(6, Argon2SaltLength).ToArray();
-            ushort wrappedKeyLength = BinaryPrimitives.ReadUInt16LittleEndian(fileBytes.AsSpan(22, 2));
-            if (24 + wrappedKeyLength + 12 + 16 > fileBytes.Length)
+            uint memorySizeKb = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(6, 4));
+            uint iterations = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(10, 4));
+            uint parallelism = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(14, 4));
+
+            if (memorySizeKb < MinimumArgon2MemorySizeKb)
+            {
+                throw new VaultCorruptedException($"Vault Argon2 memory size {memorySizeKb} KB is below minimum {MinimumArgon2MemorySizeKb} KB.");
+            }
+
+            if (iterations < MinimumArgon2Iterations)
+            {
+                throw new VaultCorruptedException($"Vault Argon2 iterations {iterations} is below minimum {MinimumArgon2Iterations}.");
+            }
+
+            if (parallelism < MinimumArgon2Parallelism)
+            {
+                throw new VaultCorruptedException($"Vault Argon2 parallelism {parallelism} is below minimum {MinimumArgon2Parallelism}.");
+            }
+
+            byte[] argonSalt = fileBytes.AsSpan(18, Argon2SaltLength).ToArray();
+            ushort wrappedKeyLength = BinaryPrimitives.ReadUInt16LittleEndian(fileBytes.AsSpan(34, 2));
+
+            if (36 + wrappedKeyLength + 12 + 16 > fileBytes.Length)
             {
                 throw new VaultCorruptedException("Vault file is truncated or corrupted.");
             }
 
-            int offset = 24;
+            int offset = 36;
             byte[] wrappedKey = fileBytes.AsSpan(offset, wrappedKeyLength).ToArray();
             offset += wrappedKeyLength;
 
@@ -460,7 +491,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             offset += 16;
 
             ReadOnlySpan<byte> ciphertext = fileBytes.AsSpan(offset);
-            byte[] aad = fileBytes.AsSpan(0, 22).ToArray();
+            byte[] aad = fileBytes.AsSpan(0, 34).ToArray(); // Authenticate all 34 header prefix bytes
 
             if (_keyProvider == null || !_keyProvider.HasKey)
             {
@@ -473,7 +504,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 throw new VaultCorruptedException("Master password is required to unlock this vault.");
             }
 
-            byte[] argonKey = DeriveKey(masterPassword, argonSalt);
+            byte[] argonKey = DeriveKey(masterPassword, argonSalt, (int)memorySizeKb, (int)iterations, (int)parallelism);
             byte[] dpapiUnwrapped;
             try
             {
@@ -562,13 +593,17 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         {
             argonSalt = RandomNumberGenerator.GetBytes(Argon2SaltLength);
             SecretValue secret = _keyProvider!.GetKey()!;
-            dataKey = DeriveKey(secret, argonSalt);
+            dataKey = DeriveKey(secret, argonSalt, Argon2MemorySizeKb, Argon2Iterations, Argon2Parallelism);
 
-            aad = new byte[22];
+            // AAD authenticates Magic (4) + Version (1) + KdfType (1) + Memory (4) + Iterations (4) + Parallelism (4) + Salt (16) = 34 bytes
+            aad = new byte[34];
             MagicBytes.CopyTo(aad.AsSpan(0, 4));
             aad[4] = Version2Byte;
             aad[5] = kdfType;
-            argonSalt.CopyTo(aad.AsSpan(6, Argon2SaltLength));
+            BinaryPrimitives.WriteUInt32LittleEndian(aad.AsSpan(6, 4), (uint)Argon2MemorySizeKb);
+            BinaryPrimitives.WriteUInt32LittleEndian(aad.AsSpan(10, 4), (uint)Argon2Iterations);
+            BinaryPrimitives.WriteUInt32LittleEndian(aad.AsSpan(14, 4), (uint)Argon2Parallelism);
+            argonSalt.CopyTo(aad.AsSpan(18, Argon2SaltLength));
         }
         else
         {
@@ -599,20 +634,12 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
 
         ushort wrappedKeyLength = (ushort)wrappedKey.Length;
-        int headerPrefixLength = useArgon2 ? 24 : 8; // (4B magic + 1B ver + 1B kdf + [16B salt] + 2B keyLen)
-        int totalLength = headerPrefixLength + wrappedKey.Length + 12 + 16 + ciphertext.Length;
+        int headerPrefixLength = useArgon2 ? 34 : 6;
+        int totalLength = headerPrefixLength + 2 + wrappedKey.Length + 12 + 16 + ciphertext.Length;
         byte[] outputBuffer = new byte[totalLength];
 
-        MagicBytes.CopyTo(outputBuffer.AsSpan(0, 4));
-        outputBuffer[4] = Version2Byte;
-        outputBuffer[5] = kdfType;
-
-        int currentOffset = 6;
-        if (useArgon2 && argonSalt != null)
-        {
-            argonSalt.CopyTo(outputBuffer.AsSpan(currentOffset, Argon2SaltLength));
-            currentOffset += Argon2SaltLength;
-        }
+        aad.CopyTo(outputBuffer.AsSpan(0, headerPrefixLength));
+        int currentOffset = headerPrefixLength;
 
         BinaryPrimitives.WriteUInt16LittleEndian(outputBuffer.AsSpan(currentOffset, 2), wrappedKeyLength);
         currentOffset += 2;
@@ -646,11 +673,54 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
 
         if (File.Exists(_filePath))
         {
+            BackupV1VaultIfUpgrading(_filePath);
             File.Replace(tmpPath, _filePath, bakPath);
         }
         else
         {
             File.Move(tmpPath, _filePath);
+        }
+    }
+
+    private static void BackupV1VaultIfUpgrading(string filePath)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+            {
+                return;
+            }
+
+            byte[] header = new byte[5];
+            using (FileStream fs = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                int read = fs.Read(header, 0, header.Length);
+                if (read < 5)
+                {
+                    return;
+                }
+            }
+
+            if (header[0] == MagicBytes[0] && header[1] == MagicBytes[1] &&
+                header[2] == MagicBytes[2] && header[3] == MagicBytes[3] &&
+                header[4] == Version1Byte)
+            {
+                string v1Bak = filePath + ".v1.bak";
+                if (!File.Exists(v1Bak))
+                {
+                    File.Copy(filePath, v1Bak, overwrite: false);
+                }
+                else
+                {
+                    string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+                    string tsBak = $"{filePath}.v1.{timestamp}.bak";
+                    File.Copy(filePath, tsBak, overwrite: false);
+                }
+            }
+        }
+        catch
+        {
+            // Do not fail upgrade if backup operation cannot read existing file
         }
     }
 

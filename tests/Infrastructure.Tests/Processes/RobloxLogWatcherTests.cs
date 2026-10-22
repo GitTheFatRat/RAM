@@ -78,7 +78,7 @@ public sealed class RobloxLogWatcherTests : IDisposable
     }
 
     [Theory]
-    [InlineData("Network disconnect: DisconnectReason 12", "DisconnectReason")]
+    [InlineData("Network disconnect: Connection lost to host", "Connection lost")]
     [InlineData("Critical failure: Error 277 occurred", "Error 277")]
     [InlineData("Security kick: Error 268 client behavior", "Error 268")]
     public async Task WatchLog_KnownKeywords_RaiseDisconnectEvents(string logLine, string expectedKeyword)
@@ -124,5 +124,50 @@ public sealed class RobloxLogWatcherTests : IDisposable
         // If lock was not released, File.Delete would throw IOException
         File.Delete(logPath);
         Assert.False(File.Exists(logPath));
+    }
+
+    [Fact]
+    public async Task ResolveLogFile_WhenMultipleCandidatesExist_SkipsMonitoringDueToAmbiguity()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        string logPath1 = Path.Combine(_tempDir, "0.1_Player_ambig1.log");
+        string logPath2 = Path.Combine(_tempDir, "0.1_Player_ambig2.log");
+        await File.WriteAllTextAsync(logPath1, "Log 1 start\n");
+        await File.WriteAllTextAsync(logPath2, "Log 2 start\n");
+        File.SetCreationTimeUtc(logPath1, now.UtcDateTime);
+        File.SetCreationTimeUtc(logPath2, now.UtcDateTime);
+
+        using RobloxLogWatcher watcher = new(_tempDir);
+        bool eventRaised = false;
+        watcher.GhostDisconnectDetected += (pid, reason) => eventRaised = true;
+
+        watcher.StartWatching(5005, now);
+
+        await File.AppendAllTextAsync(logPath1, "Connection lost\n");
+        await File.AppendAllTextAsync(logPath2, "Connection lost\n");
+        await Task.Delay(350);
+
+        Assert.False(eventRaised);
+    }
+
+    [Fact]
+    public async Task ResolveLogFile_WhenSingleCandidateExists_BindsAndDetectsDisconnect()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        string logPath = Path.Combine(_tempDir, "0.1_Player_single.log");
+        await File.WriteAllTextAsync(logPath, "Log single start\n");
+        File.SetCreationTimeUtc(logPath, now.UtcDateTime);
+
+        using RobloxLogWatcher watcher = new(_tempDir);
+        TaskCompletionSource<int> tcs = new();
+        watcher.GhostDisconnectDetected += (pid, reason) => tcs.TrySetResult(pid);
+
+        watcher.StartWatching(6006, now);
+
+        await File.AppendAllTextAsync(logPath, "Connection lost\n");
+
+        Task completedTask = await Task.WhenAny(tcs.Task, Task.Delay(2000));
+        Assert.Same(tcs.Task, completedTask);
+        Assert.Equal(6006, await tcs.Task);
     }
 }

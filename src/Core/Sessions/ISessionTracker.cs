@@ -11,6 +11,7 @@ public interface ISessionTracker
 {
     event Action<RunningSession>? SessionStarted;
     event Action<RunningSession, bool>? SessionEnded;
+    event Action<RunningSession, string>? GhostDisconnectOccurred;
 
     IReadOnlyList<RunningSession> ActiveSessions { get; }
 

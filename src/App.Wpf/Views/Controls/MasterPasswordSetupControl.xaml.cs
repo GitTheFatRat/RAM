@@ -14,6 +14,8 @@ public partial class MasterPasswordSetupControl : UserControl
 
     public string ReadConfirmPassword() => ConfirmPasswordBox.Password;
 
+    public bool IsAcknowledged => AcknowledgeIrreversibleCheckBox.IsChecked == true;
+
     public void ClearPasswords()
     {
         MasterPasswordBox.Clear();

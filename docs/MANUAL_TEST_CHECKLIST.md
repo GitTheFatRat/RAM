@@ -113,3 +113,41 @@ Theo dõi và ghi nhận phản hồi thực tế từ máy chủ Roblox đối 
    - *Mục tiêu quan sát*: Header `rbx-authentication-ticket` trả về có hiệu lực trong bao lâu và có thể tái sử dụng lần thứ 2 không (giả thuyết: ticket chỉ dùng được 1 lần duy nhất trong vòng dưới 5 phút).
 3. **Giới hạn tốc độ yêu cầu (Rate Limits)**:
    - *Mục tiêu quan sát*: Điểm cuối `GET https://users.roblox.com/v1/users/authenticated` khi người dùng nhấn "Kiểm tra tất cả" trên danh sách lớn (hơn 20 tài khoản) có gặp lỗi HTTP 429 Too Many Requests không.
+
+---
+
+## 15. Kiểm thử M15 (Tech Lead Takeover & Safety Guards)
+
+### Kịch bản 15.1: Mật khẩu chính Vault v2 & Sao lưu tự động
+- **Thao tác**:
+  1. Trong Cài đặt > Mật khẩu chính, nhấn "Thiết lập mật khẩu chính".
+  2. Xác nhận hộp kiểm cảnh báo không thể khôi phục ("Tôi hiểu mật khẩu này không thể khôi phục...").
+  3. Nhập mật khẩu chính đủ độ dài (tối thiểu 12 ký tự) và lưu.
+- **Kỳ vọng**:
+  - Tệp `vault.dat.v1.bak` được tạo tự động nếu vault trước đó ở định dạng v1.
+  - Sau khi thiết lập, khi khởi động lại ứng dụng, yêu cầu nhập đúng mật khẩu chính để mở khoá.
+  - Nhập sai mật khẩu không làm thay đổi hoặc hỏng tệp vault.
+
+### Kịch bản 15.2: Giảm tài nguyên cửa sổ ngầm (Throttle Background)
+- **Thao tác**:
+  1. Bật tuỳ chọn "Giảm tài nguyên cửa sổ Roblox chạy ngầm" trong Cài đặt.
+  2. Đọc và xác nhận hộp thoại cảnh báo rủi ro.
+  3. Khởi chạy 2 tài khoản Roblox. Để 1 tài khoản ở tiền cảnh (foreground) và 1 tài khoản ở nền.
+- **Kỳ vọng**:
+  - Cửa sổ Roblox ở tiền cảnh KHÔNG bị thu nhỏ.
+  - Cửa sổ Roblox ngầm được thu nhỏ không kích hoạt (`SW_SHOWMINNOACTIVE = 7`), không bị dời toạ độ hay gửi phím ảo.
+
+### Kịch bản 15.3: Trình dọn RAM định kỳ (RAM Cleaner)
+- **Thao tác**:
+  1. Bật tuỳ chọn "Trình dọn dẹp RAM định kỳ" trong Cài đặt.
+  2. Xác nhận hộp thoại cảnh báo rủi ro.
+- **Kỳ vọng**:
+  - Trình dọn dẹp chỉ thao tác trên các PID Roblox thuộc phiên đang theo dõi, bỏ qua tiến trình tiền cảnh.
+  - Nếu gặp lỗi quyền truy cập 3 chu kỳ liên tiếp, tính năng tự động tắt an toàn.
+
+### Kịch bản 15.4: Phát hiện mất kết nối âm thầm (Ghost Disconnect)
+- **Thao tác**:
+  1. Vào Cài đặt > Nâng cao, kiểm tra chế độ mất kết nối âm thầm.
+- **Kỳ vọng**:
+  - Chế độ mặc định là "Chỉ thông báo" (`NotifyOnly`), không tự ý tắt tiến trình game.
+  - Nếu chọn "Diệt tiến trình và vào lại", chỉ diệt khi phiên game đã sống tối thiểu 60 giây và cách lần thử trước ít nhất 5 phút.

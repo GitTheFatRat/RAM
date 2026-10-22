@@ -72,6 +72,38 @@ public sealed class WindowsRegistryProvider : IRegistryProvider
         return null;
     }
 
+    public System.Collections.Generic.IReadOnlyList<(string HiveName, string? Command)> GetProtocolHandlerHives(string protocol)
+    {
+        (string name, RegistryKey hive, string subKey)[] locations =
+        [
+            ("HKCU", Registry.CurrentUser, $@"Software\Classes\{protocol}\shell\open\command"),
+            ("HKLM", Registry.LocalMachine, $@"Software\Classes\{protocol}\shell\open\command"),
+            ("HKCR", Registry.ClassesRoot, $@"{protocol}\shell\open\command")
+        ];
+
+        System.Collections.Generic.List<(string, string?)> results = new();
+        foreach (var (name, hive, subKey) in locations)
+        {
+            try
+            {
+                using RegistryKey? key = hive.OpenSubKey(subKey);
+                if (key != null)
+                {
+                    string? command = key.GetValue(string.Empty) as string;
+                    results.Add((name, command));
+                }
+            }
+            catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException)
+            {
+            }
+            catch
+            {
+            }
+        }
+
+        return results;
+    }
+
     public bool StandardRobloxInstallFolderExists()
     {
         try

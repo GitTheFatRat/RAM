@@ -2,7 +2,7 @@ namespace RbxManager.Infrastructure.Processes;
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
@@ -15,67 +15,107 @@ using RbxManager.Core.Processes;
 [SupportedOSPlatform("windows")]
 public sealed partial class WindowsMemoryOptimizer : IMemoryOptimizer
 {
+    // Minimal rights required by SetProcessWorkingSetSize: PROCESS_SET_QUOTA only
     private const uint ProcessSetQuota = 0x0100;
-    private const uint ProcessQueryInformation = 0x0400;
-    private const uint DesiredAccess = ProcessSetQuota | ProcessQueryInformation;
 
-    private readonly IProcessProvider _processProvider;
+    private readonly IProcessProvider? _processProvider;
+    private readonly INativeProcessMemoryMethods _nativeMemoryMethods;
+    private readonly INativeWindowMethods _nativeWindowMethods;
     private readonly ILogger<WindowsMemoryOptimizer> _logger;
     private readonly Func<int, bool>? _customTrimProcess;
 
     public int LastTrimmedCount { get; private set; }
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetProcessWorkingSetSize(IntPtr hProcess, int dwMinimumWorkingSetSize, int dwMaximumWorkingSetSize);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern SafeProcessHandle OpenProcess(uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, int dwProcessId);
+    public int LastAccessDeniedCount { get; private set; }
+    public int LastFailedCount { get; private set; }
 
     public WindowsMemoryOptimizer(
-        IProcessProvider processProvider,
+        IProcessProvider? processProvider = null,
+        INativeProcessMemoryMethods? nativeMemoryMethods = null,
+        INativeWindowMethods? nativeWindowMethods = null,
         ILogger<WindowsMemoryOptimizer>? logger = null)
-        : this(processProvider, null, logger)
+        : this(processProvider, nativeMemoryMethods, nativeWindowMethods, null, logger)
     {
     }
 
     internal WindowsMemoryOptimizer(
-        IProcessProvider processProvider,
+        IProcessProvider? processProvider,
+        INativeProcessMemoryMethods? nativeMemoryMethods,
+        INativeWindowMethods? nativeWindowMethods,
         Func<int, bool>? customTrimProcess,
         ILogger<WindowsMemoryOptimizer>? logger = null)
     {
-        _processProvider = processProvider ?? throw new ArgumentNullException(nameof(processProvider));
+        _processProvider = processProvider;
+        _nativeMemoryMethods = nativeMemoryMethods ?? new WindowsNativeProcessMemoryMethods();
+        _nativeWindowMethods = nativeWindowMethods ?? new WindowsNativeWindowMethods();
         _customTrimProcess = customTrimProcess;
         _logger = logger ?? NullLogger<WindowsMemoryOptimizer>.Instance;
     }
 
-    public Task TrimMemoryAsync(CancellationToken ct = default)
+    public Task TrimMemoryAsync(IReadOnlyCollection<int>? trackedPids = null, CancellationToken ct = default)
     {
         if (ct.IsCancellationRequested)
         {
             return Task.FromCanceled(ct);
         }
 
+        IReadOnlyCollection<int>? pidsToTrim = trackedPids;
+        if ((pidsToTrim == null || pidsToTrim.Count == 0) && _processProvider != null)
+        {
+            pidsToTrim = _processProvider.GetRobloxProcesses().Select(p => p.Pid).ToList();
+        }
+
+        if (pidsToTrim == null || pidsToTrim.Count == 0)
+        {
+            LastTrimmedCount = 0;
+            LastAccessDeniedCount = 0;
+            LastFailedCount = 0;
+            return Task.CompletedTask;
+        }
+
+        int trimmed = 0;
+        int accessDenied = 0;
+        int failed = 0;
+
         try
         {
-            IReadOnlyList<ProcessSnapshot> processes = _processProvider.GetRobloxProcesses();
-            int trimmed = 0;
+            IntPtr foregroundHwnd = _nativeWindowMethods.GetForegroundWindow();
+            uint foregroundPid = foregroundHwnd != IntPtr.Zero
+                ? _nativeWindowMethods.GetWindowThreadProcessId(foregroundHwnd)
+                : 0;
 
-            foreach (ProcessSnapshot process in processes)
+            foreach (int pid in pidsToTrim)
             {
                 if (ct.IsCancellationRequested)
                 {
                     break;
                 }
 
-                if (TrimProcessWorkingSet(process.Pid))
+                if ((uint)pid == foregroundPid)
                 {
-                    trimmed++;
+                    // Skip the foreground window's process
+                    continue;
+                }
+
+                TrimResult result = TrimProcessWorkingSet(pid);
+                switch (result)
+                {
+                    case TrimResult.Success:
+                        trimmed++;
+                        break;
+                    case TrimResult.AccessDenied:
+                        accessDenied++;
+                        break;
+                    case TrimResult.Failed:
+                        failed++;
+                        break;
                 }
             }
 
             LastTrimmedCount = trimmed;
-            LogTrimCompleted(_logger, trimmed, processes.Count);
+            LastAccessDeniedCount = accessDenied;
+            LastFailedCount = failed;
+
+            LogTrimCompleted(_logger, trimmed, accessDenied, failed, pidsToTrim.Count);
         }
         catch (OperationCanceledException)
         {
@@ -89,48 +129,49 @@ public sealed partial class WindowsMemoryOptimizer : IMemoryOptimizer
         return Task.CompletedTask;
     }
 
-    private bool TrimProcessWorkingSet(int pid)
+    private TrimResult TrimProcessWorkingSet(int pid)
     {
         if (_customTrimProcess != null)
         {
-            return _customTrimProcess(pid);
+            return _customTrimProcess(pid) ? TrimResult.Success : TrimResult.Failed;
         }
 
         try
         {
-            using SafeProcessHandle handle = OpenProcess(DesiredAccess, false, pid);
+            using SafeProcessHandle handle = _nativeMemoryMethods.OpenProcess(ProcessSetQuota, false, pid);
             if (handle.IsInvalid)
             {
-                int error = Marshal.GetLastWin32Error();
-                // 5 = ERROR_ACCESS_DENIED, 87 = ERROR_INVALID_PARAMETER (process already terminated)
+                int error = _nativeMemoryMethods.GetLastWin32Error();
                 LogProcessOpenWarning(_logger, pid, error);
-                return false;
+                return error == 5 ? TrimResult.AccessDenied : TrimResult.Failed;
             }
 
-            bool success = SetProcessWorkingSetSize(handle.DangerousGetHandle(), -1, -1);
+            bool success = _nativeMemoryMethods.SetProcessWorkingSetSize(handle.DangerousGetHandle(), -1, -1);
             if (!success)
             {
-                int error = Marshal.GetLastWin32Error();
+                int error = _nativeMemoryMethods.GetLastWin32Error();
                 LogSetWorkingSetWarning(_logger, pid, error);
-                return false;
+                return error == 5 ? TrimResult.AccessDenied : TrimResult.Failed;
             }
 
-            return true;
-        }
-        catch (Win32Exception ex)
-        {
-            LogProcessWarning(_logger, pid, ex.Message);
-            return false;
+            return TrimResult.Success;
         }
         catch (Exception ex)
         {
             LogProcessWarning(_logger, pid, ex.Message);
-            return false;
+            return TrimResult.Failed;
         }
     }
 
-    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Memory trim completed: trimmed {TrimmedCount} of {TotalCount} Roblox processes.")]
-    private static partial void LogTrimCompleted(ILogger logger, int trimmedCount, int totalCount);
+    public enum TrimResult
+    {
+        Success,
+        AccessDenied,
+        Failed
+    }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Memory trim completed: trimmed {Trimmed}, access denied {AccessDenied}, failed {Failed} of {Total} tracked processes.")]
+    private static partial void LogTrimCompleted(ILogger logger, int trimmed, int accessDenied, int failed, int total);
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Debug, Message = "Failed to open process {Pid} for working set trimming. Error: {Error}.")]
     private static partial void LogProcessOpenWarning(ILogger logger, int pid, int error);

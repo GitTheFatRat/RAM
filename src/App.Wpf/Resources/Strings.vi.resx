@@ -703,4 +703,58 @@
   <data name="ProxyNavigationFailed" xml:space="preserve">
     <value>Không thể tải trang đăng nhập qua proxy đã cấu hình. Vui lòng kiểm tra lại cài đặt proxy hoặc kết nối mạng.</value>
   </data>
+  <data name="MasterPasswordAcknowledgeWarning" xml:space="preserve">
+    <value>Tôi hiểu rằng nếu quên mật khẩu này, toàn bộ dữ liệu trong vault sẽ không thể khôi phục. Bạn nên xuất bản sao lưu mã hóa trước khi tiếp tục.</value>
+  </data>
+  <data name="MasterPasswordAcknowledgeRequired" xml:space="preserve">
+    <value>Bạn phải xác nhận rủi ro khôi phục mật khẩu trước khi kích hoạt mật khẩu chính.</value>
+  </data>
+  <data name="MasterPasswordBackupAdvice" xml:space="preserve">
+    <value>Gợi ý: Xuất bản sao lưu mã hóa trong Cài đặt &gt; Quản lý dữ liệu trước khi kích hoạt.</value>
+  </data>
+  <data name="ThrottleRiskDialogTitle" xml:space="preserve">
+    <value>Xác nhận rủi ro: Thu nhỏ cửa sổ nền</value>
+  </data>
+  <data name="ThrottleRiskDialogContent" xml:space="preserve">
+    <value>Tính năng này tự động thu nhỏ các cửa sổ Roblox chạy nền. Do can thiệp vào cửa sổ client Roblox, hệ thống anti-cheat có thể xem thao tác ngoài này là hành vi bất thường. Sử dụng hoàn toàn theo rủi ro của bạn.</value>
+  </data>
+  <data name="RamCleanerRiskDialogTitle" xml:space="preserve">
+    <value>Xác nhận rủi ro: Dọn dẹp RAM</value>
+  </data>
+  <data name="RamCleanerRiskDialogContent" xml:space="preserve">
+    <value>Tính năng này tối ưu hóa bộ nhớ working set của các tiến trình Roblox. Việc dọn dẹp bộ nhớ tiến trình từ bên ngoài có thể bị hệ thống anti-cheat coi là hành vi bất thường. Sử dụng hoàn toàn theo rủi ro của bạn.</value>
+  </data>
+  <data name="RamCleanerAccessDeniedDisabled" xml:space="preserve">
+    <value>Trình dọn dẹp RAM đã tự động bị vô hiệu hóa sau nhiều chu kỳ bị từ chối truy cập.</value>
+  </data>
+  <data name="GhostDisconnectMode" xml:space="preserve">
+    <value>Chế độ phát hiện mất kết nối ngầm</value>
+  </data>
+  <data name="GhostDisconnectModeDescription" xml:space="preserve">
+    <value>Theo dõi log client Roblox để phát hiện sự kiện mất kết nối. Chỉ thông báo sẽ cảnh báo qua giao diện; Đóng tiến trình &amp; Vào lại sẽ đóng client và khởi chạy lại.</value>
+  </data>
+  <data name="GhostDisconnectMode_Off" xml:space="preserve">
+    <value>Tắt</value>
+  </data>
+  <data name="GhostDisconnectMode_NotifyOnly" xml:space="preserve">
+    <value>Chỉ thông báo</value>
+  </data>
+  <data name="GhostDisconnectMode_KillAndRejoin" xml:space="preserve">
+    <value>Đóng tiến trình &amp; Vào lại</value>
+  </data>
+  <data name="GhostDisconnectDetectedNotification" xml:space="preserve">
+    <value>Phát hiện mất kết nối ngầm cho phiên (PID: {0}, từ khóa: '{1}').</value>
+  </data>
+  <data name="RobloxNotInstalledOrRegistered" xml:space="preserve">
+    <value>Roblox Player chưa được cài đặt hoặc giao thức chưa được đăng ký trên hệ thống này.</value>
+  </data>
+  <data name="Servers_EmptyHint" xml:space="preserve">
+    <value>Không tìm thấy máy chủ công khai nào cho place này.</value>
+  </data>
+  <data name="Running_EmptyHint" xml:space="preserve">
+    <value>Hiện không có phiên Roblox nào đang được theo dõi.</value>
+  </data>
+  <data name="Servers_ErrorHint" xml:space="preserve">
+    <value>Không thể tải danh sách máy chủ. Vui lòng kiểm tra kết nối và thử lại.</value>
+  </data>
 </root>

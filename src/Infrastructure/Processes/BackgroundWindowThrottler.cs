@@ -1,28 +1,34 @@
 namespace RbxManager.Infrastructure.Processes;
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RbxManager.Core.Processes;
+using RbxManager.Core.Sessions;
 using RbxManager.Core.Settings;
 
 public sealed partial class BackgroundWindowThrottler : BackgroundService
 {
     private readonly ISettingsService _settingsService;
     private readonly IWindowController _windowController;
+    private readonly ISessionTracker? _sessionTracker;
     private readonly ILogger<BackgroundWindowThrottler> _logger;
     private bool _wasThrottling;
 
     public BackgroundWindowThrottler(
         ISettingsService settingsService,
         IWindowController windowController,
+        ISessionTracker? sessionTracker = null,
         ILogger<BackgroundWindowThrottler>? logger = null)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _windowController = windowController ?? throw new ArgumentNullException(nameof(windowController));
+        _sessionTracker = sessionTracker;
         _logger = logger ?? NullLogger<BackgroundWindowThrottler>.Instance;
     }
 
@@ -32,11 +38,24 @@ public sealed partial class BackgroundWindowThrottler : BackgroundService
         {
             try
             {
-                bool isThrottlingEnabled = _settingsService.CurrentSettings.ThrottleBackgroundRoblox;
-                if (isThrottlingEnabled)
+                bool isThrottlingEnabled = _settingsService.CurrentSettings.ThrottleBackgroundRoblox &&
+                                           _settingsService.CurrentSettings.ThrottleBackgroundAcknowledged;
+                if (isThrottlingEnabled && _sessionTracker != null)
                 {
-                    _windowController.ThrottleBackgroundProcesses();
-                    _wasThrottling = true;
+                    int[] trackedPids = _sessionTracker.ActiveSessions
+                        .Select(s => s.ProcessId)
+                        .ToArray();
+
+                    if (trackedPids.Length > 0)
+                    {
+                        _windowController.ThrottleBackgroundProcesses(trackedPids);
+                        _wasThrottling = true;
+                    }
+                    else if (_wasThrottling)
+                    {
+                        _windowController.RestoreProcesses();
+                        _wasThrottling = false;
+                    }
                 }
                 else if (_wasThrottling)
                 {

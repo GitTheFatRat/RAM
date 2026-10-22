@@ -1,9 +1,12 @@
 namespace RbxManager.Infrastructure.Tests.Processes;
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
+using RbxManager.Core.Sessions;
 using RbxManager.Core.Settings;
 using RbxManager.Infrastructure.Processes;
 using Xunit;
@@ -30,16 +33,46 @@ public sealed class RamCleanerServiceTests
     {
         public int CallCount { get; private set; }
         public bool ShouldThrow { get; set; }
+        public int LastTrimmedCount { get; set; }
+        public int LastAccessDeniedCount { get; set; }
+        public int LastFailedCount { get; set; }
+        public IReadOnlyCollection<int>? LastTargetProcessIds { get; private set; }
 
-        public Task TrimMemoryAsync(CancellationToken ct = default)
+        public Task TrimMemoryAsync(CancellationToken ct = default) => TrimMemoryAsync(null, ct);
+
+        public Task TrimMemoryAsync(IReadOnlyCollection<int>? targetProcessIds, CancellationToken ct = default)
         {
             CallCount++;
+            LastTargetProcessIds = targetProcessIds;
             if (ShouldThrow)
             {
                 throw new InvalidOperationException("Simulated trim error");
             }
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeSessionTracker : ISessionTracker
+    {
+        public List<RunningSession> Sessions { get; set; } = new();
+        public IReadOnlyList<RunningSession> ActiveSessions => Sessions;
+
+        #pragma warning disable CS0067
+        public event Action<RunningSession>? SessionStarted;
+        public event Action<RunningSession, bool>? SessionEnded;
+        public event Action<RunningSession, string>? GhostDisconnectOccurred;
+        #pragma warning restore CS0067
+
+        public bool GetAutoRejoin(AccountId accountId) => false;
+        public void SetAutoRejoin(AccountId accountId, bool enabled) { }
+        public bool IsRejoinGaveUp(AccountId accountId) => false;
+        public Task<bool> CloseSessionAsync(int pid, bool graceful = true) => Task.FromResult(true);
+        public Task CloseAllSessionsAsync(bool graceful = true) => Task.CompletedTask;
+        public Task<RunningSession?> TrackLaunchAsync(
+            AccountId accountId,
+            LaunchRequest request,
+            Func<Task<RbxManager.Core.Common.Result>> launchAction,
+            CancellationToken ct = default) => Task.FromResult<RunningSession?>(null);
     }
 
     [Fact]
@@ -64,7 +97,7 @@ public sealed class RamCleanerServiceTests
             return Task.CompletedTask;
         }
 
-        RamCleanerService service = new(settingsService, optimizer, DelayFunc);
+        RamCleanerService service = new(settingsService, optimizer, sessionTracker: null, delayFunc: DelayFunc);
 
         await service.StartAsync(cts.Token);
         // Wait for ExecuteAsync background loop to conclude after cancel
@@ -83,6 +116,7 @@ public sealed class RamCleanerServiceTests
             CurrentSettings = AppSettings.Default with
             {
                 EnableRamCleaner = true,
+                RamCleanerAcknowledged = true,
                 RamCleanerIntervalMinutes = 20
             }
         };
@@ -103,7 +137,7 @@ public sealed class RamCleanerServiceTests
             return Task.CompletedTask;
         }
 
-        RamCleanerService service = new(settingsService, optimizer, DelayFunc);
+        RamCleanerService service = new(settingsService, optimizer, sessionTracker: null, delayFunc: DelayFunc);
 
         await service.StartAsync(cts.Token);
         await Task.Delay(50);
@@ -118,7 +152,7 @@ public sealed class RamCleanerServiceTests
     {
         FakeSettingsService settingsService = new()
         {
-            CurrentSettings = AppSettings.Default with { EnableRamCleaner = true }
+            CurrentSettings = AppSettings.Default with { EnableRamCleaner = true, RamCleanerAcknowledged = true }
         };
         FakeMemoryOptimizer optimizer = new();
 
@@ -139,7 +173,7 @@ public sealed class RamCleanerServiceTests
     {
         FakeSettingsService settingsService = new()
         {
-            CurrentSettings = AppSettings.Default with { EnableRamCleaner = true }
+            CurrentSettings = AppSettings.Default with { EnableRamCleaner = true, RamCleanerAcknowledged = true }
         };
         FakeMemoryOptimizer optimizer = new()
         {
@@ -159,12 +193,87 @@ public sealed class RamCleanerServiceTests
             return Task.CompletedTask;
         }
 
-        RamCleanerService service = new(settingsService, optimizer, DelayFunc);
+        RamCleanerService service = new(settingsService, optimizer, sessionTracker: null, delayFunc: DelayFunc);
 
         await service.StartAsync(cts.Token);
         await Task.Delay(50);
         await service.StopAsync(CancellationToken.None);
 
         Assert.True(optimizer.CallCount >= 1);
+    }
+
+    [Fact]
+    public async Task RamCleanerService_ThreeConsecutiveAccessDeniedCycles_AutoDisablesFeature()
+    {
+        FakeSettingsService settingsService = new()
+        {
+            CurrentSettings = AppSettings.Default with { EnableRamCleaner = true, RamCleanerAcknowledged = true }
+        };
+        FakeMemoryOptimizer optimizer = new()
+        {
+            LastAccessDeniedCount = 1,
+            LastTrimmedCount = 0
+        };
+
+        using CancellationTokenSource cts = new();
+        int iterations = 0;
+
+        Task DelayFunc(TimeSpan span, CancellationToken token)
+        {
+            iterations++;
+            if (iterations >= 4)
+            {
+                cts.Cancel();
+            }
+            return Task.CompletedTask;
+        }
+
+        RamCleanerService service = new(settingsService, optimizer, sessionTracker: null, delayFunc: DelayFunc);
+
+        await service.StartAsync(cts.Token);
+        await Task.Delay(50);
+        await service.StopAsync(CancellationToken.None);
+
+        Assert.False(settingsService.CurrentSettings.EnableRamCleaner);
+    }
+
+    [Fact]
+    public async Task RamCleanerService_WhenSessionTrackerProvided_PassesTrackedPidsToOptimizer()
+    {
+        FakeSettingsService settingsService = new()
+        {
+            CurrentSettings = AppSettings.Default with { EnableRamCleaner = true, RamCleanerAcknowledged = true }
+        };
+        FakeMemoryOptimizer optimizer = new();
+        FakeSessionTracker sessionTracker = new()
+        {
+            Sessions =
+            [
+                new RunningSession(new AccountId(1), new LaunchRequest(new AccountId(1), 1818, null), 1234, DateTimeOffset.UtcNow),
+                new RunningSession(new AccountId(2), new LaunchRequest(new AccountId(2), 1818, null), 5678, DateTimeOffset.UtcNow)
+            ]
+        };
+
+        using CancellationTokenSource cts = new();
+        int iterations = 0;
+
+        Task DelayFunc(TimeSpan span, CancellationToken token)
+        {
+            iterations++;
+            if (iterations >= 2)
+            {
+                cts.Cancel();
+            }
+            return Task.CompletedTask;
+        }
+
+        RamCleanerService service = new(settingsService, optimizer, sessionTracker, DelayFunc);
+
+        await service.StartAsync(cts.Token);
+        await Task.Delay(50);
+        await service.StopAsync(CancellationToken.None);
+
+        Assert.NotNull(optimizer.LastTargetProcessIds);
+        Assert.Equal([1234, 5678], optimizer.LastTargetProcessIds);
     }
 }

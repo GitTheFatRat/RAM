@@ -86,6 +86,19 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
         bool handlerExists = _registryProvider.ProtocolHandlerExists("roblox-player");
         sb.AppendLine(CultureInfo.InvariantCulture, $"ProtocolHandlerRegistered: {(handlerExists ? "yes" : "no")}");
 
+        var hives = _registryProvider.GetProtocolHandlerHives("roblox-player");
+        if (hives.Count > 0)
+        {
+            foreach (var (hiveName, handlerPath) in hives)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"HandlerHive_{hiveName}: {handlerPath ?? "Registered"}");
+            }
+        }
+        else
+        {
+            sb.AppendLine("HandlerHives: None found in HKCU, HKLM, HKCR");
+        }
+
         string? command = _registryProvider.GetProtocolHandlerCommand("roblox-player");
         if (!string.IsNullOrWhiteSpace(command))
         {
@@ -107,9 +120,29 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
         }
 
         sb.AppendLine(CultureInfo.InvariantCulture, $"StandardInstallFolderExists: {(_registryProvider.StandardRobloxInstallFolderExists() ? "yes" : "no")}");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"RunningPlayerCount: {_processProvider.GetRobloxProcesses().Count}");
+        int robloxBetaCount = _processProvider.GetRobloxProcesses().Count;
+        sb.AppendLine(CultureInfo.InvariantCulture, $"RobloxPlayerBetaProcessCount: {robloxBetaCount}");
+
+        bool win10StoreRunning = _processProvider.IsProcessRunning("Windows10Universal");
+        if (win10StoreRunning)
+        {
+            sb.AppendLine("Windows10UniversalProcess: Running (Microsoft Store Roblox client detected - not tracked by RbxManager)");
+        }
+        else
+        {
+            sb.AppendLine("Windows10UniversalProcess: Not detected");
+        }
+
         sb.AppendLine(CultureInfo.InvariantCulture, $"MultiInstanceAvailable: {(_instanceGate.IsAvailable ? "yes" : "no")}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"MultiInstanceEnabled: {(_instanceGate.IsMultiInstanceEnabled ? "yes" : "no")}");
+
+        // Risky process features status
+        AppSettings currentSettings = _settingsService.CurrentSettings;
+        sb.AppendLine(CultureInfo.InvariantCulture, $"WindowThrottle: Enabled={(currentSettings.ThrottleBackgroundRoblox ? "yes" : "no")}, Acknowledged={(currentSettings.ThrottleBackgroundAcknowledged ? "yes" : "no")}");
+        string ramCleanerCycle = RbxManager.Infrastructure.Processes.RamCleanerService.LastDisabledDueToAccessDenied
+            ? " (auto-disabled due to access-denied cycles)"
+            : string.Empty;
+        sb.AppendLine(CultureInfo.InvariantCulture, $"RamCleaner: Enabled={(currentSettings.EnableRamCleaner ? "yes" : "no")}, Acknowledged={(currentSettings.RamCleanerAcknowledged ? "yes" : "no")}, IntervalMinutes={currentSettings.RamCleanerIntervalMinutes}{ramCleanerCycle}");
         sb.AppendLine();
 
         // 3. Network

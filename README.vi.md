@@ -10,11 +10,12 @@
 **RbxManager** là ứng dụng Windows Desktop hiệu năng cao, giao diện hiện đại (Fluent Design, hỗ trợ Dark Mode mặc định) viết bằng C# 14 / .NET 10 LTS và WPF-UI, giúp người dùng quản lý an toàn nhiều tài khoản Roblox trên cùng một máy tính cá nhân.
 
 ### Các tính năng cốt lõi:
-- **Lưu trữ bảo mật cục bộ**: Mã hóa tài khoản và cookie bằng chuẩn **AES-256-GCM** kết hợp với **Windows DPAPI** (`CurrentUser`). Cookie không bao giờ bị lộ dưới dạng plaintext hoặc ghi vào log.
-- **Xác thực linh hoạt**: Đăng nhập qua WebView2 cách ly hoặc nhập cookie thủ công. Kiểm tra trạng thái cookie (Hợp lệ / Hết hạn) với 1 click.
-- **Khởi chạy trò chơi nhanh chóng**: Khởi chạy trực tiếp tài khoản vào bất kỳ Place ID nào hoặc vào thẳng một Server Job cụ thể qua giao thức `roblox-player:`.
+- **Lưu trữ bảo mật cục bộ**: Mã hóa tài khoản và cookie bằng chuẩn **AES-256-GCM** kết hợp với **Windows DPAPI** (`CurrentUser`) và tuỳ chọn **Mật khẩu chính (Argon2id)** chống rò rỉ dữ liệu ngay cả khi tài khoản Windows bị xâm nhập. Tự động sao lưu `vault.dat.v1.bak` khi nâng cấp phiên bản. Cookie không bao giờ bị lộ dưới dạng plaintext hoặc ghi vào log.
+- **Xác thực linh hoạt**: Đăng nhập qua WebView2 cách ly hoặc nhập cookie thủ công. Kiểm tra trạng thái cookie (Hợp lệ / Hết hạn) với 1 click. Hỗ trợ Proxy cho kết nối HTTP và trình duyệt đăng nhập WebView2.
+- **Khởi chạy trò chơi an toàn**: Khởi chạy trực tiếp tài khoản vào bất kỳ Place ID nào hoặc vào thẳng một Server Job cụ thể qua giao thức `roblox-player:` với cơ chế kiểm tra lỗi hệ thống (Win32 1155/2) thân thiện.
 - **Duyệt máy chủ công khai (Server Browser)**: Xem danh sách server công khai, số người chơi hiện tại, ping, fps để chọn server phù hợp mà không cần mở trình duyệt web.
-- **Theo dõi phiên & Tự động kết nối lại (Auto-rejoin)**: Theo dõi tiến trình `RobloxPlayerBeta.exe`, phát hiện ngắt kết nối và tự động vào lại phòng với thuật toán Exponential Backoff và Circuit Breaker chống lặp vô tận.
+- **Theo dõi phiên & Tự động kết nối lại (Auto-rejoin)**: Theo dõi tiến trình `RobloxPlayerBeta.exe`, phát hiện mất kết nối âm thầm (Ghost Disconnect) với chế độ Chỉ thông báo an toàn, tự động vào lại phòng với thuật toán Exponential Backoff và Circuit Breaker chống lặp vô tận.
+- **Tối ưu tài nguyên an toàn**: Tuỳ chọn giảm tài nguyên cửa sổ Roblox ngầm (không chạm cửa sổ tiền cảnh) và dọn dẹp RAM các tiến trình theo dõi với cơ chế bảo vệ tự động tắt khi bị từ chối truy cập.
 - **Sao lưu & Phục hồi mã hóa**: Xuất/nhập dữ liệu tài khoản với chuẩn mã hóa **PBKDF2-HMAC-SHA512 (600.000 vòng lặp) + AES-256-GCM**, bảo vệ bằng mật khẩu người dùng tự chọn.
 
 ---

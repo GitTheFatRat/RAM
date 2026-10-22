@@ -67,12 +67,6 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
             }
         }
 
-        if (!_processStarter.IsRobloxPlayerInstalled())
-        {
-            LogRobloxNotInstalled();
-            return Result.Failure("Roblox player is not installed on this system.", "RobloxNotInstalled");
-        }
-
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
         try
         {
@@ -145,6 +139,11 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
 
                 LogLaunchSuccess(account.Id.Value, request.PlaceId);
                 return Result.Success();
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode is 1155 or 2)
+            {
+                LogLaunchFailed("RobloxNotInstalledOrRegistered");
+                return Result.Failure("Roblox player is not installed or protocol is not registered on this system.", "RobloxNotInstalledOrRegistered");
             }
             catch (TaskCanceledException) when (ct.IsCancellationRequested)
             {

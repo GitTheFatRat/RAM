@@ -11,16 +11,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RbxManager.Core.Processes;
+using RbxManager.Core.Settings;
+using RbxManager.Core.Validation;
 
 public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
 {
-    public static readonly string[] DefaultKeywords =
-    [
-        "Connection lost",
-        "DisconnectReason",
-        "Error 277",
-        "Error 268"
-    ];
+    public static readonly string[] DefaultKeywords = GhostDisconnectKeywordValidator.DefaultKeywords;
 
     private static readonly string DefaultLogsDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -28,7 +24,8 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
         "logs");
 
     private readonly string _logsDirectory;
-    private readonly IReadOnlyList<string> _keywords;
+    private readonly IReadOnlyList<string>? _explicitKeywords;
+    private readonly ISettingsService? _settingsService;
     private readonly ILogger<RobloxLogWatcher> _logger;
     private readonly ConcurrentDictionary<int, WatcherContext> _activeWatchers = new();
     private bool _disposed;
@@ -38,12 +35,19 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
     public RobloxLogWatcher(
         string? logsDirectory = null,
         IReadOnlyList<string>? keywords = null,
+        ISettingsService? settingsService = null,
         ILogger<RobloxLogWatcher>? logger = null)
     {
         _logsDirectory = logsDirectory ?? DefaultLogsDirectory;
-        _keywords = keywords ?? DefaultKeywords;
+        _explicitKeywords = keywords;
+        _settingsService = settingsService;
         _logger = logger ?? NullLogger<RobloxLogWatcher>.Instance;
     }
+
+    private IReadOnlyList<string> CurrentKeywords =>
+        _explicitKeywords ??
+        _settingsService?.CurrentSettings.Advanced?.GhostDisconnectKeywords ??
+        DefaultKeywords;
 
     public void StartWatching(int pid, DateTimeOffset startTime, string? explicitLogPath = null)
     {
@@ -55,7 +59,6 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
         string? logPath = explicitLogPath ?? ResolveLogFile(pid, startTime);
         if (string.IsNullOrEmpty(logPath) || !File.Exists(logPath))
         {
-            LogLogFileNotFound(_logger, pid);
             return;
         }
 
@@ -65,7 +68,7 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
         if (_activeWatchers.TryAdd(pid, context))
         {
             LogStartedWatching(_logger, pid, logPath);
-            context.Task = Task.Run(() => TailLogAsync(pid, context, cts.Token), cts.Token);
+            context.Task = Task.Run(() => TailLogAsync(pid, context, startTime, cts.Token), cts.Token);
         }
         else
         {
@@ -78,6 +81,13 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
         if (_activeWatchers.TryRemove(pid, out WatcherContext? context))
         {
             context.Dispose();
+            try
+            {
+                context.Task?.Wait(500);
+            }
+            catch
+            {
+            }
             LogStoppedWatching(_logger, pid);
         }
     }
@@ -102,18 +112,24 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
                 return null;
             }
 
-            // 1. Check if any file created within 2 minutes of startTime matches
-            FileInfo? closest = files
-                .Where(f => Math.Abs((f.CreationTimeUtc - startTime.UtcDateTime).TotalSeconds) < 120)
-                .MinBy(f => Math.Abs((f.CreationTimeUtc - startTime.UtcDateTime).TotalSeconds));
+            HashSet<string> assignedPaths = new(
+                _activeWatchers.Values.Select(v => v.LogPath),
+                StringComparer.OrdinalIgnoreCase);
 
-            if (closest != null)
+            // Bind only when exactly one unassigned log file was created within 20s of process start
+            List<FileInfo> candidates = files
+                .Where(f => !assignedPaths.Contains(f.FullName) &&
+                            Math.Abs((f.CreationTimeUtc - startTime.UtcDateTime).TotalSeconds) <= 20)
+                .ToList();
+
+            if (candidates.Count == 1)
             {
-                return closest.FullName;
+                return candidates[0].FullName;
             }
 
-            // 2. Fall back to the most recently modified player log
-            return files[0].FullName;
+            // Ambiguous mapping: do not monitor that session and log a warning (counts only)
+            LogAmbiguousMapping(_logger, pid, candidates.Count);
+            return null;
         }
         catch (Exception ex)
         {
@@ -122,15 +138,16 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
         }
     }
 
-    private async Task TailLogAsync(int pid, WatcherContext context, CancellationToken ct)
+    private async Task TailLogAsync(int pid, WatcherContext context, DateTimeOffset startTime, CancellationToken ct)
     {
         try
         {
-            using FileStream stream = new(
+            // Open with FileShare.ReadWrite, never lock exclusively
+            await using FileStream stream = new(
                 context.LogPath,
                 FileMode.Open,
                 FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete);
+                FileShare.ReadWrite);
 
             using StreamReader reader = new(stream, Encoding.UTF8);
 
@@ -139,10 +156,12 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
                 string? line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
                 if (line != null)
                 {
-                    foreach (string keyword in _keywords)
+                    IReadOnlyList<string> keywords = CurrentKeywords;
+                    foreach (string keyword in keywords)
                     {
                         if (line.Contains(keyword, StringComparison.OrdinalIgnoreCase))
                         {
+                            // Never copy full log lines into app logs or diagnostics, only the matched keyword
                             LogDisconnectDetected(_logger, pid, keyword);
                             GhostDisconnectDetected?.Invoke(pid, keyword);
                             return;
@@ -211,8 +230,8 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
     [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "Ghost disconnect keyword '{Keyword}' detected in log for Roblox PID {Pid}.")]
     private static partial void LogDisconnectDetected(ILogger logger, int pid, string keyword);
 
-    [LoggerMessage(EventId = 4, Level = LogLevel.Debug, Message = "Could not find matching Roblox log file for PID {Pid}.")]
-    private static partial void LogLogFileNotFound(ILogger logger, int pid);
+    [LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "Ambiguous log mapping for PID {Pid}. Candidate unassigned log files count: {Count}. Skipping log monitoring.")]
+    private static partial void LogAmbiguousMapping(ILogger logger, int pid, int count);
 
     [LoggerMessage(EventId = 5, Level = LogLevel.Warning, Message = "Error resolving log file for PID {Pid}: {Message}.")]
     private static partial void LogResolveError(ILogger logger, int pid, string message);

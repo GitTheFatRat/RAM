@@ -3,6 +3,7 @@ namespace RbxManager.App.Resources;
 using System.Globalization;
 using System.Resources;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "Matches .resx resource keys exactly")]
 public static class Strings
 {
     private static readonly ResourceManager ResourceManagerInstance =
@@ -225,6 +226,24 @@ public static class Strings
     public static string ProxyTestFailed => GetString(nameof(ProxyTestFailed));
     public static string ProxyScopeNote => GetString(nameof(ProxyScopeNote));
     public static string ProxyNavigationFailed => GetString(nameof(ProxyNavigationFailed));
+    public static string MasterPasswordAcknowledgeWarning => GetString(nameof(MasterPasswordAcknowledgeWarning));
+    public static string MasterPasswordAcknowledgeRequired => GetString(nameof(MasterPasswordAcknowledgeRequired));
+    public static string MasterPasswordBackupAdvice => GetString(nameof(MasterPasswordBackupAdvice));
+    public static string ThrottleRiskDialogTitle => GetString(nameof(ThrottleRiskDialogTitle));
+    public static string ThrottleRiskDialogContent => GetString(nameof(ThrottleRiskDialogContent));
+    public static string RamCleanerRiskDialogTitle => GetString(nameof(RamCleanerRiskDialogTitle));
+    public static string RamCleanerRiskDialogContent => GetString(nameof(RamCleanerRiskDialogContent));
+    public static string RamCleanerAccessDeniedDisabled => GetString(nameof(RamCleanerAccessDeniedDisabled));
+    public static string GhostDisconnectMode => GetString(nameof(GhostDisconnectMode));
+    public static string GhostDisconnectModeDescription => GetString(nameof(GhostDisconnectModeDescription));
+    public static string GhostDisconnectMode_Off => GetString(nameof(GhostDisconnectMode_Off));
+    public static string GhostDisconnectMode_NotifyOnly => GetString(nameof(GhostDisconnectMode_NotifyOnly));
+    public static string GhostDisconnectMode_KillAndRejoin => GetString(nameof(GhostDisconnectMode_KillAndRejoin));
+    public static string GhostDisconnectDetectedNotification => GetString(nameof(GhostDisconnectDetectedNotification));
+    public static string RobloxNotInstalledOrRegistered => GetString(nameof(RobloxNotInstalledOrRegistered));
+    public static string Servers_EmptyHint => GetString(nameof(Servers_EmptyHint));
+    public static string Running_EmptyHint => GetString(nameof(Running_EmptyHint));
+    public static string Servers_ErrorHint => GetString(nameof(Servers_ErrorHint));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

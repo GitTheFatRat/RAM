@@ -1,5 +1,6 @@
 namespace RbxManager.Core.Tests.Settings;
 
+using RbxManager.Core.Processes;
 using RbxManager.Core.Settings;
 
 public sealed class AppSettingsTests
@@ -19,6 +20,7 @@ public sealed class AppSettingsTests
         Assert.False(settings.EnableRamCleaner);
         Assert.Equal(15, settings.RamCleanerIntervalMinutes);
         Assert.True(settings.EnableSmartServerHopping);
+        Assert.Equal(GhostDisconnectMode.NotifyOnly, settings.GhostDisconnectMode);
         Assert.True(settings.EnableGhostDisconnectDetection);
     }
 
@@ -65,10 +67,13 @@ public sealed class AppSettingsTests
             RejoinMaxAttempts: 10,
             MultiInstanceEnabled: true,
             MultiInstanceAcknowledged: true,
+            ThrottleBackgroundRoblox: true,
+            ThrottleBackgroundAcknowledged: true,
             EnableRamCleaner: true,
+            RamCleanerAcknowledged: true,
             RamCleanerIntervalMinutes: 45,
             EnableSmartServerHopping: false,
-            EnableGhostDisconnectDetection: false);
+            GhostDisconnectMode: GhostDisconnectMode.Off);
 
         AppSettings clamped = valid.Clamp();
 
@@ -79,9 +84,11 @@ public sealed class AppSettingsTests
         Assert.Equal(10, clamped.RejoinMaxAttempts);
         Assert.True(clamped.MultiInstanceEnabled);
         Assert.True(clamped.MultiInstanceAcknowledged);
+        Assert.True(clamped.ThrottleBackgroundRoblox);
         Assert.True(clamped.EnableRamCleaner);
         Assert.Equal(45, clamped.RamCleanerIntervalMinutes);
         Assert.False(clamped.EnableSmartServerHopping);
+        Assert.Equal(GhostDisconnectMode.Off, clamped.GhostDisconnectMode);
         Assert.False(clamped.EnableGhostDisconnectDetection);
     }
 }

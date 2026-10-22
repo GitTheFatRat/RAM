@@ -549,7 +549,7 @@ public sealed class SessionTrackerTests
     }
 
     [Fact]
-    public void GhostDisconnectDetected_WhenEnabled_KillsRobloxProcess()
+    public void GhostDisconnectDetected_WhenKillAndRejoin_AndAgeOver60s_KillsRobloxProcess()
     {
         using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
         Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
@@ -560,7 +560,7 @@ public sealed class SessionTrackerTests
         FakeServerBrowserService serverBrowser = new();
         FakeSettingsService settingsService = new()
         {
-            CurrentSettings = Core.Settings.AppSettings.Default with { EnableGhostDisconnectDetection = true }
+            CurrentSettings = Core.Settings.AppSettings.Default with { GhostDisconnectMode = Core.Processes.GhostDisconnectMode.KillAndRejoin }
         };
         FakeLogWatcher logWatcher = new();
 
@@ -574,7 +574,7 @@ public sealed class SessionTrackerTests
             logWatcher);
 
         LaunchRequest req = new(account.Id, 1818, null);
-        RunningSession session = new(account.Id, req, 555, DateTimeOffset.UtcNow);
+        RunningSession session = new(account.Id, req, 555, DateTimeOffset.UtcNow - TimeSpan.FromSeconds(70));
         tracker.RegisterSession(session);
 
         Assert.Contains(555, logWatcher.WatchedPids);
@@ -583,6 +583,44 @@ public sealed class SessionTrackerTests
         logWatcher.RaiseDisconnect(555, "Connection lost");
 
         Assert.Contains(555, provider.KilledPids);
+    }
+
+    [Fact]
+    public void GhostDisconnectDetected_WhenNotifyOnly_DoesNotKillProcess()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        FakeAccountStore store = new(account);
+        FakeAuthService auth = new();
+        FakeLauncher launcher = new();
+        FakeServerBrowserService serverBrowser = new();
+        FakeSettingsService settingsService = new()
+        {
+            CurrentSettings = Core.Settings.AppSettings.Default with { GhostDisconnectMode = Core.Processes.GhostDisconnectMode.NotifyOnly }
+        };
+        FakeLogWatcher logWatcher = new();
+
+        using SessionTracker tracker = new(
+            provider,
+            store,
+            auth,
+            launcher,
+            serverBrowser,
+            settingsService,
+            logWatcher);
+
+        LaunchRequest req = new(account.Id, 1818, null);
+        RunningSession session = new(account.Id, req, 555, DateTimeOffset.UtcNow - TimeSpan.FromSeconds(70));
+        tracker.RegisterSession(session);
+
+        bool eventRaised = false;
+        tracker.GhostDisconnectOccurred += (s, r) => eventRaised = true;
+
+        logWatcher.RaiseDisconnect(555, "Connection lost");
+
+        Assert.True(eventRaised);
+        Assert.DoesNotContain(555, provider.KilledPids);
     }
 
     [Fact]
@@ -597,7 +635,7 @@ public sealed class SessionTrackerTests
         FakeServerBrowserService serverBrowser = new();
         FakeSettingsService settingsService = new()
         {
-            CurrentSettings = Core.Settings.AppSettings.Default with { EnableGhostDisconnectDetection = false }
+            CurrentSettings = Core.Settings.AppSettings.Default with { GhostDisconnectMode = Core.Processes.GhostDisconnectMode.Off }
         };
         FakeLogWatcher logWatcher = new();
 

@@ -29,6 +29,7 @@
                    Text="{x:Static resources:Strings.AccountsPageTitle}"
                    FontSize="{StaticResource FontSizeTitle}"
                    FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Margin="{StaticResource MarginMedium}" />
 
         <!-- Controls Bar 1: Search + Primary & More Toolbar -->
@@ -45,6 +46,7 @@
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                         Icon="{ui:SymbolIcon Search24}"
                         MaxWidth="320"
+                        VerticalAlignment="Center"
                         HorizontalAlignment="Left" />
 
             <!-- Toolbar Actions -->
@@ -249,6 +251,7 @@
                              SelectedItem="{Binding SelectedAccount}"
                              AutoGenerateColumns="False"
                              CanUserAddRows="False"
+                             CanUserDeleteRows="False"
                              IsReadOnly="True"
                              SelectionMode="Single"
                              GridLinesVisibility="None"

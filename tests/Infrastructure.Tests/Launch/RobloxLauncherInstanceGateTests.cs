@@ -28,11 +28,17 @@ public sealed class RobloxLauncherInstanceGateTests
     {
         public bool Installed { get; set; } = true;
         public string? StartedUri { get; private set; }
+        public Exception? ExceptionToThrowOnStart { get; set; }
 
         public bool IsRobloxPlayerInstalled() => Installed;
 
         public bool Start(string uri)
         {
+            if (ExceptionToThrowOnStart != null)
+            {
+                throw ExceptionToThrowOnStart;
+            }
+
             StartedUri = uri;
             return true;
         }
@@ -150,5 +156,32 @@ public sealed class RobloxLauncherInstanceGateTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(starter.StartedUri);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WhenStarterThrowsWin32Exception1155_MapsToRobloxNotInstalledOrRegistered()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE_123");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+
+        FakeAccountStore store = new(account);
+        FakeAuthService auth = new();
+        FakeProcessStarter starter = new()
+        {
+            ExceptionToThrowOnStart = new System.ComponentModel.Win32Exception(1155)
+        };
+        FakeProcessProvider provider = new()
+        {
+            Processes = []
+        };
+        FakeInstanceGate gate = new() { IsMultiInstanceEnabled = false };
+
+        using RobloxLauncher launcher = new(store, auth, starter, provider, gate);
+        LaunchRequest request = new(account.Id, 1818, null);
+
+        Result result = await launcher.LaunchAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("RobloxNotInstalledOrRegistered", result.ErrorCode);
     }
 }

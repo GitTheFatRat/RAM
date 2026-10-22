@@ -26,6 +26,7 @@
                    Text="{x:Static res:Strings.ServersPageTitle}"
                    FontSize="{StaticResource FontSizeTitle}"
                    FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Margin="{StaticResource MarginMedium}" />
 
         <!-- Controls -->
@@ -78,6 +79,7 @@
                 <ui:DataGrid ItemsSource="{Binding Servers}"
                              AutoGenerateColumns="False"
                              CanUserAddRows="False"
+                             CanUserDeleteRows="False"
                              IsReadOnly="True"
                              SelectionMode="Single"
                              GridLinesVisibility="None"
@@ -173,7 +175,7 @@
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            HorizontalAlignment="Center"
                            Margin="{StaticResource MarginTight}" />
-                <TextBlock Text="{x:Static res:Strings.SearchPlaceholder}"
+                <TextBlock Text="{x:Static res:Strings.Servers_EmptyHint}"
                            FontSize="{StaticResource FontSizeBody}"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            HorizontalAlignment="Center" />
@@ -192,6 +194,11 @@
                            FontSize="{StaticResource FontSizeSubtitle}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="{StaticResource MarginTight}" />
+                <TextBlock Text="{x:Static res:Strings.Servers_ErrorHint}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            HorizontalAlignment="Center"
                            Margin="{StaticResource MarginTight}" />
                 <ui:Button Content="{x:Static res:Strings.Retry}"

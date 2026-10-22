@@ -27,28 +27,33 @@
 - `version` (1 byte: `0x02`)
 - `kdfType` (1 byte: `0x00` for DPAPI only, `0x01` for Argon2id + DPAPI)
 - If `kdfType == 0x01`:
+  - `memorySizeKb` (4 bytes `UInt32` Little-Endian): default 65,536 KB, minimum 65,536 KB (64 MiB) enforced on load
+  - `iterations` (4 bytes `UInt32` Little-Endian): default 3, minimum 3 enforced on load
+  - `parallelism` (4 bytes `UInt32` Little-Endian): default 4, minimum 1 enforced on load
   - `argonSalt` (16 bytes): cryptographically secure random bytes
-  - Associated Authenticated Data (AAD): 22 bytes (`RBXV\x02\x01` + 16-byte salt)
+  - Associated Authenticated Data (AAD): all 34 bytes of the prefix header (`RBXV\x02\x01` + memorySizeKb + iterations + parallelism + salt)
 - If `kdfType == 0x00`:
   - Associated Authenticated Data (AAD): 6 bytes (`RBXV\x02\x00`)
 - `wrappedKeyLength` (2 bytes unsigned integer, Little-Endian)
 - `wrappedKey` (`wrappedKeyLength` bytes): 32-byte AES key wrapped with Windows DPAPI (`ProtectedData.Protect` with `DataProtectionScope.CurrentUser`)
-- `nonce` (12 bytes): cryptographically secure random bytes
+- `nonce` (12 bytes): cryptographically secure random bytes (fresh per save)
 - `tag` (16 bytes): AES-GCM authentication tag
 - `ciphertext` (remaining bytes): AES-256-GCM encrypted JSON payload of internal account DTOs
 
-### Legacy Fallback (Format v1)
+### Legacy Fallback & Automatic Migration Backup (Format v1)
 - `magic` (`RBXV`) | `version` (`0x01`) | `wrappedKeyLength` (2B) | `wrappedKey` | `nonce` (12B) | `tag` (16B) | `ciphertext`.
 - Loading Format v1 remains fully supported; any write or update automatically upgrades the storage layout to Format v2.
+- **Automatic Migration Backup**: Prior to overwriting a Format v1 vault file with Format v2, the application automatically creates a backup copy at `vault.dat.v1.bak`. If that backup already exists, a timestamped copy (`vault.dat.v1.yyyyMMddHHmmssfff.bak`) is created so the user can always recover the pre-upgrade vault if needed.
 
 ### Cryptographic Parameters & Key Derivation (Argon2id)
 - **KDF**: `Argon2id` via `Konscious.Security.Cryptography.Argon2` (version 1.3.1).
-- **Memory Size**: 65,536 KB (64 MB).
-- **Iterations**: 3.
-- **Degree of Parallelism**: 4 lanes / threads.
-- **Salt Length**: 16 bytes.
+- **Memory Size**: 65,536 KB (64 MB). Parameter validation rejects any stored parameters below 65,536 KB.
+- **Iterations**: 3. Parameter validation rejects any count below 3.
+- **Degree of Parallelism**: 4 lanes / threads. Parameter validation rejects any count below 1.
+- **Salt Length**: 16 bytes (fresh per save).
 - **Output Key Size**: 256-bit (32 bytes).
-- **Double-Layer Wrapping**: When master password protection is enabled, the 256-bit AES data key is derived from the master password and salt, and is additionally wrapped with Windows DPAPI (`CurrentUser`). Decryption requires both the correct master password and the matching Windows user account context.
+- **Double-Layer Wrapping**: When master password protection is enabled, the 256-bit AES data key is derived from the master password and salt via Argon2id, and is additionally wrapped with Windows DPAPI (`CurrentUser`). Decryption requires both the correct master password and the matching Windows user account context. Wrong password attempts leave the vault and backup files completely untouched.
+- **Irreversible Risk Acknowledgment**: Enabling a master password requires explicit user acknowledgment via a warning checkbox that lost master passwords cannot be recovered or reset by anyone.
 
 ### Threat Model & Defense-in-Depth
 - **Protected Against**:

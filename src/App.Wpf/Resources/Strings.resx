@@ -703,4 +703,58 @@
   <data name="ProxyNavigationFailed" xml:space="preserve">
     <value>Unable to load login page through the configured proxy. Please check your proxy settings or connection.</value>
   </data>
+  <data name="MasterPasswordAcknowledgeWarning" xml:space="preserve">
+    <value>I understand that if I forget this password, my vault data cannot be recovered. It is recommended to export an encrypted backup before proceeding.</value>
+  </data>
+  <data name="MasterPasswordAcknowledgeRequired" xml:space="preserve">
+    <value>You must acknowledge the password recovery risk before enabling the master password.</value>
+  </data>
+  <data name="MasterPasswordBackupAdvice" xml:space="preserve">
+    <value>Tip: Export an encrypted backup under Settings &gt; Data Management before enabling.</value>
+  </data>
+  <data name="ThrottleRiskDialogTitle" xml:space="preserve">
+    <value>Risk Acknowledgment: Window Throttling</value>
+  </data>
+  <data name="ThrottleRiskDialogContent" xml:space="preserve">
+    <value>This feature minimizes background Roblox windows. Because it interacts with Roblox client windows, anti-cheat systems may view external window manipulation as abnormal behavior. Enable at your own risk.</value>
+  </data>
+  <data name="RamCleanerRiskDialogTitle" xml:space="preserve">
+    <value>Risk Acknowledgment: RAM Cleaner</value>
+  </data>
+  <data name="RamCleanerRiskDialogContent" xml:space="preserve">
+    <value>This feature optimizes working set memory for Roblox processes. External process memory trimming may be treated as abnormal behavior by anti-cheat systems. Enable at your own risk.</value>
+  </data>
+  <data name="RamCleanerAccessDeniedDisabled" xml:space="preserve">
+    <value>RAM cleaner was automatically disabled after multiple access-denied cycles.</value>
+  </data>
+  <data name="GhostDisconnectMode" xml:space="preserve">
+    <value>Ghost Disconnect Detection Mode</value>
+  </data>
+  <data name="GhostDisconnectModeDescription" xml:space="preserve">
+    <value>Monitors Roblox client logs for disconnect events. Notify Only warns via UI; Kill and Rejoin closes and restarts the session.</value>
+  </data>
+  <data name="GhostDisconnectMode_Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="GhostDisconnectMode_NotifyOnly" xml:space="preserve">
+    <value>Notify Only</value>
+  </data>
+  <data name="GhostDisconnectMode_KillAndRejoin" xml:space="preserve">
+    <value>Kill and Rejoin</value>
+  </data>
+  <data name="GhostDisconnectDetectedNotification" xml:space="preserve">
+    <value>Ghost disconnect detected for session (PID: {0}, keyword: '{1}').</value>
+  </data>
+  <data name="RobloxNotInstalledOrRegistered" xml:space="preserve">
+    <value>Roblox Player is not installed or protocol is not registered on this system.</value>
+  </data>
+  <data name="Servers_EmptyHint" xml:space="preserve">
+    <value>No public servers found for this place.</value>
+  </data>
+  <data name="Running_EmptyHint" xml:space="preserve">
+    <value>No Roblox sessions are currently being tracked.</value>
+  </data>
+  <data name="Servers_ErrorHint" xml:space="preserve">
+    <value>Failed to load server list. Check connection and retry.</value>
+  </data>
 </root>

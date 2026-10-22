@@ -88,4 +88,22 @@ public sealed class SystemProcessProvider : IProcessProvider
             return false;
         }
     }
+
+    public bool IsProcessRunning(string processName)
+    {
+        try
+        {
+            Process[] processes = Process.GetProcessesByName(processName);
+            bool isRunning = processes.Length > 0;
+            foreach (Process p in processes)
+            {
+                p.Dispose();
+            }
+            return isRunning;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

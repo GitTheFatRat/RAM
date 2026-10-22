@@ -477,4 +477,137 @@ public sealed class EncryptedFileVaultTests
             await Assert.ThrowsAsync<VaultCorruptedException>(() => vault.ListAsync());
         }
     }
+
+    [Fact]
+    public async Task SaveV2OverV1_CreatesBackupFile()
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath("vault.dat");
+
+        // 1. Create an authentic V1 vault file
+        byte[] plaintextBytes = Encoding.UTF8.GetBytes("""[{"Id":1,"Alias":"V1Account","Cookie":"FAKE_COOKIE_FOR_TESTS_123"}]""");
+        byte[] dataKey = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        byte[] nonce = System.Security.Cryptography.RandomNumberGenerator.GetBytes(12);
+        byte[] tag = new byte[16];
+        byte[] ciphertext = new byte[plaintextBytes.Length];
+        byte[] aad = [0x52, 0x42, 0x58, 0x56, 0x01];
+
+        using (System.Security.Cryptography.AesGcm aes = new(dataKey, 16))
+        {
+            aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, aad);
+        }
+
+        byte[] wrappedKey = System.Security.Cryptography.ProtectedData.Protect(dataKey, null, System.Security.Cryptography.DataProtectionScope.CurrentUser);
+        ushort wrappedKeyLength = checked((ushort)wrappedKey.Length);
+
+        using (FileStream fs = File.Create(vaultFilePath))
+        {
+            fs.Write([0x52, 0x42, 0x58, 0x56, 0x01]);
+            byte[] lenBytes = new byte[2];
+            BinaryPrimitives.WriteUInt16LittleEndian(lenBytes, wrappedKeyLength);
+            fs.Write(lenBytes);
+            fs.Write(wrappedKey);
+            fs.Write(nonce);
+            fs.Write(tag);
+            fs.Write(ciphertext);
+        }
+
+        byte[] v1Bytes = await File.ReadAllBytesAsync(vaultFilePath);
+        Assert.Equal(1, v1Bytes[4]); // Format v1
+
+        // 2. Open and upgrade to V2 with master password
+        using VaultKeyProvider keyProvider = new();
+        using SecretValue password = SecretValue.FromString("SecureMasterPass123!");
+        keyProvider.SetKey(password.Clone());
+
+        using (EncryptedFileVault v2Vault = new(vaultFilePath, keyProvider))
+        {
+            using SecretValue cookie2 = SecretValue.FromString(FakeCookie2);
+            Account account2 = new(new AccountId(2), "V2Account", null, null, cookie2, DateTimeOffset.UtcNow);
+            await v2Vault.AddAsync(account2);
+        }
+
+        string backupPath = vaultFilePath + ".v1.bak";
+        Assert.True(File.Exists(backupPath));
+        byte[] backupBytes = await File.ReadAllBytesAsync(backupPath);
+        Assert.Equal(v1Bytes, backupBytes);
+
+        // 3. Repeat upgrade save when .v1.bak already exists; ensure timestamped backup is made
+        // Create another dummy v1 file
+        await File.WriteAllBytesAsync(vaultFilePath, v1Bytes);
+        using (EncryptedFileVault v2VaultAgain = new(vaultFilePath, keyProvider))
+        {
+            using SecretValue cookie3 = SecretValue.FromString(FakeCookie2);
+            Account account3 = new(new AccountId(3), "V3Account", null, null, cookie3, DateTimeOffset.UtcNow);
+            await v2VaultAgain.AddAsync(account3);
+        }
+
+        string[] bakFiles = Directory.GetFiles(tempDir.Path, "vault.dat.v1.*bak");
+        Assert.True(bakFiles.Length >= 2);
+    }
+
+    [Theory]
+    [InlineData(32768, 3, 1)] // Memory < 64MB (32MB)
+    [InlineData(65536, 2, 1)] // Iterations < 3 (2)
+    [InlineData(65536, 3, 0)] // Parallelism < 1 (0)
+    public async Task FormatV2_InvalidKdfParameters_ThrowsVaultCorruptedException(int memKb, int iter, int par)
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath();
+
+        using VaultKeyProvider keyProvider = new();
+        using SecretValue password = SecretValue.FromString("TestPass123!");
+        keyProvider.SetKey(password.Clone());
+
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            using SecretValue cookie = SecretValue.FromString(FakeCookie1);
+            Account account = new(new AccountId(1), "ParamTest", null, null, cookie, DateTimeOffset.UtcNow);
+            await vault.AddAsync(account);
+        }
+
+        byte[] fileBytes = await File.ReadAllBytesAsync(vaultFilePath);
+        BinaryPrimitives.WriteInt32LittleEndian(fileBytes.AsSpan(6, 4), memKb);
+        BinaryPrimitives.WriteInt32LittleEndian(fileBytes.AsSpan(10, 4), iter);
+        BinaryPrimitives.WriteInt32LittleEndian(fileBytes.AsSpan(14, 4), par);
+        await File.WriteAllBytesAsync(vaultFilePath, fileBytes);
+
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            VaultCorruptedException ex = await Assert.ThrowsAsync<VaultCorruptedException>(() => vault.ListAsync());
+            Assert.Contains("below minimum", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public async Task WrongMasterPassword_DoesNotModifyVaultOrBackupFiles()
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath("vault.dat");
+
+        using VaultKeyProvider correctKeyProvider = new();
+        using SecretValue correctPassword = SecretValue.FromString("CorrectPass123!");
+        correctKeyProvider.SetKey(correctPassword.Clone());
+
+        using (EncryptedFileVault vault = new(vaultFilePath, correctKeyProvider))
+        {
+            using SecretValue cookie = SecretValue.FromString(FakeCookie1);
+            Account account = new(new AccountId(1), "ShaTest", null, null, cookie, DateTimeOffset.UtcNow);
+            await vault.AddAsync(account);
+        }
+
+        byte[] originalHash = System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(vaultFilePath));
+
+        using VaultKeyProvider wrongKeyProvider = new();
+        using SecretValue wrongPassword = SecretValue.FromString("WrongPass123!");
+        wrongKeyProvider.SetKey(wrongPassword.Clone());
+
+        using (EncryptedFileVault vault = new(vaultFilePath, wrongKeyProvider))
+        {
+            await Assert.ThrowsAsync<VaultCorruptedException>(() => vault.ListAsync());
+        }
+
+        byte[] afterHash = System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(vaultFilePath));
+        Assert.Equal(originalHash, afterHash);
+    }
 }

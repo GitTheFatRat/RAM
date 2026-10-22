@@ -39,6 +39,8 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     public event Action<RunningSession>? SessionStarted;
     public event Action<RunningSession, bool>? SessionEnded;
+    public event Action<RunningSession, string>? GhostDisconnectOccurred;
+    private readonly ConcurrentDictionary<int, DateTimeOffset> _lastGhostKillTimes = new();
 
     public IReadOnlyList<RunningSession> ActiveSessions => _activeSessions.Values.ToList();
 
@@ -332,9 +334,44 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     private void OnGhostDisconnectDetected(int pid, string keyword)
     {
-        bool enabled = _settingsService?.CurrentSettings.EnableGhostDisconnectDetection ?? true;
-        if (enabled && _activeSessions.ContainsKey(pid))
+        GhostDisconnectMode mode = _settingsService?.CurrentSettings.GhostDisconnectMode ?? GhostDisconnectMode.NotifyOnly;
+        if (mode == GhostDisconnectMode.Off)
         {
+            return;
+        }
+
+        if (!_activeSessions.TryGetValue(pid, out RunningSession? session))
+        {
+            return;
+        }
+
+        GhostDisconnectOccurred?.Invoke(session, keyword);
+
+        if (mode == GhostDisconnectMode.NotifyOnly)
+        {
+            // In NotifyOnly mode never kill
+            LogGhostDisconnectNotified(session.AccountId.Value, pid, keyword);
+            return;
+        }
+
+        if (mode == GhostDisconnectMode.KillAndRejoin)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+
+            // Guard 1: session age at least 60 s
+            if (now - session.StartedAt < TimeSpan.FromSeconds(60))
+            {
+                return;
+            }
+
+            // Guard 2: at most one kill per session per 5 minutes (cooldown)
+            if (_lastGhostKillTimes.TryGetValue(pid, out DateTimeOffset lastKill) &&
+                now - lastKill < TimeSpan.FromMinutes(5))
+            {
+                return;
+            }
+
+            _lastGhostKillTimes[pid] = now;
             LogGhostDisconnectDetected(pid, keyword);
             _processProvider.Kill(pid, graceful: false);
         }
@@ -384,4 +421,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     [LoggerMessage(EventId = 512, Level = LogLevel.Warning, Message = "Ghost disconnect keyword '{Keyword}' detected for Roblox PID {Pid}. Killing process.")]
     private partial void LogGhostDisconnectDetected(int pid, string keyword);
+
+    [LoggerMessage(EventId = 513, Level = LogLevel.Information, Message = "Ghost disconnect keyword '{Keyword}' detected for account {AccountId} (PID {Pid}). NotifyOnly mode: session not killed.")]
+    private partial void LogGhostDisconnectNotified(long accountId, int pid, string keyword);
 }

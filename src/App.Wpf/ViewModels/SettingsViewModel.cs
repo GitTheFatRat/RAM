@@ -81,6 +81,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _enableGhostDisconnectDetection = true;
 
     [ObservableProperty]
+    private Core.Processes.GhostDisconnectMode _selectedGhostDisconnectMode = Core.Processes.GhostDisconnectMode.NotifyOnly;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -121,7 +124,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableRamCleaner = settings.EnableRamCleaner;
         RamCleanerIntervalMinutes = settings.RamCleanerIntervalMinutes;
         EnableSmartServerHopping = settings.EnableSmartServerHopping;
-        EnableGhostDisconnectDetection = settings.EnableGhostDisconnectDetection;
+        EnableGhostDisconnectDetection = settings.GhostDisconnectMode != Core.Processes.GhostDisconnectMode.Off;
+        SelectedGhostDisconnectMode = settings.GhostDisconnectMode;
 
         string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
         LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -160,10 +164,12 @@ public sealed partial class SettingsViewModel : ObservableObject
                 MultiInstanceAcknowledged: current.MultiInstanceAcknowledged,
                 IsMasterPasswordEnabled: IsMasterPasswordEnabled,
                 ThrottleBackgroundRoblox: ThrottleBackgroundRoblox,
+                ThrottleBackgroundAcknowledged: current.ThrottleBackgroundAcknowledged,
                 EnableRamCleaner: EnableRamCleaner,
+                RamCleanerAcknowledged: current.RamCleanerAcknowledged,
                 RamCleanerIntervalMinutes: RamCleanerIntervalMinutes,
                 EnableSmartServerHopping: EnableSmartServerHopping,
-                EnableGhostDisconnectDetection: EnableGhostDisconnectDetection,
+                GhostDisconnectMode: SelectedGhostDisconnectMode,
                 Advanced: current.Advanced);
 
             await _settingsService.SaveSettingsAsync(updated);
@@ -247,17 +253,91 @@ public sealed partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task OnThrottleBackgroundRobloxToggledAsync(bool enabled)
     {
-        ThrottleBackgroundRoblox = enabled;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { ThrottleBackgroundRoblox = enabled });
+        if (enabled)
+        {
+            AppSettings current = _settingsService.CurrentSettings;
+            if (!current.ThrottleBackgroundAcknowledged)
+            {
+                ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+                {
+                    Title = Strings.ThrottleRiskDialogTitle,
+                    Content = Strings.ThrottleRiskDialogContent,
+                    PrimaryButtonText = Strings.Save,
+                    CloseButtonText = Strings.Cancel
+                });
+
+                if (result != ContentDialogResult.Primary)
+                {
+                    ThrottleBackgroundRoblox = false;
+                    return;
+                }
+
+                current = current with { ThrottleBackgroundAcknowledged = true };
+            }
+
+            ThrottleBackgroundRoblox = true;
+            await _settingsService.SaveSettingsAsync(current with { ThrottleBackgroundRoblox = true });
+        }
+        else
+        {
+            ThrottleBackgroundRoblox = false;
+            AppSettings current = _settingsService.CurrentSettings;
+            await _settingsService.SaveSettingsAsync(current with { ThrottleBackgroundRoblox = false });
+        }
     }
 
     [RelayCommand]
     private async Task OnEnableRamCleanerToggledAsync(bool enabled)
     {
-        EnableRamCleaner = enabled;
+        if (enabled)
+        {
+            AppSettings current = _settingsService.CurrentSettings;
+            if (!current.RamCleanerAcknowledged)
+            {
+                ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+                {
+                    Title = Strings.RamCleanerRiskDialogTitle,
+                    Content = Strings.RamCleanerRiskDialogContent,
+                    PrimaryButtonText = Strings.Save,
+                    CloseButtonText = Strings.Cancel
+                });
+
+                if (result != ContentDialogResult.Primary)
+                {
+                    EnableRamCleaner = false;
+                    return;
+                }
+
+                current = current with { RamCleanerAcknowledged = true };
+            }
+
+            EnableRamCleaner = true;
+            await _settingsService.SaveSettingsAsync(current with { EnableRamCleaner = true });
+        }
+        else
+        {
+            EnableRamCleaner = false;
+            AppSettings current = _settingsService.CurrentSettings;
+            await _settingsService.SaveSettingsAsync(current with { EnableRamCleaner = false });
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnGhostDisconnectModeChangedAsync(Core.Processes.GhostDisconnectMode mode)
+    {
+        SelectedGhostDisconnectMode = mode;
+        EnableGhostDisconnectDetection = mode != Core.Processes.GhostDisconnectMode.Off;
         AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { EnableRamCleaner = enabled });
+        await _settingsService.SaveSettingsAsync(current with { GhostDisconnectMode = mode });
+    }
+
+    async partial void OnSelectedGhostDisconnectModeChanged(Core.Processes.GhostDisconnectMode value)
+    {
+        AppSettings current = _settingsService.CurrentSettings;
+        if (current.GhostDisconnectMode != value)
+        {
+            await _settingsService.SaveSettingsAsync(current with { GhostDisconnectMode = value });
+        }
     }
 
     [RelayCommand]
@@ -272,8 +352,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     private async Task OnEnableGhostDisconnectDetectionToggledAsync(bool enabled)
     {
         EnableGhostDisconnectDetection = enabled;
+        Core.Processes.GhostDisconnectMode mode = enabled ? Core.Processes.GhostDisconnectMode.NotifyOnly : Core.Processes.GhostDisconnectMode.Off;
+        SelectedGhostDisconnectMode = mode;
         AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { EnableGhostDisconnectDetection = enabled });
+        await _settingsService.SaveSettingsAsync(current with { GhostDisconnectMode = mode });
     }
 
     [RelayCommand]
@@ -294,6 +376,14 @@ public sealed partial class SettingsViewModel : ObservableObject
             {
                 IsMasterPasswordEnabled = false;
                 setupControl.ClearPasswords();
+                return;
+            }
+
+            if (!setupControl.IsAcknowledged)
+            {
+                IsMasterPasswordEnabled = false;
+                setupControl.ClearPasswords();
+                _snackbarService.Show(Strings.ErrorTitle, Strings.MasterPasswordAcknowledgeRequired, ControlAppearance.Danger);
                 return;
             }
 

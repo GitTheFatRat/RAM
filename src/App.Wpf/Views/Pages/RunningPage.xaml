@@ -26,6 +26,7 @@
                    Text="{x:Static res:Strings.RunningPageTitle}"
                    FontSize="{StaticResource FontSizeTitle}"
                    FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Margin="{StaticResource MarginMedium}" />
 
         <!-- Controls Bar -->
@@ -56,6 +57,7 @@
                 <ui:DataGrid ItemsSource="{Binding Sessions}"
                              AutoGenerateColumns="False"
                              CanUserAddRows="False"
+                             CanUserDeleteRows="False"
                              IsReadOnly="True"
                              SelectionMode="Single"
                              GridLinesVisibility="None"
@@ -75,9 +77,11 @@
                 <ui:DataGrid.Columns>
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnAlias}"
                                         Binding="{Binding Alias}"
-                                        Width="160" />
+                                        Width="140"
+                                        MinWidth="100" />
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPid}"
-                                            Width="90">
+                                            Width="80"
+                                            MinWidth="60">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Pid}"
@@ -88,7 +92,8 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPlace}"
-                                            Width="130">
+                                            Width="120"
+                                            MinWidth="90">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding PlaceId}"
@@ -100,15 +105,19 @@
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnStarted}"
                                         Binding="{Binding StartedFormatted}"
-                                        Width="100" />
+                                        Width="130"
+                                        MinWidth="100" />
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnUptime}"
                                         Binding="{Binding UptimeFormatted}"
-                                        Width="100" />
+                                        Width="130"
+                                        MinWidth="100" />
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnMemory}"
                                         Binding="{Binding MemoryMb, StringFormat='{}{0} MB'}"
-                                        Width="110" />
+                                        Width="110"
+                                        MinWidth="80" />
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAutoRejoin}"
-                                            Width="170">
+                                            Width="130"
+                                            MinWidth="100">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -122,7 +131,8 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAction}"
-                                            Width="*">
+                                            Width="*"
+                                            MinWidth="90">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ui:Button Content="{x:Static res:Strings.CloseAction}"
@@ -151,7 +161,7 @@
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            HorizontalAlignment="Center"
                            Margin="{StaticResource MarginTight}" />
-                <TextBlock Text="{x:Static res:Strings.LaunchingSectionSubtitle}"
+                <TextBlock Text="{x:Static res:Strings.Running_EmptyHint}"
                            FontSize="{StaticResource FontSizeBody}"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            HorizontalAlignment="Center" />

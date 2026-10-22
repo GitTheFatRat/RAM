@@ -2,10 +2,15 @@ namespace RbxManager.Core.Settings;
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using RbxManager.Core.Common;
+using RbxManager.Core.Processes;
+using RbxManager.Core.Validation;
 
 public sealed record AdvancedSettings(
     string? LaunchUriTemplate = null,
-    string? PlaceLauncherUrlTemplate = null);
+    string? PlaceLauncherUrlTemplate = null,
+    IReadOnlyList<string>? GhostDisconnectKeywords = null);
 
 public sealed record UiStateSettings(
     double? WindowWidth = null,
@@ -69,10 +74,13 @@ public sealed record AppSettings(
     bool MultiInstanceAcknowledged = false,
     bool IsMasterPasswordEnabled = false,
     bool ThrottleBackgroundRoblox = false,
+    bool ThrottleBackgroundAcknowledged = false,
     bool EnableRamCleaner = false,
+    bool RamCleanerAcknowledged = false,
     int RamCleanerIntervalMinutes = AppSettings.DefaultRamCleanerIntervalMinutes,
     bool EnableSmartServerHopping = true,
-    bool EnableGhostDisconnectDetection = true,
+    GhostDisconnectMode GhostDisconnectMode = GhostDisconnectMode.NotifyOnly,
+    [property: JsonPropertyName("EnableGhostDisconnectDetection")] bool? LegacyEnableGhostDisconnectDetection = null,
     AdvancedSettings? Advanced = null,
     UiStateSettings? UiState = null)
 {
@@ -90,6 +98,9 @@ public sealed record AppSettings(
 
     public static AppSettings Default => new();
 
+    [JsonIgnore]
+    public bool EnableGhostDisconnectDetection => GhostDisconnectMode != GhostDisconnectMode.Off;
+
     public AppSettings Clamp()
     {
         string lang = string.Equals(Language, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
@@ -105,6 +116,25 @@ public sealed record AppSettings(
         int rejoinMax = Math.Max(MinimumRejoinMaxAttempts, RejoinMaxAttempts);
         int ramInterval = Math.Clamp(RamCleanerIntervalMinutes, MinimumRamCleanerIntervalMinutes, MaximumRamCleanerIntervalMinutes);
 
+        GhostDisconnectMode mode = GhostDisconnectMode;
+        if (LegacyEnableGhostDisconnectDetection.HasValue && mode == GhostDisconnectMode.NotifyOnly && !LegacyEnableGhostDisconnectDetection.Value)
+        {
+            mode = GhostDisconnectMode.Off;
+        }
+
+        bool throttle = ThrottleBackgroundRoblox && ThrottleBackgroundAcknowledged;
+        bool ramCleaner = EnableRamCleaner && RamCleanerAcknowledged;
+
+        AdvancedSettings? advanced = Advanced;
+        if (advanced?.GhostDisconnectKeywords != null)
+        {
+            Result validation = GhostDisconnectKeywordValidator.Validate(advanced.GhostDisconnectKeywords);
+            if (!validation.IsSuccess)
+            {
+                advanced = advanced with { GhostDisconnectKeywords = null };
+            }
+        }
+
         return this with
         {
             Language = lang,
@@ -112,7 +142,12 @@ public sealed record AppSettings(
             LaunchDelayMs = launchDelay,
             RejoinDelaySeconds = rejoinDelay,
             RejoinMaxAttempts = rejoinMax,
-            RamCleanerIntervalMinutes = ramInterval
+            ThrottleBackgroundRoblox = throttle,
+            EnableRamCleaner = ramCleaner,
+            RamCleanerIntervalMinutes = ramInterval,
+            GhostDisconnectMode = mode,
+            LegacyEnableGhostDisconnectDetection = null,
+            Advanced = advanced
         };
     }
 }
