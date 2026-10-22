@@ -4,9 +4,11 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:resources="clr-namespace:RbxManager.App.Resources"
       xmlns:processes="clr-namespace:RbxManager.Core.Processes;assembly=RbxManager.Core"
-      Title="{x:Static resources:Strings.SettingsPageTitle}">
+      Title="{x:Static resources:Strings.SettingsPageTitle}"
+      Background="Transparent"
+      PreviewMouseWheel="OnPagePreviewMouseWheel">
 
-    <Grid Margin="{StaticResource MarginLarge}">
+    <Grid Margin="{StaticResource MarginLarge}" Background="Transparent">
         <Grid.RowDefinitions>
             <!-- Row 0: Page Title & Save Action Header -->
             <RowDefinition Height="Auto" />
@@ -38,8 +40,13 @@
         </Grid>
 
         <!-- Main Content: Scrollable Grid of Setting Cards -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="860" HorizontalAlignment="Left">
+        <ScrollViewer x:Name="SettingsScrollViewer"
+                      Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Background="Transparent"
+                      Focusable="False">
+            <StackPanel MaxWidth="860" HorizontalAlignment="Left" Background="Transparent">
 
                 <!-- ══════════════════════════════════════════════════════════
                      CARD 1: Giao diện (Appearance)
