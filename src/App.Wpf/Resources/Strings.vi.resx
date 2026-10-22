@@ -661,4 +661,10 @@
   <data name="EnableSmartServerHoppingDescription" xml:space="preserve">
     <value>Tự động tìm và chuyển sang máy chủ công khai còn chỗ mới khi trò chơi bị đóng thay vì vào lại máy chủ cũ.</value>
   </data>
+  <data name="EnableGhostDisconnectDetection" xml:space="preserve">
+    <value>Tự động phát hiện mất kết nối ngầm (Đọc Log)</value>
+  </data>
+  <data name="EnableGhostDisconnectDetectionDescription" xml:space="preserve">
+    <value>Đọc tệp nhật ký Roblox cục bộ để phát hiện đơ mạng hoặc lỗi mất kết nối (như lỗi 277) và tắt tiến trình để kích hoạt vào lại.</value>
+  </data>
 </root>

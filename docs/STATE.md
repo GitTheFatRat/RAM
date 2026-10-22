@@ -14,4 +14,4 @@
 - M10: done (fde0b9d) - master password (Argon2id Format v2), per-account proxy, resource optimization
 - M11: done (783cfb8) - smart ram cleaner for background processes
 - M12: done (1d71723) - smart server hopping on auto-rejoin
-- M13: pending
+- M13: done (7b3a93d) - ghost disconnect detection via log tailing

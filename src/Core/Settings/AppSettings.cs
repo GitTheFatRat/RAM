@@ -72,6 +72,7 @@ public sealed record AppSettings(
     bool EnableRamCleaner = false,
     int RamCleanerIntervalMinutes = AppSettings.DefaultRamCleanerIntervalMinutes,
     bool EnableSmartServerHopping = true,
+    bool EnableGhostDisconnectDetection = true,
     AdvancedSettings? Advanced = null,
     UiStateSettings? UiState = null)
 {

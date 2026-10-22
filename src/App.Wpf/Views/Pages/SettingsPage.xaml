@@ -134,6 +134,19 @@
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="{StaticResource MarginTight}"
                                TextWrapping="Wrap" />
+
+                    <!-- Ghost Disconnect Detection -->
+                    <ui:ToggleSwitch Content="{x:Static resources:Strings.EnableGhostDisconnectDetection}"
+                                     IsChecked="{Binding EnableGhostDisconnectDetection, Mode=OneWay}"
+                                     Command="{Binding EnableGhostDisconnectDetectionToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     Margin="{StaticResource MarginBase}" />
+
+                    <TextBlock Text="{x:Static resources:Strings.EnableGhostDisconnectDetectionDescription}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="{StaticResource MarginTight}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
 

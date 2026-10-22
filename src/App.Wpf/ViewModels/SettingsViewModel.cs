@@ -78,6 +78,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _enableSmartServerHopping = true;
 
     [ObservableProperty]
+    private bool _enableGhostDisconnectDetection = true;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -118,6 +121,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableRamCleaner = settings.EnableRamCleaner;
         RamCleanerIntervalMinutes = settings.RamCleanerIntervalMinutes;
         EnableSmartServerHopping = settings.EnableSmartServerHopping;
+        EnableGhostDisconnectDetection = settings.EnableGhostDisconnectDetection;
 
         string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
         LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -159,6 +163,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 EnableRamCleaner: EnableRamCleaner,
                 RamCleanerIntervalMinutes: RamCleanerIntervalMinutes,
                 EnableSmartServerHopping: EnableSmartServerHopping,
+                EnableGhostDisconnectDetection: EnableGhostDisconnectDetection,
                 Advanced: current.Advanced);
 
             await _settingsService.SaveSettingsAsync(updated);
@@ -261,6 +266,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableSmartServerHopping = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { EnableSmartServerHopping = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableGhostDisconnectDetectionToggledAsync(bool enabled)
+    {
+        EnableGhostDisconnectDetection = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { EnableGhostDisconnectDetection = enabled });
     }
 
     [RelayCommand]

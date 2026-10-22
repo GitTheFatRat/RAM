@@ -661,4 +661,10 @@
   <data name="EnableSmartServerHoppingDescription" xml:space="preserve">
     <value>Automatically hops to a new available public server when a session crashes instead of retrying the old server.</value>
   </data>
+  <data name="EnableGhostDisconnectDetection" xml:space="preserve">
+    <value>Enable Ghost Disconnect Detection (Read Logs)</value>
+  </data>
+  <data name="EnableGhostDisconnectDetectionDescription" xml:space="preserve">
+    <value>Tails local Roblox logs to detect in-game freezes or network disconnects (e.g. Error 277) and terminates frozen processes so auto-rejoin can trigger.</value>
+  </data>
 </root>

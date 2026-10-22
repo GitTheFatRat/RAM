@@ -26,6 +26,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     private readonly ILauncher _launcher;
     private readonly IServerBrowserService? _serverBrowserService;
     private readonly Core.Settings.ISettingsService? _settingsService;
+    private readonly IRobloxLogWatcher? _logWatcher;
     private readonly ILogger<SessionTracker> _logger;
 
     private readonly ConcurrentDictionary<int, RunningSession> _activeSessions = new();
@@ -49,7 +50,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         ILogger<SessionTracker>? logger = null,
         Func<RejoinPolicy>? policyFactory = null,
         Core.Settings.ISettingsService? settingsService = null)
-        : this(processProvider, accountStore, authService, launcher, null, settingsService, logger, policyFactory)
+        : this(processProvider, accountStore, authService, launcher, null, settingsService, null, logger, policyFactory)
     {
     }
 
@@ -62,6 +63,20 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         Core.Settings.ISettingsService? settingsService,
         ILogger<SessionTracker>? logger = null,
         Func<RejoinPolicy>? policyFactory = null)
+        : this(processProvider, accountStore, authService, launcher, serverBrowserService, settingsService, null, logger, policyFactory)
+    {
+    }
+
+    public SessionTracker(
+        IProcessProvider processProvider,
+        IAccountStore accountStore,
+        IRobloxAuthService authService,
+        ILauncher launcher,
+        IServerBrowserService? serverBrowserService,
+        Core.Settings.ISettingsService? settingsService,
+        IRobloxLogWatcher? logWatcher,
+        ILogger<SessionTracker>? logger = null,
+        Func<RejoinPolicy>? policyFactory = null)
     {
         _processProvider = processProvider;
         _accountStore = accountStore;
@@ -69,7 +84,14 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         _launcher = launcher;
         _serverBrowserService = serverBrowserService;
         _settingsService = settingsService;
+        _logWatcher = logWatcher;
         _logger = logger ?? NullLogger<SessionTracker>.Instance;
+
+        if (_logWatcher != null)
+        {
+            _logWatcher.GhostDisconnectDetected += OnGhostDisconnectDetected;
+        }
+
         _policyFactory = policyFactory ?? (() =>
         {
             if (settingsService != null)
@@ -105,6 +127,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     public async Task<bool> CloseSessionAsync(int pid, bool graceful = true)
     {
         _intentionalCloses[pid] = true;
+        _logWatcher?.StopWatching(pid);
         bool killed = await Task.Run(() => _processProvider.Kill(pid, graceful)).ConfigureAwait(false);
         return killed;
     }
@@ -120,6 +143,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     internal void RegisterSession(RunningSession session)
     {
         _activeSessions[session.ProcessId] = session;
+        _logWatcher?.StartWatching(session.ProcessId, session.StartedAt);
     }
 
     public async Task<RunningSession?> TrackLaunchAsync(
@@ -150,6 +174,8 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
                 _activeSessions[snapshot.Pid] = session;
                 LogSessionBound(accountId.Value, snapshot.Pid);
+
+                _logWatcher?.StartWatching(snapshot.Pid, snapshot.StartTime);
 
                 SessionStarted?.Invoke(session);
                 return session;
@@ -201,6 +227,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             if (!activePids.Contains(pid))
             {
                 _activeSessions.TryRemove(pid, out _);
+                _logWatcher?.StopWatching(pid);
                 bool intentional = _intentionalCloses.TryRemove(pid, out _);
 
                 LogSessionEnded(session.AccountId.Value, pid, intentional);
@@ -303,6 +330,25 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         await TrackLaunchAsync(session.AccountId, launchRequest, () => _launcher.LaunchAsync(launchRequest)).ConfigureAwait(false);
     }
 
+    private void OnGhostDisconnectDetected(int pid, string keyword)
+    {
+        bool enabled = _settingsService?.CurrentSettings.EnableGhostDisconnectDetection ?? true;
+        if (enabled && _activeSessions.ContainsKey(pid))
+        {
+            LogGhostDisconnectDetected(pid, keyword);
+            _processProvider.Kill(pid, graceful: false);
+        }
+    }
+
+    public override void Dispose()
+    {
+        if (_logWatcher != null)
+        {
+            _logWatcher.GhostDisconnectDetected -= OnGhostDisconnectDetected;
+        }
+        base.Dispose();
+    }
+
     [LoggerMessage(EventId = 501, Level = LogLevel.Information, Message = "Bound account {AccountId} to new Roblox PID {Pid}.")]
     private partial void LogSessionBound(long accountId, int pid);
 
@@ -335,4 +381,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     [LoggerMessage(EventId = 511, Level = LogLevel.Warning, Message = "Smart server hop for account {AccountId} failed ({Error}); falling back to original request.")]
     private partial void LogServerHopError(long accountId, string error);
+
+    [LoggerMessage(EventId = 512, Level = LogLevel.Warning, Message = "Ghost disconnect keyword '{Keyword}' detected for Roblox PID {Pid}. Killing process.")]
+    private partial void LogGhostDisconnectDetected(int pid, string keyword);
 }

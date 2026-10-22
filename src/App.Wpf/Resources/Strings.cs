@@ -211,6 +211,8 @@ public static class Strings
     public static string RamCleanerIntervalFormat => GetString(nameof(RamCleanerIntervalFormat));
     public static string EnableSmartServerHopping => GetString(nameof(EnableSmartServerHopping));
     public static string EnableSmartServerHoppingDescription => GetString(nameof(EnableSmartServerHoppingDescription));
+    public static string EnableGhostDisconnectDetection => GetString(nameof(EnableGhostDisconnectDetection));
+    public static string EnableGhostDisconnectDetectionDescription => GetString(nameof(EnableGhostDisconnectDetectionDescription));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

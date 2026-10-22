@@ -18,6 +18,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M10**: Master password defense-in-depth (Argon2id Format v2), per-account HTTP/SOCKS5 proxy, background Roblox process resource optimization. (Completed)
 - **M11**: Smart RAM cleaner (background working set memory optimization via `SetProcessWorkingSetSize`, periodic `RamCleanerService`, UI toggle & interval slider). (Completed)
 - **M12**: Smart auto-rejoin with intelligent server hopping on crash (`SessionTracker` + `IServerBrowserService`), failure fallback, and UI toggle. (Completed)
+- **M13**: Ghost disconnect detector (`RobloxLogWatcher` tailing on-disk logs for disconnection keywords, automatic termination of frozen processes, UI toggle). (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).
