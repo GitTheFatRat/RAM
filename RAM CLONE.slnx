@@ -8,6 +8,7 @@
     <Project Path="tests/App.UiTests/App.UiTests.csproj" />
     <Project Path="tests/App.Wpf.Tests/App.Wpf.Tests.csproj" />
     <Project Path="tests/Core.Tests/Core.Tests.csproj" />
+    <Project Path="tests/Infrastructure.LiveTests/Infrastructure.LiveTests.csproj" />
     <Project Path="tests/Infrastructure.Tests/Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
