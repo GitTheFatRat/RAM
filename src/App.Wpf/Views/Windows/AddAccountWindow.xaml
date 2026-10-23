@@ -39,26 +39,50 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Informational Notice for Anti-Geo-Ban -->
+            <!-- Dynamic GoodbyeDPI Orchestrator & Status Area -->
             <Border Grid.Row="0"
                     Style="{StaticResource SettingsCardStyle}"
                     Margin="{StaticResource MarginBottomMedium}">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <ui:SymbolIcon Grid.Column="0"
-                                   Symbol="Info24"
-                                   FontSize="20"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,12,0" />
-                    <TextBlock Grid.Column="1"
-                               AutomationProperties.AutomationId="AddAccount_AntiGeoBanHint"
-                               Text="{x:Static resources:Strings.AntiGeoBanHint}"
-                               TextWrapping="Wrap"
-                               VerticalAlignment="Center" />
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0"
+                                       Symbol="ShieldTask24"
+                                       FontSize="20"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,12,0" />
+                        <TextBlock Grid.Column="1"
+                                   AutomationProperties.AutomationId="AddAccount_AntiGeoBanHint"
+                                   Text="{x:Static resources:Strings.AntiGeoBanHint}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+
+                    <ProgressBar Grid.Row="1"
+                                 AutomationProperties.AutomationId="AddAccount_GoodbyeDpiProgress"
+                                 IsIndeterminate="True"
+                                 Height="4"
+                                 Margin="0,0,0,8"
+                                 Visibility="{Binding IsStartingGoodbyeDpi, Converter={StaticResource BoolToVis}}" />
+
+                    <ui:Button Grid.Row="2"
+                               AutomationProperties.AutomationId="AddAccount_GoodbyeDpiButton"
+                               AutomationProperties.Name="{Binding GoodbyeDpiButtonText}"
+                               Content="{Binding GoodbyeDpiButtonText}"
+                               Icon="{ui:SymbolIcon Shield24}"
+                               HorizontalAlignment="Stretch"
+                               IsEnabled="{Binding CanStartGoodbyeDpi}"
+                               Command="{Binding InstallAndStartGoodbyeDpiCommand}" />
                 </Grid>
             </Border>
 

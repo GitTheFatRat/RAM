@@ -13,6 +13,7 @@ using RbxManager.App.Services;
 using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Models;
+using RbxManager.Core.Network;
 using RbxManager.Core.Storage;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -25,6 +26,7 @@ public partial class AddAccountViewModel : ObservableObject
 
     private readonly IAccountStore _accountStore;
     private readonly IRobloxAuthService _authService;
+    private readonly IDpiToolService? _dpiToolService;
     private readonly ISnackbarService? _snackbarService;
     private readonly Func<bool> _browserLauncher;
 
@@ -37,6 +39,15 @@ public partial class AddAccountViewModel : ObservableObject
     private bool _isImporting;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GoodbyeDpiButtonText))]
+    [NotifyPropertyChangedFor(nameof(CanStartGoodbyeDpi))]
+    private bool _isGoodbyeDpiRunning;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStartGoodbyeDpi))]
+    private bool _isStartingGoodbyeDpi;
+
+    [ObservableProperty]
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
@@ -47,6 +58,10 @@ public partial class AddAccountViewModel : ObservableObject
 
     public bool CanImport => !IsImporting && !string.IsNullOrWhiteSpace(RawCookiesText);
 
+    public string GoodbyeDpiButtonText => IsGoodbyeDpiRunning ? Strings.GoodbyeDpiActive : Strings.InstallAndStartGoodbyeDpi;
+
+    public bool CanStartGoodbyeDpi => !IsGoodbyeDpiRunning && !IsStartingGoodbyeDpi;
+
     public int ImportedCount { get; private set; }
 
     public event Action<bool>? RequestClose;
@@ -55,12 +70,60 @@ public partial class AddAccountViewModel : ObservableObject
         IAccountStore accountStore,
         IRobloxAuthService authService,
         ISnackbarService? snackbarService = null,
-        Func<bool>? browserLauncher = null)
+        Func<bool>? browserLauncher = null,
+        IDpiToolService? dpiToolService = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _snackbarService = snackbarService;
         _browserLauncher = browserLauncher ?? (() => IncognitoBrowserLauncher.TryLaunch());
+        _dpiToolService = dpiToolService;
+        IsGoodbyeDpiRunning = _dpiToolService?.IsRunning() == true;
+    }
+
+    public void RefreshGoodbyeDpiStatus()
+    {
+        IsGoodbyeDpiRunning = _dpiToolService?.IsRunning() == true;
+    }
+
+    [RelayCommand]
+    public async Task InstallAndStartGoodbyeDpiAsync()
+    {
+        if (IsStartingGoodbyeDpi || IsGoodbyeDpiRunning)
+        {
+            return;
+        }
+
+        if (_dpiToolService == null)
+        {
+            return;
+        }
+
+        ErrorMessage = string.Empty;
+        IsStartingGoodbyeDpi = true;
+        try
+        {
+            Result result = await _dpiToolService.EnsureInstalledAndStartAsync();
+            if (result.IsSuccess)
+            {
+                IsGoodbyeDpiRunning = true;
+            }
+            else
+            {
+                string localizedError = result.ErrorCode switch
+                {
+                    DpiErrorCodes.UacDenied => Strings.GoodbyeDpiUacDenied,
+                    DpiErrorCodes.DownloadFailed => Strings.GoodbyeDpiDownloadFailed,
+                    _ => Strings.GoodbyeDpiLaunchFailed
+                };
+                ErrorMessage = localizedError;
+                _snackbarService?.Show(Strings.ErrorTitle, localizedError, ControlAppearance.Danger);
+            }
+        }
+        finally
+        {
+            IsStartingGoodbyeDpi = false;
+        }
     }
 
     [RelayCommand]

@@ -742,4 +742,19 @@
   <data name="EnableUatTelemetryDescription" xml:space="preserve">
     <value>Writes unencrypted execution traces (with masked secrets) to RbxManager_UAT_Trace.txt on Desktop for transparent manual testing.</value>
   </data>
+  <data name="InstallAndStartGoodbyeDpi" xml:space="preserve">
+    <value>Install &amp; Start GoodbyeDPI</value>
+  </data>
+  <data name="GoodbyeDpiActive" xml:space="preserve">
+    <value>✅ GoodbyeDPI is running</value>
+  </data>
+  <data name="GoodbyeDpiUacDenied" xml:space="preserve">
+    <value>Administrator permission (UAC) was denied. GoodbyeDPI requires Administrator rights to run.</value>
+  </data>
+  <data name="GoodbyeDpiDownloadFailed" xml:space="preserve">
+    <value>Failed to download GoodbyeDPI from GitHub. Please check your network connection.</value>
+  </data>
+  <data name="GoodbyeDpiLaunchFailed" xml:space="preserve">
+    <value>Could not start GoodbyeDPI. Please check your antivirus settings and try again.</value>
+  </data>
 </root>

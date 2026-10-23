@@ -38,6 +38,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private readonly ILauncher _launcher;
     private readonly Core.Settings.ISettingsService? _settingsService;
     private readonly Core.Backup.IBackupService? _backupService;
+    private readonly Core.Network.IDpiToolService? _dpiToolService;
     private readonly TimeProvider _timeProvider;
     private readonly List<AccountItemViewModel> _allAccounts = new();
 
@@ -117,7 +118,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         ILauncher launcher,
         Core.Settings.ISettingsService? settingsService = null,
         Core.Backup.IBackupService? backupService = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        Core.Network.IDpiToolService? dpiToolService = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _contentDialogService = contentDialogService ?? throw new ArgumentNullException(nameof(contentDialogService));
@@ -127,6 +129,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _settingsService = settingsService;
         _backupService = backupService;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _dpiToolService = dpiToolService;
 
         _searchDebouncer = new DebounceDispatcher(TimeSpan.FromMilliseconds(200));
         _selectedGroup = Strings.GroupFilterAll;
@@ -217,7 +220,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public async Task AddViaLoginAsync()
     {
-        AddAccountViewModel addViewModel = new(_accountStore, _authService, _snackbarService);
+        AddAccountViewModel addViewModel = new(_accountStore, _authService, _snackbarService, dpiToolService: _dpiToolService);
         AddAccountWindow addWindow = new(addViewModel)
         {
             Owner = Application.Current?.MainWindow

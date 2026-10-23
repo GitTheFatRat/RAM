@@ -14,6 +14,7 @@ using RbxManager.Core.Diagnostics;
 using RbxManager.Core.Instance;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
+using RbxManager.Core.Network;
 using RbxManager.Core.Processes;
 using RbxManager.Core.Servers;
 using RbxManager.Core.Storage;
@@ -33,6 +34,9 @@ internal static class UiTestHooks
 
         services.RemoveAll<IProcessProvider>();
         services.AddSingleton<IProcessProvider, FakeProcessProvider>();
+
+        services.RemoveAll<IDpiToolService>();
+        services.AddSingleton<IDpiToolService, FakeDpiToolService>();
 
         services.RemoveAll<IDiagnosticsService>();
         services.AddSingleton<IDiagnosticsService, FakeDiagnosticsService>();
@@ -201,5 +205,11 @@ internal sealed class FakeInstanceGate : IInstanceGate
     public bool IsAvailable => true;
     public Result TryEnable() => Result.Success();
     public void Disable() { IsMultiInstanceEnabled = false; }
+}
+
+internal sealed class FakeDpiToolService : IDpiToolService
+{
+    public bool IsRunning() => false;
+    public Task<Result> EnsureInstalledAndStartAsync(CancellationToken ct = default) => Task.FromResult(Result.Success());
 }
 #endif

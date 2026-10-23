@@ -224,6 +224,16 @@ To eliminate this single point of failure without exposing plaintext credentials
 2. **Mandatory Ticket & Cookie Masking**:
    - Before writing any trace line (`WindowsProcessStarter.Start`, `WindowController`, `WindowsMemoryOptimizer`, `SessionTracker`), `UatLogger.MaskSecrets` scrubs all `.ROBLOSECURITY` cookies and single-use `gameinfo:` authentication tickets with `***`, ensuring credentials never appear in `RbxManager_UAT_Trace.txt`.
 
+---
+
+## External GoodbyeDPI Orchestrator Safety (M21)
+
+1. **Zero Bundled Kernel Drivers**:
+   - To avoid Hyperion anti-cheat bans and false-positive antivirus detections, RbxManager never bundles `WinDivert` or `GoodbyeDPI` inside its application binaries.
+2. **User-Initiated External Tool Provisioning**:
+   - Only when the user explicitly clicks `"Cài đặt & Bật GoodbyeDPI"` in `AddAccountWindow`, `DpiToolService` downloads the official `goodbyedpi-0.2.3.zip` archive from GitHub (`https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.3/goodbyedpi-0.2.3.zip`) into `%LOCALAPPDATA%\RbxManager\Tools\GoodbyeDPI` and invokes `1_russia_blacklist.cmd` externally via standard Windows UAC (`UseShellExecute = true`, `Verb = "runas"`).
+
+
 
 
 

@@ -10,6 +10,7 @@ using RbxManager.Core.Auth;
 using RbxManager.Core.Backup;
 using RbxManager.Core.Instance;
 using RbxManager.Core.Launch;
+using RbxManager.Core.Network;
 using RbxManager.Core.Processes;
 using RbxManager.Core.Servers;
 using RbxManager.Core.Sessions;
@@ -20,6 +21,7 @@ using RbxManager.Infrastructure.Backup;
 using RbxManager.Infrastructure.Http;
 using RbxManager.Infrastructure.Instance;
 using RbxManager.Infrastructure.Launch;
+using RbxManager.Infrastructure.Network;
 using RbxManager.Infrastructure.Processes;
 using RbxManager.Infrastructure.Servers;
 using RbxManager.Infrastructure.Sessions;
@@ -48,6 +50,13 @@ public static class InfrastructureServiceExtensions
             sp.GetService<ILogger<EncryptedFileVault>>()));
         services.AddSingleton<IProcessStarter, WindowsProcessStarter>();
         services.AddSingleton<IProcessProvider, SystemProcessProvider>();
+        services.AddSingleton<IDpiToolService>(sp => new DpiToolService(
+            httpClient: null,
+            processProvider: sp.GetRequiredService<IProcessProvider>(),
+            toolsDirectory: null,
+            processRunner: null,
+            logger: sp.GetService<ILogger<DpiToolService>>(),
+            uatLogger: sp.GetService<Core.Diagnostics.IUatLogger>()));
         services.AddSingleton<IWindowController, WindowController>();
         services.AddSingleton<IMemoryOptimizer, WindowsMemoryOptimizer>();
         services.AddSingleton<IInstanceGate, NamedMutexInstanceGate>();

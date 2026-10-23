@@ -239,6 +239,11 @@ public static class Strings
     public static string IncognitoBrowserFailed => GetString(nameof(IncognitoBrowserFailed));
     public static string EnableUatTelemetry => GetString(nameof(EnableUatTelemetry));
     public static string EnableUatTelemetryDescription => GetString(nameof(EnableUatTelemetryDescription));
+    public static string InstallAndStartGoodbyeDpi => GetString(nameof(InstallAndStartGoodbyeDpi));
+    public static string GoodbyeDpiActive => GetString(nameof(GoodbyeDpiActive));
+    public static string GoodbyeDpiUacDenied => GetString(nameof(GoodbyeDpiUacDenied));
+    public static string GoodbyeDpiDownloadFailed => GetString(nameof(GoodbyeDpiDownloadFailed));
+    public static string GoodbyeDpiLaunchFailed => GetString(nameof(GoodbyeDpiLaunchFailed));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

@@ -742,4 +742,19 @@
   <data name="EnableUatTelemetryDescription" xml:space="preserve">
     <value>Ghi lại chi tiết luồng thực thi (đã che giấu mã bí mật) ra tệp RbxManager_UAT_Trace.txt ngoài Desktop để kiểm thử minh bạch.</value>
   </data>
+  <data name="InstallAndStartGoodbyeDpi" xml:space="preserve">
+    <value>Cài đặt &amp; Bật GoodbyeDPI</value>
+  </data>
+  <data name="GoodbyeDpiActive" xml:space="preserve">
+    <value>✅ GoodbyeDPI đang hoạt động</value>
+  </data>
+  <data name="GoodbyeDpiUacDenied" xml:space="preserve">
+    <value>Bạn đã từ chối cấp quyền Quản trị viên (UAC). GoodbyeDPI cần quyền Quản trị viên để hoạt động.</value>
+  </data>
+  <data name="GoodbyeDpiDownloadFailed" xml:space="preserve">
+    <value>Không thể tải xuống GoodbyeDPI từ GitHub. Vui lòng kiểm tra kết nối mạng của bạn.</value>
+  </data>
+  <data name="GoodbyeDpiLaunchFailed" xml:space="preserve">
+    <value>Không thể khởi động GoodbyeDPI. Vui lòng kiểm tra phần mềm diệt virus và thử lại.</value>
+  </data>
 </root>

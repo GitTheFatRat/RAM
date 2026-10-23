@@ -26,6 +26,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M20**: Replaced WebView2 with Zero-Cost Anti-Geo-Ban bulk cookie import (`AddAccountWindow`) and native incognito browser launcher. (Completed)
 - **M18**: Live Integration Test Suite (`tests/Infrastructure.LiveTests/`, `tools/run-live-tests.ps1`) against real Roblox endpoints without mocks. (Completed)
 - **M19**: UAT Live Trace Telemetry (`UatLogger`, `EnableUatTelemetry` toggle in Settings -> Advanced) writing masked real-time execution traces to `Desktop\RbxManager_UAT_Trace.txt`. (Completed)
+- **M21**: GoodbyeDPI Automation Orchestrator (`DpiToolService`, `AddAccountWindow` dynamic status & one-click installer/launcher with UAC `runas` elevation). (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

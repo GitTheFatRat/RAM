@@ -5,10 +5,12 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NSubstitute;
+using RbxManager.App.Resources;
 using RbxManager.App.ViewModels;
 using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Models;
+using RbxManager.Core.Network;
 using RbxManager.Core.Storage;
 using Wpf.Ui;
 using Xunit;
@@ -93,5 +95,48 @@ public sealed class AddAccountViewModelTests
         Assert.Equal("AlphaUser", store.StoredAccounts[0].Alias);
         Assert.Equal("GammaUser", store.StoredAccounts[1].Alias);
         Assert.True(closedWithResult);
+    }
+
+    [Fact]
+    public async Task InstallAndStartGoodbyeDpiCommand_WhenSuccessful_UpdatesStateAndDisablesButton()
+    {
+        FakeAccountStore store = new();
+        IRobloxAuthService auth = Substitute.For<IRobloxAuthService>();
+        IDpiToolService dpiService = Substitute.For<IDpiToolService>();
+        dpiService.IsRunning().Returns(false);
+        dpiService.EnsureInstalledAndStartAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(Result.Success()));
+
+        AddAccountViewModel vm = new(store, auth, dpiToolService: dpiService);
+
+        Assert.False(vm.IsGoodbyeDpiRunning);
+        Assert.True(vm.CanStartGoodbyeDpi);
+        Assert.Equal(Strings.InstallAndStartGoodbyeDpi, vm.GoodbyeDpiButtonText);
+
+        await vm.InstallAndStartGoodbyeDpiCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsGoodbyeDpiRunning);
+        Assert.False(vm.CanStartGoodbyeDpi);
+        Assert.Equal(Strings.GoodbyeDpiActive, vm.GoodbyeDpiButtonText);
+    }
+
+    [Fact]
+    public async Task InstallAndStartGoodbyeDpiCommand_WhenUacDenied_ShowsLocalizedError()
+    {
+        FakeAccountStore store = new();
+        IRobloxAuthService auth = Substitute.For<IRobloxAuthService>();
+        ISnackbarService snackbar = Substitute.For<ISnackbarService>();
+        IDpiToolService dpiService = Substitute.For<IDpiToolService>();
+        dpiService.IsRunning().Returns(false);
+        dpiService.EnsureInstalledAndStartAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(Result.Failure("UAC denied", DpiErrorCodes.UacDenied)));
+
+        AddAccountViewModel vm = new(store, auth, snackbar, dpiToolService: dpiService);
+
+        await vm.InstallAndStartGoodbyeDpiCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsGoodbyeDpiRunning);
+        Assert.True(vm.CanStartGoodbyeDpi);
+        Assert.Equal(Strings.GoodbyeDpiUacDenied, vm.ErrorMessage);
     }
 }
