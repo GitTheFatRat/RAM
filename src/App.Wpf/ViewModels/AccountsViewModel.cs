@@ -217,51 +217,16 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public async Task AddViaLoginAsync()
     {
-        LoginWindow loginWindow = new()
+        AddAccountViewModel addViewModel = new(_accountStore, _authService, _snackbarService);
+        AddAccountWindow addWindow = new(addViewModel)
         {
-            Owner = Application.Current.MainWindow
+            Owner = Application.Current?.MainWindow
         };
 
-        bool? result = loginWindow.ShowDialog();
-        if (result != true || loginWindow.CapturedCookie == null)
-        {
-            return;
-        }
-
-        using SecretValue cookie = loginWindow.CapturedCookie;
-        _snackbarService.Show(Strings.SuccessTitle, Strings.LoginSuccessValidating, ControlAppearance.Info);
-
-        Result<RobloxUser> validationResult = await _authService.ValidateCookieAsync(cookie);
-        if (!validationResult.IsSuccess || validationResult.Value == null)
-        {
-            _snackbarService.Show(Strings.ErrorTitle, validationResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
-            return;
-        }
-
-        RobloxUser user = validationResult.Value;
-
-        long nextId = _allAccounts.Count > 0 ? _allAccounts.Max(a => a.Id.Value) + 1 : 1;
-        Account newAccount = new(
-            Id: new AccountId(nextId),
-            Alias: user.Name,
-            Group: null,
-            Note: null,
-            Cookie: cookie.Clone(),
-            CreatedAt: DateTimeOffset.UtcNow,
-            Username: user.Name,
-            UserId: user.Id,
-            Status: AccountStatus.Valid,
-            LastCheckedAt: DateTimeOffset.UtcNow);
-
-        Result addResult = await _accountStore.AddAsync(newAccount);
-        if (addResult.IsSuccess)
+        bool? result = addWindow.ShowDialog();
+        if (result == true || addViewModel.ImportedCount > 0)
         {
             await LoadAccountsAsync();
-            _snackbarService.Show(Strings.SuccessTitle, Strings.AccountSavedMessage, ControlAppearance.Success);
-        }
-        else
-        {
-            _snackbarService.Show(Strings.ErrorTitle, addResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
         }
     }
 

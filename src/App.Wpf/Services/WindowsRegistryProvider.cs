@@ -134,14 +134,31 @@ public sealed class WindowsRegistryProvider : IRegistryProvider
 
     public string? GetWebView2Version()
     {
-        try
+        const string webView2Guid = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
+        (RegistryKey hive, string subKey)[] locations =
+        [
+            (Registry.LocalMachine, $@"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{webView2Guid}"),
+            (Registry.CurrentUser, $@"Software\Microsoft\EdgeUpdate\Clients\{webView2Guid}"),
+            (Registry.LocalMachine, $@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{webView2Guid}")
+        ];
+
+        foreach (var (hive, subKey) in locations)
         {
-            return Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+            try
+            {
+                using RegistryKey? key = hive.OpenSubKey(subKey);
+                string? pv = key?.GetValue("pv") as string;
+                if (!string.IsNullOrWhiteSpace(pv) && pv != "0.0.0.0")
+                {
+                    return pv;
+                }
+            }
+            catch
+            {
+            }
         }
-        catch
-        {
-            return null;
-        }
+
+        return null;
     }
 
     public bool IsProcessElevated()

@@ -233,15 +233,18 @@ public sealed class XamlSmokeTests
     [Theory]
     [InlineData("Dark")]
     [InlineData("Light")]
-    public void LoginWindow_LoadsInInitialState(string theme)
+    public void AddAccountWindow_LoadsInInitialState(string theme)
     {
         ExecuteWithTraceListener(() =>
         {
             TestAppResources.Initialize(theme);
 
-            LoginWindow window = new();
+            IAccountStore accountStore = Substitute.For<IAccountStore>();
+            IRobloxAuthService authService = Substitute.For<IRobloxAuthService>();
+            AddAccountViewModel viewModel = new(accountStore, authService);
+            AddAccountWindow window = new(viewModel);
             Assert.NotNull(window);
-            Assert.Equal(Visibility.Visible, window.LoadingOverlay.Visibility);
+            Assert.Same(viewModel, window.ViewModel);
         });
     }
 

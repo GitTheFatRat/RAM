@@ -709,4 +709,31 @@
   <data name="Servers_ErrorHint" xml:space="preserve">
     <value>Failed to load server list. Check connection and retry.</value>
   </data>
+  <data name="AddAccountWindowTitle" xml:space="preserve">
+    <value>Bulk Import Cookies &amp; Incognito Login</value>
+  </data>
+  <data name="AntiGeoBanHint" xml:space="preserve">
+    <value>If you cannot access Global Roblox, use GoodbyeDPI/WARP, then open an incognito browser to get the Cookie.</value>
+  </data>
+  <data name="OpenIncognitoBrowser" xml:space="preserve">
+    <value>Open Incognito Browser (Get Cookie)</value>
+  </data>
+  <data name="ImportAccounts" xml:space="preserve">
+    <value>Import Accounts</value>
+  </data>
+  <data name="BulkCookiePlaceholder" xml:space="preserve">
+    <value>Paste .ROBLOSECURITY cookies here (one per line, or User:Pass:Cookie format)...</value>
+  </data>
+  <data name="BulkImportProgress" xml:space="preserve">
+    <value>Importing account {0} of {1}...</value>
+  </data>
+  <data name="BulkImportCompleted" xml:space="preserve">
+    <value>Imported {0} account(s) successfully ({1} failed or skipped).</value>
+  </data>
+  <data name="NoValidCookiesFound" xml:space="preserve">
+    <value>No valid .ROBLOSECURITY cookies found in the input text.</value>
+  </data>
+  <data name="IncognitoBrowserFailed" xml:space="preserve">
+    <value>Could not launch browser in incognito mode.</value>
+  </data>
 </root>

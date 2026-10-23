@@ -1,0 +1,121 @@
+<ui:FluentWindow x:Class="RbxManager.App.Views.Windows.AddAccountWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                  xmlns:resources="clr-namespace:RbxManager.App.Resources"
+                  xmlns:viewModels="clr-namespace:RbxManager.App.ViewModels"
+                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                  d:DataContext="{d:DesignInstance viewModels:AddAccountViewModel}"
+                  mc:Ignorable="d"
+                  Title="{x:Static resources:Strings.AddAccountWindowTitle}"
+                  AutomationProperties.AutomationId="AddAccountWindow"
+                  AutomationProperties.Name="{x:Static resources:Strings.AddAccountWindowTitle}"
+                  Height="540"
+                  Width="680"
+                  MinWidth="500"
+                  MinHeight="440"
+                  WindowStartupLocation="CenterOwner"
+                  Background="{DynamicResource ApplicationBackgroundBrush}">
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </ui:FluentWindow.Resources>
+
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0"
+                     Title="{x:Static resources:Strings.AddAccountWindowTitle}" />
+
+        <Grid Grid.Row="1" Margin="{StaticResource MarginLarge}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Informational Notice for Anti-Geo-Ban -->
+            <Border Grid.Row="0"
+                    Style="{StaticResource SettingsCardStyle}"
+                    Margin="{StaticResource MarginBottomMedium}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon Grid.Column="0"
+                                   Symbol="Info24"
+                                   FontSize="20"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="1"
+                               AutomationProperties.AutomationId="AddAccount_AntiGeoBanHint"
+                               Text="{x:Static resources:Strings.AntiGeoBanHint}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- Prominent Native Incognito Browser Launcher Button -->
+            <ui:Button Grid.Row="1"
+                       AutomationProperties.AutomationId="AddAccount_OpenIncognitoButton"
+                       AutomationProperties.Name="{x:Static resources:Strings.OpenIncognitoBrowser}"
+                       Content="{x:Static resources:Strings.OpenIncognitoBrowser}"
+                       Icon="{ui:SymbolIcon Globe24}"
+                       HorizontalAlignment="Stretch"
+                       Margin="{StaticResource MarginBottomMedium}"
+                       Command="{Binding OpenIncognitoBrowserCommand}" />
+
+            <!-- Primary Multi-Line Bulk Cookie TextBox -->
+            <ui:TextBox Grid.Row="2"
+                        x:Name="CookiesTextBox"
+                        AutomationProperties.AutomationId="AddAccount_CookiesTextBox"
+                        AutomationProperties.Name="{x:Static resources:Strings.FieldCookie}"
+                        PlaceholderText="{x:Static resources:Strings.BulkCookiePlaceholder}"
+                        Text="{Binding RawCookiesText, UpdateSourceTrigger=PropertyChanged}"
+                        AcceptsReturn="True"
+                        TextWrapping="Wrap"
+                        VerticalScrollBarVisibility="Auto"
+                        VerticalContentAlignment="Top"
+                        FontFamily="{StaticResource FontFamilyMonospace}"
+                        Margin="{StaticResource MarginBottomMedium}" />
+
+            <!-- Status & Error Messages -->
+            <StackPanel Grid.Row="3" Margin="{StaticResource MarginBottomMedium}">
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding HasErrorMessage, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="4"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <ui:Button AutomationProperties.AutomationId="AddAccount_ImportButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.ImportAccounts}"
+                           Content="{x:Static resources:Strings.ImportAccounts}"
+                           Icon="{ui:SymbolIcon ArrowDownload24}"
+                           Appearance="Primary"
+                           Command="{Binding ImportAccountsCommand}"
+                           IsEnabled="{Binding CanImport}"
+                           Margin="{StaticResource MarginTight}" />
+                <ui:Button AutomationProperties.AutomationId="AddAccount_CancelButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.Cancel}"
+                           Content="{x:Static resources:Strings.Cancel}"
+                           IsCancel="True"
+                           Click="OnCancelClicked"
+                           Margin="{StaticResource MarginTight}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

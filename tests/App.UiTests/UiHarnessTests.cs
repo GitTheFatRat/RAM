@@ -326,8 +326,8 @@ public sealed class UiHarnessTests
             DismissOpenContentDialog(root, session.MainWindowHandle);
         });
 
-        // 18. LoginWindow
-        RunScenario(session, "LoginWindow", theme, artifactsDir, results, () =>
+        // 18. AddAccountWindow
+        RunScenario(session, "AddAccountWindow", theme, artifactsDir, results, () =>
         {
             NavigateTo(session.MainWindowHandle, root, "NavItem_Accounts");
 
@@ -339,13 +339,13 @@ public sealed class UiHarnessTests
             }
         }, targetWindowFinder: (s) =>
         {
-            return WaitForLoginWindowHwnd(s.Process.Id, s.MainWindowHandle);
+            return WaitForSecondaryWindowHwnd(s.Process.Id, s.MainWindowHandle);
         }, postAction: () =>
         {
-            IntPtr loginHwnd = FindLoginWindowHwnd(session.Process.Id, session.MainWindowHandle);
-            if (loginHwnd != IntPtr.Zero)
+            IntPtr secondaryHwnd = FindSecondaryWindowHwnd(session.Process.Id, session.MainWindowHandle);
+            if (secondaryHwnd != IntPtr.Zero)
             {
-                SendEscape(loginHwnd);
+                SendEscape(secondaryHwnd);
                 Thread.Sleep(300);
             }
         });
@@ -448,12 +448,12 @@ public sealed class UiHarnessTests
         }
     }
 
-    private static IntPtr WaitForLoginWindowHwnd(int processId, IntPtr excludeHwnd, int timeoutMs = 3000)
+    private static IntPtr WaitForSecondaryWindowHwnd(int processId, IntPtr excludeHwnd, int timeoutMs = 3000)
     {
         DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
         while (DateTime.UtcNow < deadline)
         {
-            IntPtr hwnd = FindLoginWindowHwnd(processId, excludeHwnd);
+            IntPtr hwnd = FindSecondaryWindowHwnd(processId, excludeHwnd);
             if (hwnd != IntPtr.Zero)
             {
                 return hwnd;
@@ -463,7 +463,7 @@ public sealed class UiHarnessTests
         return IntPtr.Zero;
     }
 
-    private static IntPtr FindLoginWindowHwnd(int processId, IntPtr excludeHwnd)
+    private static IntPtr FindSecondaryWindowHwnd(int processId, IntPtr excludeHwnd)
     {
         IntPtr found = IntPtr.Zero;
         EnumThreadWindowsCallback callback = (hwnd, lParam) =>

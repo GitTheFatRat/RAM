@@ -228,6 +228,15 @@ public static class Strings
     public static string Servers_EmptyHint => GetString(nameof(Servers_EmptyHint));
     public static string Running_EmptyHint => GetString(nameof(Running_EmptyHint));
     public static string Servers_ErrorHint => GetString(nameof(Servers_ErrorHint));
+    public static string AddAccountWindowTitle => GetString(nameof(AddAccountWindowTitle));
+    public static string AntiGeoBanHint => GetString(nameof(AntiGeoBanHint));
+    public static string OpenIncognitoBrowser => GetString(nameof(OpenIncognitoBrowser));
+    public static string ImportAccounts => GetString(nameof(ImportAccounts));
+    public static string BulkCookiePlaceholder => GetString(nameof(BulkCookiePlaceholder));
+    public static string BulkImportProgress => GetString(nameof(BulkImportProgress));
+    public static string BulkImportCompleted => GetString(nameof(BulkImportCompleted));
+    public static string NoValidCookiesFound => GetString(nameof(NoValidCookiesFound));
+    public static string IncognitoBrowserFailed => GetString(nameof(IncognitoBrowserFailed));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

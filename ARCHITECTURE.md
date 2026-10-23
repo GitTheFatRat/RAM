@@ -28,7 +28,7 @@ graph TD
    - **Dependencies**: References `Core`.
 
 3. **`src/App.Wpf/`**
-   - **Responsibility**: WPF UI shell, design tokens (`Themes/Tokens.xaml`), theme engine (`ThemeTokens`), window state restoration and screen-bounds clamping (`UiState`), MVVM view models (`AccountsViewModel`, `ServersViewModel`, `RunningViewModel`, `SettingsViewModel`, `DiagnosticsViewModel`), Views & Controls (`AccountsPage` with bulk launch queue & countdown, `ServersPage`, `RunningPage`, `SettingsPage` with launch delay pacing slider, `DiagnosticsPage`, `AccountEditorControl`, `MasterPasswordSetupControl`), Windows (`MainWindow`, `LoginWindow`, `MasterPasswordWindow`), dialogs (`IContentDialogService`), notifications (`ISnackbarService`), and DI bootstrapping.
+   - **Responsibility**: WPF UI shell, design tokens (`Themes/Tokens.xaml`), theme engine (`ThemeTokens`), window state restoration and screen-bounds clamping (`UiState`), MVVM view models (`AccountsViewModel`, `AddAccountViewModel`, `ServersViewModel`, `RunningViewModel`, `SettingsViewModel`, `DiagnosticsViewModel`), Views & Controls (`AccountsPage` with bulk launch queue & countdown, `ServersPage`, `RunningPage`, `SettingsPage` with launch delay pacing slider, `DiagnosticsPage`, `AccountEditorControl`, `MasterPasswordSetupControl`), Windows (`MainWindow`, `AddAccountWindow`, `MasterPasswordWindow`), dialogs (`IContentDialogService`), notifications (`ISnackbarService`), and DI bootstrapping.
    - **Dependencies**: References `Core` and `Infrastructure`.
 
 4. **`tests/Core.Tests/`**
@@ -98,3 +98,4 @@ flowchart TD
 - **M15**: Tech Lead audit, launch precheck, UI defect fixes, XAML smoke tests. (Completed)
 - **M16**: Sandboxed UI automation test harness, window-only capture, UIA dump, visual assertions. (Completed)
 - **M17**: Removal of proxy support across all layers, unified launch pacing gate (`LaunchDelaySeconds`, default 20 s), sequential cookie validation (2 s gap), strict 5-file `Reveal()` allowlist. (Completed)
+- **M20**: Replaced WebView2 with bulk cookie import (`AddAccountWindow`, `AddAccountViewModel`, `BulkCookieParser`) and native incognito browser launcher (`IncognitoBrowserLauncher`). (Completed)

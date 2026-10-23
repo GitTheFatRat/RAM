@@ -22,4 +22,5 @@
 - M14.4: done (2b03ab9) - webview2 login through account proxy
 - M15: done - Tech Lead takeover audit, safety guards, launch precheck, UI defects, XAML smoke tests
 - M16: done (38f4742) - UI "eyes" for the agent (sandboxed UI automation, window-only screenshots)
-- M17: done (194434c) - remove proxy support, pace launches (default 20 s)
+- M17: done (bd61d74) - remove proxy support, pace launches (default 20 s)
+- M20: done - replace WebView2 with bulk cookie import and native incognito launcher

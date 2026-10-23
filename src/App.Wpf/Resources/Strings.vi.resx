@@ -709,4 +709,31 @@
   <data name="Servers_ErrorHint" xml:space="preserve">
     <value>Không thể tải danh sách máy chủ. Vui lòng kiểm tra kết nối và thử lại.</value>
   </data>
+  <data name="AddAccountWindowTitle" xml:space="preserve">
+    <value>Nhập hàng loạt Cookie &amp; Trình duyệt Ẩn danh</value>
+  </data>
+  <data name="AntiGeoBanHint" xml:space="preserve">
+    <value>Nếu không truy cập được Roblox Quốc tế, vui lòng sử dụng GoodbyeDPI hoặc WARP 1.1.1.1, sau đó mở trình duyệt ẩn danh để lấy Cookie.</value>
+  </data>
+  <data name="OpenIncognitoBrowser" xml:space="preserve">
+    <value>Mở Trình duyệt Ẩn danh (Lấy Cookie)</value>
+  </data>
+  <data name="ImportAccounts" xml:space="preserve">
+    <value>Nhập tài khoản</value>
+  </data>
+  <data name="BulkCookiePlaceholder" xml:space="preserve">
+    <value>Dán danh sách cookie .ROBLOSECURITY vào đây (mỗi dòng 1 cookie hoặc định dạng User:Pass:Cookie)...</value>
+  </data>
+  <data name="BulkImportProgress" xml:space="preserve">
+    <value>Đang nhập tài khoản {0} / {1}...</value>
+  </data>
+  <data name="BulkImportCompleted" xml:space="preserve">
+    <value>Đã nhập thành công {0} tài khoản ({1} thất bại hoặc bỏ qua).</value>
+  </data>
+  <data name="NoValidCookiesFound" xml:space="preserve">
+    <value>Không tìm thấy cookie .ROBLOSECURITY hợp lệ nào trong nội dung đã nhập.</value>
+  </data>
+  <data name="IncognitoBrowserFailed" xml:space="preserve">
+    <value>Không thể khởi chạy trình duyệt ở chế độ ẩn danh.</value>
+  </data>
 </root>
