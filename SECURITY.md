@@ -231,7 +231,7 @@ To eliminate this single point of failure without exposing plaintext credentials
 1. **Zero Bundled Kernel Drivers**:
    - To avoid Hyperion anti-cheat bans and false-positive antivirus detections, RbxManager never bundles `WinDivert` or `GoodbyeDPI` inside its application binaries.
 2. **User-Initiated External Tool Provisioning**:
-   - Only when the user explicitly clicks `"Cài đặt & Bật GoodbyeDPI"` in `AddAccountWindow`, `DpiToolService` downloads the official `goodbyedpi-0.2.2.zip` archive from GitHub (`https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.2/goodbyedpi-0.2.2.zip`) into `%LOCALAPPDATA%\RbxManager\Tools\GoodbyeDPI\goodbyedpi.zip`, extracts it, and invokes `1_russia_blacklist.cmd` externally via standard Windows UAC (`UseShellExecute = true`, `Verb = "runas"`).
+   - Only when the user explicitly clicks `"Cài đặt & Bật GoodbyeDPI"` in `AddAccountWindow`, `DpiToolService` downloads the official `goodbyedpi-0.2.2.zip` archive from GitHub (`https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.2/goodbyedpi-0.2.2.zip`) into `%LOCALAPPDATA%\RbxManager\Tools\GoodbyeDPI\goodbyedpi.zip`, extracts it, and invokes `2_any_country.cmd` (or fallback `2_any_country_dnsredir.cmd`) externally via standard Windows UAC (`UseShellExecute = true`, `Verb = "runas"`).
 
 
 

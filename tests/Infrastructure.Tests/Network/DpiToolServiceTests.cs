@@ -48,7 +48,7 @@ public sealed class DpiToolServiceTests : IDisposable
         using MemoryStream ms = new();
         using (ZipArchive archive = new(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
-            ZipArchiveEntry entry = archive.CreateEntry("goodbyedpi-0.2.2/1_russia_blacklist.cmd");
+            ZipArchiveEntry entry = archive.CreateEntry("goodbyedpi-0.2.2/2_any_country.cmd");
             using StreamWriter writer = new(entry.Open());
             writer.WriteLine("@echo off");
         }
@@ -102,8 +102,36 @@ public sealed class DpiToolServiceTests : IDisposable
         Assert.NotNull(capturedPsi);
         Assert.True(capturedPsi!.UseShellExecute);
         Assert.Equal("runas", capturedPsi.Verb);
-        Assert.EndsWith("1_russia_blacklist.cmd", capturedPsi.FileName, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("2_any_country.cmd", capturedPsi.FileName, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(capturedPsi.FileName));
+    }
+
+    [Fact]
+    public async Task EnsureInstalledAndStartAsync_WhenDefaultScriptMissing_FallsBackToDnsRedirScript()
+    {
+        IProcessProvider processProvider = Substitute.For<IProcessProvider>();
+        processProvider.IsProcessRunning(DpiToolService.ProcessName).Returns(false);
+
+        string subDir = Path.Combine(_tempDir, "goodbyedpi-0.2.2");
+        Directory.CreateDirectory(subDir);
+        string fallbackPath = Path.Combine(subDir, DpiToolService.FallbackScriptFileName);
+        await File.WriteAllTextAsync(fallbackPath, "@echo off");
+
+        ProcessStartInfo? capturedPsi = null;
+        using DpiToolService service = new(
+            processProvider: processProvider,
+            toolsDirectory: _tempDir,
+            processRunner: psi =>
+            {
+                capturedPsi = psi;
+                return true;
+            });
+
+        Result result = await service.EnsureInstalledAndStartAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedPsi);
+        Assert.EndsWith(DpiToolService.FallbackScriptFileName, capturedPsi!.FileName, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

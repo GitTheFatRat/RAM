@@ -21,7 +21,8 @@ using RbxManager.Core.Processes;
 public sealed partial class DpiToolService : IDpiToolService, IDisposable
 {
     public const string ProcessName = "goodbyedpi";
-    public const string DefaultScriptFileName = "1_russia_blacklist.cmd";
+    public const string DefaultScriptFileName = "2_any_country.cmd";
+    public const string FallbackScriptFileName = "2_any_country_dnsredir.cmd";
     public const string ArchiveFileName = "goodbyedpi.zip";
     public static readonly Uri DefaultDownloadUri = new("https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.2/goodbyedpi-0.2.2.zip");
 
@@ -233,6 +234,20 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
         if (matchingScript != null)
         {
             return matchingScript;
+        }
+
+        string fallbackDirectPath = Path.Combine(_toolsDirectory, FallbackScriptFileName);
+        if (File.Exists(fallbackDirectPath))
+        {
+            return fallbackDirectPath;
+        }
+
+        string? fallbackScript = Directory
+            .EnumerateFiles(_toolsDirectory, FallbackScriptFileName, SearchOption.AllDirectories)
+            .FirstOrDefault();
+        if (fallbackScript != null)
+        {
+            return fallbackScript;
         }
 
         return Directory

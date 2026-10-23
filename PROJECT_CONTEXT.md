@@ -28,6 +28,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M19**: UAT Live Trace Telemetry (`UatLogger`, `EnableUatTelemetry` toggle in Settings -> Advanced) writing masked real-time execution traces to `Desktop\RbxManager_UAT_Trace.txt`. (Completed)
 - **M21**: GoodbyeDPI Automation Orchestrator (`DpiToolService`, `AddAccountWindow` dynamic status & one-click installer/launcher with UAC `runas` elevation). (Completed)
 - **M21.2**: Hotfix pinning exact GoodbyeDPI v0.2.2 release URL (`goodbyedpi-0.2.2.zip`) for stable downloads. (Completed)
+- **M21.3**: Hotfix switching GoodbyeDPI execution target from `1_russia_blacklist.cmd` to `2_any_country.cmd` (with `2_any_country_dnsredir.cmd` fallback) to bypass global SNI blocks. (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).

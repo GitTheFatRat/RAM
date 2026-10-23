@@ -103,3 +103,4 @@ flowchart TD
 - **M19**: UAT Live Trace Telemetry (`IUatLogger`, `UatLogger`) intercepting `WindowsProcessStarter.Start`, `WindowController`, `WindowsMemoryOptimizer`, and `SessionTracker` transitions into `Desktop\RbxManager_UAT_Trace.txt` with secret/ticket masking (`***`). (Completed)
 - **M21**: GoodbyeDPI Automation Orchestrator (`IDpiToolService`, `DpiToolService`) downloading and launching external GoodbyeDPI into `%LOCALAPPDATA%\RbxManager\Tools\GoodbyeDPI` with UAC elevation (`Verb = "runas"`), wired into `AddAccountWindow`. (Completed)
 - **M21.2**: Pinned exact GoodbyeDPI v0.2.2 release URL (`https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.2/goodbyedpi-0.2.2.zip`) in `DpiToolService`. (Completed)
+- **M21.3**: Switched GoodbyeDPI execution script in `DpiToolService` to `2_any_country.cmd` (with `2_any_country_dnsredir.cmd` fallback) to bypass global SNI blocks. (Completed)
