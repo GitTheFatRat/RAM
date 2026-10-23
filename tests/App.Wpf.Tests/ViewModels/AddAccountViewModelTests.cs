@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NSubstitute;
 using RbxManager.App.Resources;
+using RbxManager.App.Services;
 using RbxManager.App.ViewModels;
 using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
@@ -54,6 +55,32 @@ public sealed class AddAccountViewModelTests
         vm.OpenIncognitoBrowserCommand.Execute(null);
         Assert.True(launched);
         Assert.False(vm.HasErrorMessage);
+    }
+
+    [Fact]
+    public void IncognitoBrowserLauncher_IncludesDpiBypassFlagsInBrowserArguments()
+    {
+        string expectedIncognito = "--incognito --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/login\"";
+        string expectedInPrivate = "--inprivate --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/login\"";
+
+        Assert.Equal(expectedIncognito, IncognitoBrowserLauncher.BuildIncognitoArguments());
+        Assert.Equal(expectedInPrivate, IncognitoBrowserLauncher.BuildInPrivateArguments());
+
+        foreach (var (cmdName, args) in IncognitoBrowserLauncher.GetPathBrowserCommands())
+        {
+            string expected = cmdName.Equals("msedge.exe", StringComparison.OrdinalIgnoreCase)
+                ? expectedInPrivate
+                : expectedIncognito;
+            Assert.Equal(expected, args);
+        }
+
+        foreach (var (exePath, args) in IncognitoBrowserLauncher.GetCandidateBrowserPaths())
+        {
+            string expected = exePath.EndsWith("msedge.exe", StringComparison.OrdinalIgnoreCase)
+                ? expectedInPrivate
+                : expectedIncognito;
+            Assert.Equal(expected, args);
+        }
     }
 
     [Fact]

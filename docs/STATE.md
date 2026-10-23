@@ -28,4 +28,5 @@
 - M19: done (bb7d6a9) - UAT telemetry for absolute transparency during manual testing
 - M21: done (f10d8ed) - orchestrator to auto-download and launch GoodbyeDPI safely
 - M21.2: done (8987a3f) - pin exact GoodbyeDPI v0.2.2 release url for stable downloads
-- M21.3: done - switch GoodbyeDPI execution to 2_any_country.cmd to bypass global SNI blocks
+- M21.3: done (4fa947a) - switch GoodbyeDPI execution to 2_any_country.cmd to bypass global SNI blocks
+- M21.4: done - inject Chrome CLI args to disable QUIC and ECH automatically
