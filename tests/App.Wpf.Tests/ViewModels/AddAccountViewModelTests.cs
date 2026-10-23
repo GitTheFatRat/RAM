@@ -60,8 +60,8 @@ public sealed class AddAccountViewModelTests
     [Fact]
     public void IncognitoBrowserLauncher_IncludesDpiBypassFlagsInBrowserArguments()
     {
-        string expectedIncognito = "--incognito --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/login\"";
-        string expectedInPrivate = "--inprivate --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/login\"";
+        string expectedIncognito = "--incognito --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/NewLogin\"";
+        string expectedInPrivate = "--inprivate --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/NewLogin\"";
 
         Assert.Equal(expectedIncognito, IncognitoBrowserLauncher.BuildIncognitoArguments());
         Assert.Equal(expectedInPrivate, IncognitoBrowserLauncher.BuildInPrivateArguments());

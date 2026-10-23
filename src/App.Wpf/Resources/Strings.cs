@@ -244,6 +244,7 @@ public static class Strings
     public static string GoodbyeDpiUacDenied => GetString(nameof(GoodbyeDpiUacDenied));
     public static string GoodbyeDpiDownloadFailed => GetString(nameof(GoodbyeDpiDownloadFailed));
     public static string GoodbyeDpiLaunchFailed => GetString(nameof(GoodbyeDpiLaunchFailed));
+    public static string IncognitoCookieNote => GetString(nameof(IncognitoCookieNote));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

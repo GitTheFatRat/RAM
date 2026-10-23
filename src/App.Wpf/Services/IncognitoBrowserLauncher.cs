@@ -8,7 +8,7 @@ using System.Runtime.Versioning;
 [SupportedOSPlatform("windows")]
 public static class IncognitoBrowserLauncher
 {
-    public const string LoginUrl = "https://www.roblox.com/login";
+    public const string LoginUrl = "https://www.roblox.com/NewLogin";
     public const string DpiBypassArgs = "--disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2";
 
     public static bool TryLaunch(string url = LoginUrl)

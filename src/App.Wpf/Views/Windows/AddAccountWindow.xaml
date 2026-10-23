@@ -86,15 +86,21 @@
                 </Grid>
             </Border>
 
-            <!-- Prominent Native Incognito Browser Launcher Button -->
-            <ui:Button Grid.Row="1"
-                       AutomationProperties.AutomationId="AddAccount_OpenIncognitoButton"
-                       AutomationProperties.Name="{x:Static resources:Strings.OpenIncognitoBrowser}"
-                       Content="{x:Static resources:Strings.OpenIncognitoBrowser}"
-                       Icon="{ui:SymbolIcon Globe24}"
-                       HorizontalAlignment="Stretch"
-                       Margin="{StaticResource MarginBottomMedium}"
-                       Command="{Binding OpenIncognitoBrowserCommand}" />
+            <!-- Prominent Native Incognito Browser Launcher Button & Post-Login Hint -->
+            <StackPanel Grid.Row="1" Margin="{StaticResource MarginBottomMedium}">
+                <ui:Button AutomationProperties.AutomationId="AddAccount_OpenIncognitoButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.OpenIncognitoBrowser}"
+                           Content="{x:Static resources:Strings.OpenIncognitoBrowser}"
+                           Icon="{ui:SymbolIcon Globe24}"
+                           HorizontalAlignment="Stretch"
+                           Margin="0,0,0,6"
+                           Command="{Binding OpenIncognitoBrowserCommand}" />
+                <TextBlock AutomationProperties.AutomationId="AddAccount_IncognitoCookieNote"
+                           Text="{x:Static resources:Strings.IncognitoCookieNote}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+            </StackPanel>
 
             <!-- Primary Multi-Line Bulk Cookie TextBox -->
             <ui:TextBox Grid.Row="2"

@@ -757,4 +757,7 @@
   <data name="GoodbyeDpiLaunchFailed" xml:space="preserve">
     <value>Không thể khởi động GoodbyeDPI. Vui lòng kiểm tra phần mềm diệt virus và thử lại.</value>
   </data>
+  <data name="IncognitoCookieNote" xml:space="preserve">
+    <value>Lưu ý: Sau khi đăng nhập xong, trang web sẽ xoay tròn hoặc báo lỗi, nhưng Cookie đã được lưu. Hãy bấm F12 -&gt; Application -&gt; Cookies để lấy luôn!</value>
+  </data>
 </root>
