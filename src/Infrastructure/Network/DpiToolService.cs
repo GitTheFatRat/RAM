@@ -22,7 +22,8 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
 {
     public const string ProcessName = "goodbyedpi";
     public const string DefaultScriptFileName = "1_russia_blacklist.cmd";
-    public static readonly Uri DefaultDownloadUri = new("https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.3/goodbyedpi-0.2.3.zip");
+    public const string ArchiveFileName = "goodbyedpi.zip";
+    public static readonly Uri DefaultDownloadUri = new("https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.2/goodbyedpi-0.2.2.zip");
 
     private const int ErrorCancelledWin32Code = 1223;
 
@@ -162,11 +163,11 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
 
     private async Task<Result> DownloadAndExtractAsync(CancellationToken ct)
     {
-        string tempZipPath = Path.Combine(_toolsDirectory, $"goodbyedpi_{Guid.NewGuid():N}.zip");
+        string zipPath = Path.Combine(_toolsDirectory, ArchiveFileName);
         try
         {
             Directory.CreateDirectory(_toolsDirectory);
-            _uatLogger?.LogTrace($"DpiToolService: Downloading GoodbyeDPI archive from {DefaultDownloadUri} to \"{_toolsDirectory}\"");
+            _uatLogger?.LogTrace($"DpiToolService: Downloading GoodbyeDPI archive from {DefaultDownloadUri} to \"{zipPath}\"");
 
             using HttpResponseMessage response = await _httpClient.GetAsync(
                 DefaultDownloadUri,
@@ -179,12 +180,12 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
                 return Result.Failure($"GitHub download failed with HTTP {(int)response.StatusCode}.", DpiErrorCodes.DownloadFailed);
             }
 
-            await using (FileStream fileStream = new(tempZipPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (FileStream fileStream = new(zipPath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 await response.Content.CopyToAsync(fileStream, ct).ConfigureAwait(false);
             }
 
-            ZipFile.ExtractToDirectory(tempZipPath, _toolsDirectory, overwriteFiles: true);
+            ZipFile.ExtractToDirectory(zipPath, _toolsDirectory, overwriteFiles: true);
             LogExtracted(_logger, _toolsDirectory);
             return Result.Success();
         }
@@ -201,9 +202,9 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
         {
             try
             {
-                if (File.Exists(tempZipPath))
+                if (File.Exists(zipPath))
                 {
-                    File.Delete(tempZipPath);
+                    File.Delete(zipPath);
                 }
             }
             catch

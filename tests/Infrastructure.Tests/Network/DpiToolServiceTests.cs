@@ -48,11 +48,19 @@ public sealed class DpiToolServiceTests : IDisposable
         using MemoryStream ms = new();
         using (ZipArchive archive = new(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
-            ZipArchiveEntry entry = archive.CreateEntry("goodbyedpi-0.2.3/1_russia_blacklist.cmd");
+            ZipArchiveEntry entry = archive.CreateEntry("goodbyedpi-0.2.2/1_russia_blacklist.cmd");
             using StreamWriter writer = new(entry.Open());
             writer.WriteLine("@echo off");
         }
         return ms.ToArray();
+    }
+
+    [Fact]
+    public void DefaultDownloadUri_PointsToPinnedV022Release()
+    {
+        Assert.Equal(
+            "https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.2/goodbyedpi-0.2.2.zip",
+            DpiToolService.DefaultDownloadUri.ToString());
     }
 
     [Fact]
