@@ -214,5 +214,16 @@ To eliminate this single point of failure without exposing plaintext credentials
    - In Release builds, these environment variables and hooks are completely omitted by the compiler.
    - Verified by automated reflection tests (`ReleaseConfigurationSafetyTests`) that assert Release binaries contain zero test hook types or interfaces.
 
+---
+
+## UAT Live Trace Telemetry & Secret Masking (M19)
+
+1. **Opt-In Local Trace Logging (`EnableUatTelemetry`)**:
+   - Disabled by default (`EnableUatTelemetry = false`).
+   - When explicitly enabled by the user in Settings -> Advanced (`"Bật chế độ ghi log thực chiến ra Desktop"`), `UatLogger` writes timestamped execution traces to `Desktop\RbxManager_UAT_Trace.txt` for local manual testing verification.
+2. **Mandatory Ticket & Cookie Masking**:
+   - Before writing any trace line (`WindowsProcessStarter.Start`, `WindowController`, `WindowsMemoryOptimizer`, `SessionTracker`), `UatLogger.MaskSecrets` scrubs all `.ROBLOSECURITY` cookies and single-use `gameinfo:` authentication tickets with `***`, ensuring credentials never appear in `RbxManager_UAT_Trace.txt`.
+
+
 
 

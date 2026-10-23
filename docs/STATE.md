@@ -24,4 +24,5 @@
 - M16: done (38f4742) - UI "eyes" for the agent (sandboxed UI automation, window-only screenshots)
 - M17: done (bd61d74) - remove proxy support, pace launches (default 20 s)
 - M20: done (95b1d9b) - replace WebView2 with bulk cookie import and native incognito launcher
-- M18: done - live integration suite against real Roblox endpoints
+- M18: done (fa69ec3) - live integration suite against real Roblox endpoints
+- M19: done - UAT telemetry for absolute transparency during manual testing

@@ -237,6 +237,8 @@ public static class Strings
     public static string BulkImportCompleted => GetString(nameof(BulkImportCompleted));
     public static string NoValidCookiesFound => GetString(nameof(NoValidCookiesFound));
     public static string IncognitoBrowserFailed => GetString(nameof(IncognitoBrowserFailed));
+    public static string EnableUatTelemetry => GetString(nameof(EnableUatTelemetry));
+    public static string EnableUatTelemetryDescription => GetString(nameof(EnableUatTelemetryDescription));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

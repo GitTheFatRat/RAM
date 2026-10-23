@@ -100,3 +100,4 @@ flowchart TD
 - **M17**: Removal of proxy support across all layers, unified launch pacing gate (`LaunchDelaySeconds`, default 20 s), sequential cookie validation (2 s gap), strict 5-file `Reveal()` allowlist. (Completed)
 - **M20**: Replaced WebView2 with bulk cookie import (`AddAccountWindow`, `AddAccountViewModel`, `BulkCookieParser`) and native incognito browser launcher (`IncognitoBrowserLauncher`). (Completed)
 - **M18**: Live Integration Test Suite (`tests/Infrastructure.LiveTests/`) exercising real `RobloxHttpClientFactory`, `RobloxAuthService`, and `ServerBrowserService` against live Roblox endpoints with explicit opt-in (`RBX_LIVE_TEST_COOKIE`). (Completed)
+- **M19**: UAT Live Trace Telemetry (`IUatLogger`, `UatLogger`) intercepting `WindowsProcessStarter.Start`, `WindowController`, `WindowsMemoryOptimizer`, and `SessionTracker` transitions into `Desktop\RbxManager_UAT_Trace.txt` with secret/ticket masking (`***`). (Completed)

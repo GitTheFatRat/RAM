@@ -2,13 +2,23 @@ namespace RbxManager.Infrastructure.Launch;
 
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.Versioning;
 using System.Security;
 using Microsoft.Win32;
+using RbxManager.Core.Diagnostics;
+using RbxManager.Infrastructure.Logging;
 
 [SupportedOSPlatform("windows")]
 public sealed class WindowsProcessStarter : IProcessStarter
 {
+    private readonly IUatLogger? _uatLogger;
+
+    public WindowsProcessStarter(IUatLogger? uatLogger = null)
+    {
+        _uatLogger = uatLogger;
+    }
+
     public bool IsRobloxPlayerInstalled()
     {
         (RegistryKey hive, string subKey)[] locations =
@@ -43,6 +53,9 @@ public sealed class WindowsProcessStarter : IProcessStarter
 
     public bool Start(string uri)
     {
+        string maskedUri = UatLogger.MaskSecrets(uri);
+        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"WindowsProcessStarter: Process.Start(FileName=\"{maskedUri}\", UseShellExecute=True)"));
+
         ProcessStartInfo psi = new(uri)
         {
             UseShellExecute = true

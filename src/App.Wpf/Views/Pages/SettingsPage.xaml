@@ -508,6 +508,8 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -547,6 +549,28 @@
                                    Text="{Binding PlaceLauncherUrlTemplateStatus}"
                                    Style="{StaticResource MonospaceTextStyle}"
                                    VerticalAlignment="Center" />
+
+                        <!-- Divider 2 -->
+                        <Rectangle Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Height="1"
+                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                   Margin="0,8" />
+
+                        <!-- Row 3: UAT Live Trace Telemetry -->
+                        <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
+                            <TextBlock Text="{x:Static resources:Strings.EnableUatTelemetry}"
+                                       Style="{StaticResource SettingLabelStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.EnableUatTelemetryDescription}"
+                                       Style="{StaticResource DescriptionTextStyle}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Row="5" Grid.Column="1"
+                                         AutomationProperties.AutomationId="Settings_UatTelemetryToggle"
+                                         AutomationProperties.Name="{x:Static resources:Strings.EnableUatTelemetry}"
+                                         IsChecked="{Binding EnableUatTelemetry, Mode=OneWay}"
+                                         Command="{Binding EnableUatTelemetryToggledCommand}"
+                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                         VerticalAlignment="Center" />
                     </Grid>
                 </Border>
 

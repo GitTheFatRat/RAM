@@ -40,6 +40,7 @@ public static class InfrastructureServiceExtensions
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<Core.Diagnostics.IUatLogger, Logging.UatLogger>();
         services.AddSingleton<IVaultKeyProvider, VaultKeyProvider>();
         services.AddSingleton<IAccountStore>(sp => new EncryptedFileVault(
             null,
@@ -104,7 +105,8 @@ public static class InfrastructureServiceExtensions
             sp.GetRequiredService<IServerBrowserService>(),
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<IRobloxLogWatcher>(),
-            sp.GetService<ILogger<SessionTracker>>()));
+            sp.GetService<ILogger<SessionTracker>>(),
+            uatLogger: sp.GetService<Core.Diagnostics.IUatLogger>()));
         services.AddSingleton<ISessionTracker>(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService<BackgroundWindowThrottler>();

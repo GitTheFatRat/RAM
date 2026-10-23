@@ -2,10 +2,12 @@ namespace RbxManager.Infrastructure.Processes;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using RbxManager.Core.Diagnostics;
 using RbxManager.Core.Processes;
 
 [SupportedOSPlatform("windows")]
@@ -16,6 +18,7 @@ public sealed partial class WindowController : IWindowController
 
     private readonly INativeWindowMethods _nativeMethods;
     private readonly ILogger<WindowController> _logger;
+    private readonly IUatLogger? _uatLogger;
     private readonly HashSet<IntPtr> _throttledWindows = new();
     private readonly object _lock = new();
 
@@ -33,10 +36,12 @@ public sealed partial class WindowController : IWindowController
     public WindowController(
         IProcessProvider? processProvider = null,
         INativeWindowMethods? nativeMethods = null,
-        ILogger<WindowController>? logger = null)
+        ILogger<WindowController>? logger = null,
+        IUatLogger? uatLogger = null)
     {
         _nativeMethods = nativeMethods ?? new WindowsNativeWindowMethods();
         _logger = logger ?? NullLogger<WindowController>.Instance;
+        _uatLogger = uatLogger;
     }
 
     public void ThrottleBackgroundProcesses(IReadOnlyCollection<int>? trackedPids = null)
@@ -68,6 +73,7 @@ public sealed partial class WindowController : IWindowController
                     if (targetPids.Contains(pid) && pid != foregroundPid)
                     {
                         // Minimize without activating; never move off-screen or send synthetic input
+                        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"WindowController: Calling ShowWindow(0x{hWnd:X}, SW_SHOWMINNOACTIVE={SwShowMinNoActive}) on PID {pid}"));
                         _nativeMethods.ShowWindow(hWnd, SwShowMinNoActive);
                         _throttledWindows.Add(hWnd);
                     }
@@ -90,6 +96,7 @@ public sealed partial class WindowController : IWindowController
             {
                 foreach (IntPtr hWnd in _throttledWindows)
                 {
+                    _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"WindowController: Calling ShowWindow(0x{hWnd:X}, SW_RESTORE={SwRestore})"));
                     _nativeMethods.ShowWindow(hWnd, SwRestore);
                 }
                 _throttledWindows.Clear();

@@ -80,6 +80,7 @@ public sealed record AppSettings(
     int RamCleanerIntervalMinutes = AppSettings.DefaultRamCleanerIntervalMinutes,
     bool EnableSmartServerHopping = true,
     GhostDisconnectMode GhostDisconnectMode = GhostDisconnectMode.NotifyOnly,
+    bool EnableUatTelemetry = false,
     [property: JsonPropertyName("EnableGhostDisconnectDetection")]
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     bool? LegacyEnableGhostDisconnectDetection = null,

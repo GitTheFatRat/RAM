@@ -3,6 +3,7 @@ namespace RbxManager.Infrastructure.Sessions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
+using RbxManager.Core.Diagnostics;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
@@ -28,6 +30,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     private readonly Core.Settings.ISettingsService? _settingsService;
     private readonly IRobloxLogWatcher? _logWatcher;
     private readonly ILogger<SessionTracker> _logger;
+    private readonly IUatLogger? _uatLogger;
 
     private readonly ConcurrentDictionary<int, RunningSession> _activeSessions = new();
     private readonly ConcurrentDictionary<long, bool> _autoRejoinEnabled = new();
@@ -78,7 +81,8 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         Core.Settings.ISettingsService? settingsService,
         IRobloxLogWatcher? logWatcher,
         ILogger<SessionTracker>? logger = null,
-        Func<RejoinPolicy>? policyFactory = null)
+        Func<RejoinPolicy>? policyFactory = null,
+        IUatLogger? uatLogger = null)
     {
         _processProvider = processProvider;
         _accountStore = accountStore;
@@ -88,6 +92,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         _settingsService = settingsService;
         _logWatcher = logWatcher;
         _logger = logger ?? NullLogger<SessionTracker>.Instance;
+        _uatLogger = uatLogger;
 
         if (_logWatcher != null)
         {
@@ -176,6 +181,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
                 _activeSessions[snapshot.Pid] = session;
                 LogSessionBound(accountId.Value, snapshot.Pid);
+                _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Session {snapshot.Pid} bound to JobId {request.JobId ?? "<any>"} (PlaceId {request.PlaceId}, AccountId {accountId.Value})"));
 
                 _logWatcher?.StartWatching(snapshot.Pid, snapshot.StartTime);
 
@@ -233,6 +239,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
                 bool intentional = _intentionalCloses.TryRemove(pid, out _);
 
                 LogSessionEnded(session.AccountId.Value, pid, intentional);
+                _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Session {pid} ended (AccountId {session.AccountId.Value}, Intentional={intentional})"));
                 SessionEnded?.Invoke(session, intentional);
 
                 if (!intentional && GetAutoRejoin(session.AccountId))
@@ -252,6 +259,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         {
             _gaveUpAccounts[session.AccountId.Value] = true;
             LogRejoinGaveUp(session.AccountId.Value);
+            _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Auto-rejoin circuit breaker tripped for AccountId {session.AccountId.Value}"));
             return;
         }
 
@@ -261,6 +269,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         }
 
         LogRejoining(session.AccountId.Value, (int)decision.Delay.TotalSeconds);
+        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Auto-rejoin scheduled for AccountId {session.AccountId.Value} in {(int)decision.Delay.TotalSeconds}s"));
 
         if (decision.Delay > TimeSpan.Zero)
         {
@@ -309,6 +318,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
                     {
                         launchRequest = session.Request with { JobId = candidate.Id };
                         LogServerHopped(session.AccountId.Value, candidate.Id);
+                        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Smart server hop selected JobId {candidate.Id} for AccountId {session.AccountId.Value}"));
                     }
                     else
                     {
@@ -345,6 +355,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             return;
         }
 
+        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: LogWatcher triggered {keyword} on PID {pid} (Mode={mode})"));
         GhostDisconnectOccurred?.Invoke(session, keyword);
 
         if (mode == GhostDisconnectMode.NotifyOnly)

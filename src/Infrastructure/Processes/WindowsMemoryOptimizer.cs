@@ -2,6 +2,7 @@ namespace RbxManager.Infrastructure.Processes;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Win32.SafeHandles;
+using RbxManager.Core.Diagnostics;
 using RbxManager.Core.Processes;
 
 [SupportedOSPlatform("windows")]
@@ -22,6 +24,7 @@ public sealed partial class WindowsMemoryOptimizer : IMemoryOptimizer
     private readonly INativeProcessMemoryMethods _nativeMemoryMethods;
     private readonly INativeWindowMethods _nativeWindowMethods;
     private readonly ILogger<WindowsMemoryOptimizer> _logger;
+    private readonly IUatLogger? _uatLogger;
     private readonly Func<int, bool>? _customTrimProcess;
 
     public int LastTrimmedCount { get; private set; }
@@ -32,8 +35,9 @@ public sealed partial class WindowsMemoryOptimizer : IMemoryOptimizer
         IProcessProvider? processProvider = null,
         INativeProcessMemoryMethods? nativeMemoryMethods = null,
         INativeWindowMethods? nativeWindowMethods = null,
-        ILogger<WindowsMemoryOptimizer>? logger = null)
-        : this(processProvider, nativeMemoryMethods, nativeWindowMethods, null, logger)
+        ILogger<WindowsMemoryOptimizer>? logger = null,
+        IUatLogger? uatLogger = null)
+        : this(processProvider, nativeMemoryMethods, nativeWindowMethods, null, logger, uatLogger)
     {
     }
 
@@ -42,13 +46,15 @@ public sealed partial class WindowsMemoryOptimizer : IMemoryOptimizer
         INativeProcessMemoryMethods? nativeMemoryMethods,
         INativeWindowMethods? nativeWindowMethods,
         Func<int, bool>? customTrimProcess,
-        ILogger<WindowsMemoryOptimizer>? logger = null)
+        ILogger<WindowsMemoryOptimizer>? logger = null,
+        IUatLogger? uatLogger = null)
     {
         _processProvider = processProvider;
         _nativeMemoryMethods = nativeMemoryMethods ?? new WindowsNativeProcessMemoryMethods();
         _nativeWindowMethods = nativeWindowMethods ?? new WindowsNativeWindowMethods();
         _customTrimProcess = customTrimProcess;
         _logger = logger ?? NullLogger<WindowsMemoryOptimizer>.Instance;
+        _uatLogger = uatLogger;
     }
 
     public Task TrimMemoryAsync(IReadOnlyCollection<int>? trackedPids = null, CancellationToken ct = default)
@@ -133,6 +139,7 @@ public sealed partial class WindowsMemoryOptimizer : IMemoryOptimizer
     {
         if (_customTrimProcess != null)
         {
+            _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"WindowsMemoryOptimizer: Calling SetProcessWorkingSetSize(-1, -1) on PID {pid}"));
             return _customTrimProcess(pid) ? TrimResult.Success : TrimResult.Failed;
         }
 
@@ -146,6 +153,7 @@ public sealed partial class WindowsMemoryOptimizer : IMemoryOptimizer
                 return error == 5 ? TrimResult.AccessDenied : TrimResult.Failed;
             }
 
+            _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"WindowsMemoryOptimizer: Calling SetProcessWorkingSetSize(-1, -1) on PID {pid}"));
             bool success = _nativeMemoryMethods.SetProcessWorkingSetSize(handle.DangerousGetHandle(), -1, -1);
             if (!success)
             {

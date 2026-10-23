@@ -736,4 +736,10 @@
   <data name="IncognitoBrowserFailed" xml:space="preserve">
     <value>Could not launch browser in incognito mode.</value>
   </data>
+  <data name="EnableUatTelemetry" xml:space="preserve">
+    <value>Enable UAT live trace logging to Desktop</value>
+  </data>
+  <data name="EnableUatTelemetryDescription" xml:space="preserve">
+    <value>Writes unencrypted execution traces (with masked secrets) to RbxManager_UAT_Trace.txt on Desktop for transparent manual testing.</value>
+  </data>
 </root>

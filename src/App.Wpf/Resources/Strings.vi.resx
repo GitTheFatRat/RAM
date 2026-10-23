@@ -736,4 +736,10 @@
   <data name="IncognitoBrowserFailed" xml:space="preserve">
     <value>Không thể khởi chạy trình duyệt ở chế độ ẩn danh.</value>
   </data>
+  <data name="EnableUatTelemetry" xml:space="preserve">
+    <value>Bật chế độ ghi log thực chiến ra Desktop</value>
+  </data>
+  <data name="EnableUatTelemetryDescription" xml:space="preserve">
+    <value>Ghi lại chi tiết luồng thực thi (đã che giấu mã bí mật) ra tệp RbxManager_UAT_Trace.txt ngoài Desktop để kiểm thử minh bạch.</value>
+  </data>
 </root>

@@ -84,6 +84,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private Core.Processes.GhostDisconnectMode _selectedGhostDisconnectMode = Core.Processes.GhostDisconnectMode.NotifyOnly;
 
     [ObservableProperty]
+    private bool _enableUatTelemetry;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -126,6 +129,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableSmartServerHopping = settings.EnableSmartServerHopping;
         EnableGhostDisconnectDetection = settings.GhostDisconnectMode != Core.Processes.GhostDisconnectMode.Off;
         SelectedGhostDisconnectMode = settings.GhostDisconnectMode;
+        EnableUatTelemetry = settings.EnableUatTelemetry;
 
         string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
         LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -170,6 +174,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 RamCleanerIntervalMinutes: RamCleanerIntervalMinutes,
                 EnableSmartServerHopping: EnableSmartServerHopping,
                 GhostDisconnectMode: SelectedGhostDisconnectMode,
+                EnableUatTelemetry: EnableUatTelemetry,
                 Advanced: current.Advanced);
 
             await _settingsService.SaveSettingsAsync(updated);
@@ -346,6 +351,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableSmartServerHopping = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { EnableSmartServerHopping = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableUatTelemetryToggledAsync(bool enabled)
+    {
+        EnableUatTelemetry = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { EnableUatTelemetry = enabled });
     }
 
     [RelayCommand]
