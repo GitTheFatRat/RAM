@@ -9,6 +9,14 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimmerRootAssembly Include="RbxManager.Core" />
+    <TrimmerRootAssembly Include="RbxManager.Infrastructure" />
+    <TrimmerRootAssembly Include="RbxManager.App" />
+    <TrimmerRootAssembly Include="Wpf.Ui" />
+    <TrimmerRootAssembly Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
   </ItemGroup>
@@ -29,6 +37,23 @@
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="WPF-UI" />
+    <PackageReference Include="Obfuscar">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
+
+  <Target Name="ObfuscateReleaseBuild" AfterTargets="Build" BeforeTargets="ComputeFilesToPublish;PrepareForPublish" Condition="'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' != ''">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\obfuscar.xml" DestinationFolder="$(TargetDir)" />
+    <Exec Command="&quot;$(Obfuscar)&quot; &quot;$(TargetDir)obfuscar.xml&quot;" WorkingDirectory="$(TargetDir)" />
+    <Copy SourceFiles="$(TargetDir)Obfuscated\RbxManager.App.dll" DestinationFiles="$(TargetDir)RbxManager.App.dll" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(TargetDir)Obfuscated\RbxManager.App.dll" DestinationFiles="$(IntermediateOutputPath)RbxManager.App.dll" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(TargetDir)Obfuscated\RbxManager.Core.dll" DestinationFiles="$(TargetDir)RbxManager.Core.dll" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(TargetDir)Obfuscated\RbxManager.Core.dll" DestinationFiles="..\Core\bin\$(Configuration)\net10.0\RbxManager.Core.dll" Condition="Exists('..\Core\bin\$(Configuration)\net10.0\RbxManager.Core.dll')" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(TargetDir)Obfuscated\RbxManager.Infrastructure.dll" DestinationFiles="$(TargetDir)RbxManager.Infrastructure.dll" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(TargetDir)Obfuscated\RbxManager.Infrastructure.dll" DestinationFiles="..\Infrastructure\bin\$(Configuration)\net10.0\RbxManager.Infrastructure.dll" Condition="Exists('..\Infrastructure\bin\$(Configuration)\net10.0\RbxManager.Infrastructure.dll')" OverwriteReadOnlyFiles="true" />
+    <RemoveDir Directories="$(TargetDir)Obfuscated" />
+    <Delete Files="$(TargetDir)obfuscar.xml" />
+  </Target>
 
 </Project>

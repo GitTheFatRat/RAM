@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Obfuscator>
+  <Var name="InPath" value="." />
+  <Var name="OutPath" value=".\Obfuscated" />
+  <Var name="KeepPublicApi" value="true" />
+  <Var name="HidePrivateApi" value="true" />
+  <Var name="HideStrings" value="true" />
+  <Var name="UseUnicodeNames" value="true" />
+  <Var name="ReuseNames" value="true" />
+  <Var name="RenameFields" value="true" />
+  <Var name="RenameProperties" value="true" />
+  <Var name="RenameEvents" value="true" />
+  <Var name="OptimizeMethods" value="true" />
+  <Var name="SuppressIldasm" value="true" />
+
+  <Module file="$(InPath)\RbxManager.Core.dll" />
+  <Module file="$(InPath)\RbxManager.Infrastructure.dll" />
+  <Module file="$(InPath)\RbxManager.App.dll">
+    <SkipProperty type="RbxManager.App.ViewModels.*" rx=".*" attrib="public" />
+    <SkipType name="RbxManager.App.Views.*" skipProperties="true" skipMethods="false" skipFields="false" />
+  </Module>
+</Obfuscator>
