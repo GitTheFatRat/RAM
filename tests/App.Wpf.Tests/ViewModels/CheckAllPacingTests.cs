@@ -139,8 +139,97 @@ public sealed class CheckAllPacingTests
 
     private sealed class FakeLauncher : ILauncher
     {
-        public Task<Result> LaunchAsync(LaunchRequest request, CancellationToken ct = default) =>
-            Task.FromResult(Result.Success());
+        public List<(AccountId AccountId, DateTimeOffset LaunchTime)> LaunchedAccounts { get; } = new();
+        private readonly TimeProvider? _timeProvider;
+
+        public FakeLauncher(TimeProvider? timeProvider = null)
+        {
+            _timeProvider = timeProvider;
+        }
+
+        public Task<Result> LaunchAsync(LaunchRequest request, CancellationToken ct = default)
+        {
+            LaunchedAccounts.Add((request.AccountId, _timeProvider?.GetUtcNow() ?? DateTimeOffset.UtcNow));
+            return Task.FromResult(Result.Success());
+        }
+    }
+
+    [Fact]
+    public void ExecuteSequentialLaunchQueueAsync_RunsSequentiallyWith60To120SecondRandomizedDelay()
+    {
+        StaRunner.Run(() =>
+        {
+            FakeTimeProvider timeProvider = new();
+            using SecretValue c1 = SecretValue.FromString("fake-cookie-1");
+            using SecretValue c2 = SecretValue.FromString("fake-cookie-2");
+            using SecretValue c3 = SecretValue.FromString("fake-cookie-3");
+
+            Account a1 = new(new AccountId(1), "A1", null, null, c1, DateTimeOffset.UtcNow);
+            Account a2 = new(new AccountId(2), "A2", null, null, c2, DateTimeOffset.UtcNow);
+            Account a3 = new(new AccountId(3), "A3", null, null, c3, DateTimeOffset.UtcNow);
+
+            FakeAccountStore store = new(a1, a2, a3);
+            FakeAuthService auth = new(timeProvider);
+            FakeLauncher launcher = new(timeProvider);
+            IContentDialogService dialogService = Substitute.For<IContentDialogService>();
+            ISnackbarService snackbarService = Substitute.For<ISnackbarService>();
+
+            Queue<int> delays = new();
+            delays.Enqueue(65);
+            delays.Enqueue(115);
+            List<(int Min, int MaxExclusive)> requestedRanges = new();
+
+            AccountsViewModel vm = new(
+                store,
+                dialogService,
+                snackbarService,
+                auth,
+                launcher,
+                timeProvider: timeProvider,
+                randomDelayGenerator: (min, maxExclusive) =>
+                {
+                    requestedRanges.Add((min, maxExclusive));
+                    return delays.Dequeue();
+                });
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            vm.SelectedAccount = vm.FilteredAccounts[0];
+            Assert.True(vm.CanLaunchAccount);
+            Assert.True(vm.IsNotBusy);
+
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+
+            // Account 1 launched immediately at T = 0; buttons disabled during sequence
+            Assert.Single(launcher.LaunchedAccounts);
+            Assert.Equal(new AccountId(1), launcher.LaunchedAccounts[0].AccountId);
+            Assert.True(vm.IsBulkLaunching);
+            Assert.False(vm.CanLaunchAccount);
+            Assert.False(vm.IsNotBusy);
+            Assert.Single(requestedRanges);
+            Assert.Equal((60, 121), requestedRanges[0]);
+
+            // Advance 64s: still waiting for the 65s randomized delay
+            timeProvider.Advance(TimeSpan.FromSeconds(64));
+            Assert.Single(launcher.LaunchedAccounts);
+
+            // Advance 1s (total 65s): Account 2 launched, second delay (115s) scheduled
+            timeProvider.Advance(TimeSpan.FromSeconds(1));
+            Assert.Equal(2, launcher.LaunchedAccounts.Count);
+            Assert.Equal(new AccountId(2), launcher.LaunchedAccounts[1].AccountId);
+            Assert.Equal(2, requestedRanges.Count);
+            Assert.Equal((60, 121), requestedRanges[1]);
+
+            // Advance 115s: Account 3 launched; no delay after the last account
+            timeProvider.Advance(TimeSpan.FromSeconds(115));
+            Assert.Equal(3, launcher.LaunchedAccounts.Count);
+            Assert.Equal(new AccountId(3), launcher.LaunchedAccounts[2].AccountId);
+            Assert.Equal(2, requestedRanges.Count);
+
+            launchTask.GetAwaiter().GetResult();
+            Assert.False(vm.IsBulkLaunching);
+            Assert.True(vm.CanLaunchAccount);
+            Assert.True(vm.IsNotBusy);
+        });
     }
 
     [Fact]

@@ -55,7 +55,7 @@
                            Appearance="Primary"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchAccountCommand}"
-                           IsEnabled="{Binding IsAccountSelected}" />
+                           IsEnabled="{Binding CanLaunchAccount}" />
 
                 <Border Style="{StaticResource ToolbarSeparatorStyle}" />
 
@@ -268,13 +268,15 @@
                            AutomationProperties.Name="{x:Static resources:Strings.LaunchSelected}"
                            Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
-                           Command="{Binding LaunchSelectedAccountsCommand}" />
+                           Command="{Binding LaunchSelectedAccountsCommand}"
+                           IsEnabled="{Binding IsNotBusy}" />
                 <ui:Button Content="{x:Static resources:Strings.LaunchGroup}"
                            AutomationProperties.AutomationId="Accounts_LaunchGroupButton"
                            AutomationProperties.Name="{x:Static resources:Strings.LaunchGroup}"
                            Icon="{ui:SymbolIcon PlayCircle24}"
                            Margin="{StaticResource MarginTight}"
                            Command="{Binding LaunchGroupAccountsCommand}"
+                           IsEnabled="{Binding IsNotBusy}"
                            Visibility="{Binding IsLaunchGroupVisible, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </Grid>

@@ -143,6 +143,7 @@ public partial class ServersViewModel : ObservableObject
         }
 
         int successCount = 0;
+        Account lastAccount = selectedAccounts[^1];
         foreach (Account account in selectedAccounts)
         {
             LaunchRequest request = new(account.Id, placeId, server.Id);
@@ -154,6 +155,14 @@ public partial class ServersViewModel : ObservableObject
             if (session != null)
             {
                 successCount++;
+            }
+
+            if (!ReferenceEquals(account, lastAccount))
+            {
+                int randomSeconds = Random.Shared.Next(
+                    AccountsViewModel.MinSequentialLaunchDelaySeconds,
+                    AccountsViewModel.MaxSequentialLaunchDelaySeconds + 1);
+                await Task.Delay(TimeSpan.FromSeconds(randomSeconds));
             }
         }
 

@@ -29,6 +29,9 @@ using Wpf.Ui.Extensions;
 
 public partial class AccountsViewModel : ObservableObject, IDisposable
 {
+    public const int MinSequentialLaunchDelaySeconds = 60;
+    public const int MaxSequentialLaunchDelaySeconds = 120;
+
     private static string _lastPlaceId = string.Empty;
 
     private readonly IAccountStore _accountStore;
@@ -40,6 +43,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private readonly Core.Backup.IBackupService? _backupService;
     private readonly Core.Network.IDpiToolService? _dpiToolService;
     private readonly TimeProvider _timeProvider;
+    private readonly Func<int, int, int> _randomDelayGenerator;
     private readonly List<AccountItemViewModel> _allAccounts = new();
 
     private CancellationTokenSource? _checkAllCts;
@@ -59,9 +63,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAccountSelected))]
+    [NotifyPropertyChangedFor(nameof(CanLaunchAccount))]
     private AccountItemViewModel? _selectedAccount;
 
     public bool IsAccountSelected => SelectedAccount != null;
+    public bool CanLaunchAccount => IsAccountSelected && !IsBulkLaunching;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -89,6 +95,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
+    [NotifyPropertyChangedFor(nameof(CanLaunchAccount))]
     private bool _isBulkLaunching;
 
     [ObservableProperty]
@@ -119,7 +126,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         Core.Settings.ISettingsService? settingsService = null,
         Core.Backup.IBackupService? backupService = null,
         TimeProvider? timeProvider = null,
-        Core.Network.IDpiToolService? dpiToolService = null)
+        Core.Network.IDpiToolService? dpiToolService = null,
+        Func<int, int, int>? randomDelayGenerator = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _contentDialogService = contentDialogService ?? throw new ArgumentNullException(nameof(contentDialogService));
@@ -130,6 +138,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _backupService = backupService;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _dpiToolService = dpiToolService;
+        _randomDelayGenerator = randomDelayGenerator ?? Random.Shared.Next;
 
         _searchDebouncer = new DebounceDispatcher(TimeSpan.FromMilliseconds(200));
         _selectedGroup = Strings.GroupFilterAll;
@@ -828,9 +837,19 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task LaunchSelectedAccountsAsync()
+    public async Task LaunchSelectedAccountsAsync()
     {
-        List<AccountItemViewModel> selected = _allAccounts.Where(a => a.IsSelected).ToList();
+        if (IsBulkLaunching)
+        {
+            return;
+        }
+
+        List<AccountItemViewModel> selected = FilteredAccounts.Where(a => a.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            selected = _allAccounts.Where(a => a.IsSelected).ToList();
+        }
+
         if (selected.Count == 0)
         {
             return;
@@ -840,14 +859,23 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task LaunchGroupAccountsAsync()
+    public async Task LaunchGroupAccountsAsync()
     {
-        if (string.IsNullOrEmpty(SelectedGroup) || string.Equals(SelectedGroup, Strings.GroupFilterAll, StringComparison.OrdinalIgnoreCase))
+        if (IsBulkLaunching || string.IsNullOrEmpty(SelectedGroup) || string.Equals(SelectedGroup, Strings.GroupFilterAll, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        List<AccountItemViewModel> groupAccounts = _allAccounts.Where(a => string.Equals(a.Group, SelectedGroup, StringComparison.OrdinalIgnoreCase)).ToList();
+        List<AccountItemViewModel> groupAccounts = FilteredAccounts
+            .Where(a => string.Equals(a.Group, SelectedGroup, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (groupAccounts.Count == 0)
+        {
+            groupAccounts = _allAccounts
+                .Where(a => string.Equals(a.Group, SelectedGroup, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
         if (groupAccounts.Count == 0)
         {
             return;
@@ -858,6 +886,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     private async Task ExecuteBulkLaunchAsync(List<AccountItemViewModel> accounts)
     {
+        if (IsBulkLaunching)
+        {
+            return;
+        }
+
         LaunchDialogControl dialogControl = new()
         {
             PlaceIdText = _lastPlaceId,
@@ -898,24 +931,39 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             return;
         }
 
+        await ExecuteSequentialLaunchQueueAsync(accounts, placeId, jobId);
+    }
+
+    public async Task ExecuteSequentialLaunchQueueAsync(
+        IReadOnlyList<AccountItemViewModel> accounts,
+        long placeId,
+        string? jobId = null)
+    {
+        if (accounts == null || accounts.Count == 0 || IsBulkLaunching)
+        {
+            return;
+        }
+
         _bulkLaunchCts = new CancellationTokenSource();
         int successCount = 0;
         int failCount = 0;
         IsBulkLaunching = true;
-        int delaySeconds = _settingsService?.CurrentSettings.LaunchDelaySeconds ?? AppSettings.DefaultLaunchDelaySeconds;
 
         try
         {
-            for (int i = 0; i < accounts.Count; i++)
+            int currentIndex = 0;
+            AccountItemViewModel lastAccount = accounts[^1];
+
+            foreach (AccountItemViewModel account in accounts)
             {
+                currentIndex++;
                 if (_bulkLaunchCts.IsCancellationRequested)
                 {
                     _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
                     return;
                 }
 
-                AccountItemViewModel account = accounts[i];
-                BulkLaunchQueueText = $"{account.Alias} ({i + 1} / {accounts.Count})";
+                BulkLaunchQueueText = $"{account.Alias} ({currentIndex} / {accounts.Count})";
 
                 LaunchRequest req = new(account.Id, placeId, jobId);
                 Result launchResult = await _launcher.LaunchAsync(req, _bulkLaunchCts.Token);
@@ -930,14 +978,25 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
                 }
 
-                if (i < accounts.Count - 1 && !_bulkLaunchCts.IsCancellationRequested)
+                bool isLastAccount = currentIndex == accounts.Count || ReferenceEquals(account, lastAccount);
+                if (!isLastAccount && !_bulkLaunchCts.IsCancellationRequested)
                 {
+                    int randomSeconds = _randomDelayGenerator(
+                        MinSequentialLaunchDelaySeconds,
+                        MaxSequentialLaunchDelaySeconds + 1);
+
                     CompositeFormat nextAccountFormat = CompositeFormat.Parse(Strings.NextAccountCountdown);
-                    for (int sec = delaySeconds; sec > 0; sec--)
+                    BulkLaunchCountdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, randomSeconds);
+
+                    if (ReferenceEquals(_timeProvider, TimeProvider.System))
                     {
-                        BulkLaunchCountdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, sec);
-                        await Task.Delay(TimeSpan.FromSeconds(1), _timeProvider, _bulkLaunchCts.Token);
+                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), _bulkLaunchCts.Token);
                     }
+                    else
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), _timeProvider, _bulkLaunchCts.Token);
+                    }
+
                     BulkLaunchCountdownText = string.Empty;
                 }
             }
