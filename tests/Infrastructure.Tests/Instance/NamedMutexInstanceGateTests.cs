@@ -60,8 +60,8 @@ public sealed class NamedMutexInstanceGateTests
         using Mutex probeMutex = new(initiallyOwned: false, mutexName, out bool mutexCreatedNew);
         Assert.False(mutexCreatedNew);
 
-        // Probe 2: attempt to create event; must detect that it already exists (createdNew = false)
-        using EventWaitHandle probeEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        // Probe 2: attempt to create event mutex; must detect that it already exists (createdNew = false)
+        using Mutex probeEvent = new(initiallyOwned: false, eventName, out bool eventCreatedNew);
         Assert.False(eventCreatedNew);
     }
 
@@ -86,7 +86,7 @@ public sealed class NamedMutexInstanceGateTests
         using Mutex probeMutex = new(initiallyOwned: false, mutexName, out bool mutexCreatedNew);
         Assert.True(mutexCreatedNew);
 
-        using EventWaitHandle probeEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        using Mutex probeEvent = new(initiallyOwned: false, eventName, out bool eventCreatedNew);
         Assert.True(eventCreatedNew);
     }
 
@@ -118,8 +118,8 @@ public sealed class NamedMutexInstanceGateTests
         string mutexName = CreateUniqueMutexName();
         string eventName = CreateUniqueEventName();
 
-        // Pre-create the event so gate's attempt to create the event will fail (createdNew == false)
-        using EventWaitHandle preExistingEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        // Pre-create the event mutex so gate's attempt to create the event mutex will fail (createdNew == false)
+        using Mutex preExistingEvent = new(initiallyOwned: true, eventName, out bool eventCreatedNew);
         Assert.True(eventCreatedNew);
 
         using NamedMutexInstanceGate gate = new(provider, mutexName, eventName);
@@ -154,7 +154,7 @@ public sealed class NamedMutexInstanceGateTests
         Assert.False(gate.IsMultiInstanceEnabled);
 
         // Event must not be left held; probe must be able to create the event afresh
-        using EventWaitHandle probeEvent = new(initialState: false, EventResetMode.ManualReset, eventName, out bool eventCreatedNew);
+        using Mutex probeEvent = new(initiallyOwned: false, eventName, out bool eventCreatedNew);
         Assert.True(eventCreatedNew);
     }
 

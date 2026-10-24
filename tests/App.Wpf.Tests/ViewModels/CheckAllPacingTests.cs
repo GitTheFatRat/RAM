@@ -178,6 +178,9 @@ public sealed class CheckAllPacingTests
             delays.Enqueue(65);
             delays.Enqueue(115);
             List<(int Min, int MaxExclusive)> requestedRanges = new();
+            RbxManager.Core.Instance.IInstanceGate instanceGate = Substitute.For<RbxManager.Core.Instance.IInstanceGate>();
+            instanceGate.IsMultiInstanceEnabled.Returns(false);
+            instanceGate.TryEnable().Returns(Result.Success());
 
             AccountsViewModel vm = new(
                 store,
@@ -190,14 +193,27 @@ public sealed class CheckAllPacingTests
                 {
                     requestedRanges.Add((min, maxExclusive));
                     return delays.Dequeue();
-                });
+                },
+                instanceGate: instanceGate);
 
             vm.LoadAccountsAsync().GetAwaiter().GetResult();
-            vm.SelectedAccount = vm.FilteredAccounts[0];
+            vm.FilteredAccounts[0].IsSelected = true;
+            vm.FilteredAccounts[1].IsSelected = true;
+            vm.FilteredAccounts[2].IsSelected = true;
+            vm.SelectedAccount = vm.FilteredAccounts[2]; // Last clicked row
+
+            // Reloading accounts must preserve IsSelected for all 3 checked accounts
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            List<AccountItemViewModel> selectedQueue = vm.GetSelectedAccountsInQueueOrder();
+            Assert.Equal(3, selectedQueue.Count);
             Assert.True(vm.CanLaunchAccount);
             Assert.True(vm.IsNotBusy);
 
-            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(selectedQueue, 1818);
+
+            // Multi-instance gate must be enabled before launching the queue
+            instanceGate.Received(1).TryEnable();
+            Assert.StartsWith("Queued 3 accounts for launch...", vm.BulkLaunchQueueText, StringComparison.Ordinal);
 
             // Account 1 launched immediately at T = 0; buttons disabled during sequence
             Assert.Single(launcher.LaunchedAccounts);

@@ -33,3 +33,4 @@
 - M21.6: done (f9dc87e) - resolve infinite spin on registration page and verify full flow
 - M21.7: done - native Sign-Up UI injection via CDP on /NewLogin#signup with Arkose CAPTCHA & auto cookie capture
 - M22.1: done - randomized 60-120s sequential multi-account launch delay (anti-bot bypass)
+- M22.2: done - fix sequential launch selection binding, queue logging, and ROBLOX_singletonEvent mutex bypass

@@ -145,7 +145,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
     private void WorkerLoop()
     {
         Mutex? mutex = null;
-        EventWaitHandle? eventHandle = null;
+        Mutex? eventMutex = null;
 
         while (true)
         {
@@ -162,21 +162,19 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                     mutex = new Mutex(initiallyOwned: true, _mutexName, out bool mutexCreatedNew);
                     if (!mutexCreatedNew)
                     {
-                        CleanupHandles(ref mutex, ref eventHandle);
+                        CleanupHandles(ref mutex, ref eventMutex);
                         _isEnabled = false;
                         _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
                     }
                     else
                     {
-                        eventHandle = new EventWaitHandle(
-                            initialState: true,
-                            mode: EventResetMode.ManualReset,
-                            name: _eventName,
-                            out bool eventCreatedNew);
+                        // Lock ROBLOX_singletonEvent as a Mutex so RobloxPlayerBeta.exe's CreateEventW
+                        // fails with ERROR_INVALID_HANDLE and cannot signal existing clients to exit.
+                        eventMutex = new Mutex(initiallyOwned: true, _eventName, out bool eventCreatedNew);
 
                         if (!eventCreatedNew)
                         {
-                            CleanupHandles(ref mutex, ref eventHandle);
+                            CleanupHandles(ref mutex, ref eventMutex);
                             _isEnabled = false;
                             _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
                         }
@@ -189,7 +187,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                 }
                 catch (Exception)
                 {
-                    CleanupHandles(ref mutex, ref eventHandle);
+                    CleanupHandles(ref mutex, ref eventMutex);
                     _isEnabled = false;
                     _commandResult = Result.Failure("MutexError", "MutexError");
                 }
@@ -198,14 +196,14 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             }
             else if (cmd == GateCommand.Disable)
             {
-                CleanupHandles(ref mutex, ref eventHandle);
+                CleanupHandles(ref mutex, ref eventMutex);
                 _isEnabled = false;
                 _commandResult = Result.Success();
                 _commandDone.Set();
             }
             else if (cmd == GateCommand.Shutdown)
             {
-                CleanupHandles(ref mutex, ref eventHandle);
+                CleanupHandles(ref mutex, ref eventMutex);
                 _isEnabled = false;
                 _commandDone.Set();
                 break;
@@ -213,7 +211,13 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
         }
     }
 
-    private static void CleanupHandles(ref Mutex? mutex, ref EventWaitHandle? eventHandle)
+    private static void CleanupHandles(ref Mutex? mutex, ref Mutex? eventMutex)
+    {
+        ReleaseAndDisposeMutex(ref mutex);
+        ReleaseAndDisposeMutex(ref eventMutex);
+    }
+
+    private static void ReleaseAndDisposeMutex(ref Mutex? mutex)
     {
         if (mutex != null)
         {
@@ -234,19 +238,6 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             }
 
             mutex = null;
-        }
-
-        if (eventHandle != null)
-        {
-            try
-            {
-                eventHandle.Dispose();
-            }
-            catch
-            {
-            }
-
-            eventHandle = null;
         }
     }
 }

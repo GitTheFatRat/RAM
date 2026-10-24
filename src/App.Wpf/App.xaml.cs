@@ -267,6 +267,13 @@ public partial class App : Application
         Core.Settings.AppSettings settings = await settingsService.LoadSettingsAsync();
         ApplyTheme(settings.Theme);
 
+        bool isUiTest = Environment.GetEnvironmentVariable("RBXMANAGER_UITEST") == "1";
+        if (!isUiTest || settings.MultiInstanceEnabled)
+        {
+            IInstanceGate? instanceGate = _host.Services.GetService<IInstanceGate>();
+            instanceGate?.TryEnable();
+        }
+
         if (settings.IsMasterPasswordEnabled)
         {
             Core.Storage.IVaultKeyProvider keyProvider = _host.Services.GetRequiredService<Core.Storage.IVaultKeyProvider>();

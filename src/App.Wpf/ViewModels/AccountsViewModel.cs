@@ -42,6 +42,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private readonly Core.Settings.ISettingsService? _settingsService;
     private readonly Core.Backup.IBackupService? _backupService;
     private readonly Core.Network.IDpiToolService? _dpiToolService;
+    private readonly Core.Instance.IInstanceGate? _instanceGate;
     private readonly TimeProvider _timeProvider;
     private readonly Func<int, int, int> _randomDelayGenerator;
     private readonly List<AccountItemViewModel> _allAccounts = new();
@@ -67,7 +68,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private AccountItemViewModel? _selectedAccount;
 
     public bool IsAccountSelected => SelectedAccount != null;
-    public bool CanLaunchAccount => IsAccountSelected && !IsBulkLaunching;
+    public bool HasCheckedAccounts => _allAccounts.Any(a => a.IsSelected);
+    public bool CanLaunchAccount => (IsAccountSelected || HasCheckedAccounts) && !IsBulkLaunching;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -127,7 +129,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         Core.Backup.IBackupService? backupService = null,
         TimeProvider? timeProvider = null,
         Core.Network.IDpiToolService? dpiToolService = null,
-        Func<int, int, int>? randomDelayGenerator = null)
+        Func<int, int, int>? randomDelayGenerator = null,
+        Core.Instance.IInstanceGate? instanceGate = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _contentDialogService = contentDialogService ?? throw new ArgumentNullException(nameof(contentDialogService));
@@ -139,6 +142,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _timeProvider = timeProvider ?? TimeProvider.System;
         _dpiToolService = dpiToolService;
         _randomDelayGenerator = randomDelayGenerator ?? Random.Shared.Next;
+        _instanceGate = instanceGate;
 
         _searchDebouncer = new DebounceDispatcher(TimeSpan.FromMilliseconds(200));
         _selectedGroup = Strings.GroupFilterAll;
@@ -179,14 +183,26 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         IsLoading = true;
         try
         {
+            HashSet<AccountId> checkedIds = _allAccounts
+                .Where(a => a.IsSelected)
+                .Select(a => a.Id)
+                .ToHashSet();
+
             IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
             _allAccounts.Clear();
             foreach (Account account in accounts)
             {
-                _allAccounts.Add(new AccountItemViewModel(account));
+                AccountItemViewModel item = new(account)
+                {
+                    IsSelected = checkedIds.Contains(account.Id)
+                };
+                item.PropertyChanged += OnAccountItemPropertyChanged;
+                _allAccounts.Add(item);
             }
             UpdateGroups();
             ApplyFilter();
+            OnPropertyChanged(nameof(HasCheckedAccounts));
+            OnPropertyChanged(nameof(CanLaunchAccount));
         }
         catch (VaultCorruptedException)
         {
@@ -195,6 +211,15 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private void OnAccountItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (string.Equals(e.PropertyName, nameof(AccountItemViewModel.IsSelected), StringComparison.Ordinal))
+        {
+            OnPropertyChanged(nameof(HasCheckedAccounts));
+            OnPropertyChanged(nameof(CanLaunchAccount));
         }
     }
 
@@ -558,7 +583,20 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public async Task LaunchAccountAsync()
     {
-        if (SelectedAccount == null)
+        if (IsBulkLaunching)
+        {
+            return;
+        }
+
+        List<AccountItemViewModel> checkedAccounts = GetSelectedAccountsInQueueOrder();
+        if (checkedAccounts.Count > 1 || (checkedAccounts.Count == 1 && SelectedAccount == null))
+        {
+            await ExecuteBulkLaunchAsync(checkedAccounts);
+            return;
+        }
+
+        AccountItemViewModel? targetAccount = checkedAccounts.Count == 1 ? checkedAccounts[0] : SelectedAccount;
+        if (targetAccount == null)
         {
             return;
         }
@@ -603,7 +641,12 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
             _lastPlaceId = placeIdStr;
 
-            LaunchRequest launchRequest = new(SelectedAccount.Id, placeId, jobId);
+            if (_instanceGate is { IsMultiInstanceEnabled: false })
+            {
+                _instanceGate.TryEnable();
+            }
+
+            LaunchRequest launchRequest = new(targetAccount.Id, placeId, jobId);
             Result launchResult = await _launcher.LaunchAsync(launchRequest);
 
             if (launchResult.IsSuccess)
@@ -836,6 +879,17 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _snackbarService.Show(Strings.SuccessTitle, message, ControlAppearance.Success);
     }
 
+    public List<AccountItemViewModel> GetSelectedAccountsInQueueOrder()
+    {
+        List<AccountItemViewModel> selected = FilteredAccounts.Where(a => a.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            selected = _allAccounts.Where(a => a.IsSelected).ToList();
+        }
+
+        return selected;
+    }
+
     [RelayCommand]
     public async Task LaunchSelectedAccountsAsync()
     {
@@ -844,10 +898,10 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             return;
         }
 
-        List<AccountItemViewModel> selected = FilteredAccounts.Where(a => a.IsSelected).ToList();
-        if (selected.Count == 0)
+        List<AccountItemViewModel> selected = GetSelectedAccountsInQueueOrder();
+        if (selected.Count == 0 && SelectedAccount != null)
         {
-            selected = _allAccounts.Where(a => a.IsSelected).ToList();
+            selected = [SelectedAccount];
         }
 
         if (selected.Count == 0)
@@ -887,6 +941,12 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private async Task ExecuteBulkLaunchAsync(List<AccountItemViewModel> accounts)
     {
         if (IsBulkLaunching)
+        {
+            return;
+        }
+
+        List<AccountItemViewModel> queueSnapshot = accounts.Where(a => a != null).ToList();
+        if (queueSnapshot.Count == 0)
         {
             return;
         }
@@ -931,7 +991,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             return;
         }
 
-        await ExecuteSequentialLaunchQueueAsync(accounts, placeId, jobId);
+        await ExecuteSequentialLaunchQueueAsync(queueSnapshot, placeId, jobId);
     }
 
     public async Task ExecuteSequentialLaunchQueueAsync(
@@ -944,17 +1004,32 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             return;
         }
 
+        List<AccountItemViewModel> queue = accounts.Where(a => a != null).ToList();
+        if (queue.Count == 0)
+        {
+            return;
+        }
+
+        if (_instanceGate is { IsMultiInstanceEnabled: false })
+        {
+            _instanceGate.TryEnable();
+        }
+
         _bulkLaunchCts = new CancellationTokenSource();
         int successCount = 0;
         int failCount = 0;
         IsBulkLaunching = true;
 
+        string queueStatus = string.Create(CultureInfo.InvariantCulture, $"Queued {queue.Count} accounts for launch...");
+        BulkLaunchQueueText = queueStatus;
+        Console.WriteLine(queueStatus);
+        Serilog.Log.Information("Queued {Count} accounts for launch: {Aliases}", queue.Count, string.Join(", ", queue.Select(a => a.Alias)));
+
         try
         {
             int currentIndex = 0;
-            AccountItemViewModel lastAccount = accounts[^1];
 
-            foreach (AccountItemViewModel account in accounts)
+            foreach (AccountItemViewModel account in queue)
             {
                 currentIndex++;
                 if (_bulkLaunchCts.IsCancellationRequested)
@@ -963,7 +1038,9 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     return;
                 }
 
-                BulkLaunchQueueText = $"{account.Alias} ({currentIndex} / {accounts.Count})";
+                BulkLaunchQueueText = string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Queued {queue.Count} accounts for launch... ({currentIndex} / {queue.Count}: {account.Alias})");
 
                 LaunchRequest req = new(account.Id, placeId, jobId);
                 Result launchResult = await _launcher.LaunchAsync(req, _bulkLaunchCts.Token);
@@ -978,7 +1055,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
                 }
 
-                bool isLastAccount = currentIndex == accounts.Count || ReferenceEquals(account, lastAccount);
+                bool isLastAccount = currentIndex >= queue.Count;
                 if (!isLastAccount && !_bulkLaunchCts.IsCancellationRequested)
                 {
                     int randomSeconds = _randomDelayGenerator(

@@ -29,6 +29,7 @@ public partial class ServersViewModel : ObservableObject
     private readonly ISessionTracker _sessionTracker;
     private readonly IContentDialogService _contentDialogService;
     private readonly ISnackbarService _snackbarService;
+    private readonly Core.Instance.IInstanceGate? _instanceGate;
 
     [ObservableProperty]
     private string _placeIdText = "1818";
@@ -66,7 +67,8 @@ public partial class ServersViewModel : ObservableObject
         ILauncher launcher,
         ISessionTracker sessionTracker,
         IContentDialogService contentDialogService,
-        ISnackbarService snackbarService)
+        ISnackbarService snackbarService,
+        Core.Instance.IInstanceGate? instanceGate = null)
     {
         _serverBrowserService = serverBrowserService;
         _accountStore = accountStore;
@@ -74,6 +76,7 @@ public partial class ServersViewModel : ObservableObject
         _sessionTracker = sessionTracker;
         _contentDialogService = contentDialogService;
         _snackbarService = snackbarService;
+        _instanceGate = instanceGate;
     }
 
     [RelayCommand]
@@ -142,10 +145,21 @@ public partial class ServersViewModel : ObservableObject
             return;
         }
 
-        int successCount = 0;
-        Account lastAccount = selectedAccounts[^1];
-        foreach (Account account in selectedAccounts)
+        List<Account> queue = selectedAccounts.ToList();
+        if (_instanceGate is { IsMultiInstanceEnabled: false })
         {
+            _instanceGate.TryEnable();
+        }
+
+        string queueStatus = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Queued {queue.Count} accounts for launch...");
+        Console.WriteLine(queueStatus);
+        Serilog.Log.Information("Queued {Count} accounts for launch: {Aliases}", queue.Count, string.Join(", ", queue.Select(a => a.Alias)));
+
+        int successCount = 0;
+        int currentIndex = 0;
+        foreach (Account account in queue)
+        {
+            currentIndex++;
             LaunchRequest request = new(account.Id, placeId, server.Id);
             RunningSession? session = await _sessionTracker.TrackLaunchAsync(
                 account.Id,
@@ -157,7 +171,7 @@ public partial class ServersViewModel : ObservableObject
                 successCount++;
             }
 
-            if (!ReferenceEquals(account, lastAccount))
+            if (currentIndex < queue.Count)
             {
                 int randomSeconds = Random.Shared.Next(
                     AccountsViewModel.MinSequentialLaunchDelaySeconds,
