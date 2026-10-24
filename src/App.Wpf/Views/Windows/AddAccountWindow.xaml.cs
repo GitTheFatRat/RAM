@@ -15,11 +15,7 @@ public partial class AddAccountWindow : FluentWindow
         DataContext = viewModel;
         InitializeComponent();
 
-        ViewModel.RequestClose += result =>
-        {
-            DialogResult = result;
-            Close();
-        };
+        ViewModel.RequestClose += OnRequestClose;
 
         Loaded += (_, _) =>
         {
@@ -29,8 +25,27 @@ public partial class AddAccountWindow : FluentWindow
 
         Closed += (_, _) =>
         {
+            ViewModel.RequestClose -= OnRequestClose;
             IncognitoBrowserLauncher.CookieCaptured -= OnBrowserCookieCaptured;
+            IncognitoBrowserLauncher.CleanupAllSessions();
         };
+    }
+
+    private void OnRequestClose(bool result)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            DialogResult = result;
+            Close();
+        }
+        else
+        {
+            Dispatcher.Invoke(() =>
+            {
+                DialogResult = result;
+                Close();
+            });
+        }
     }
 
     private void OnBrowserCookieCaptured(string cookie)

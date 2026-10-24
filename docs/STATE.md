@@ -35,3 +35,4 @@
 - M22.1: done - randomized 60-120s sequential multi-account launch delay (anti-bot bypass)
 - M22.2: done - fix sequential launch selection binding, queue logging, and ROBLOX_singletonEvent mutex bypass
 - M22.3: done - unlock multi-instance UI in SettingsPage and persist ROBLOX_singletonEvent mutex bypass
+- M23: done - full system verification; fixed orphaned CDP Chrome/temp profiles, dispose-mid-launch NRE, orphaned launch queues, missing cancellation tokens, cross-thread UI updates

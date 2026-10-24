@@ -190,10 +190,12 @@ public partial class App : Application
         // Views & ViewModels
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
-        services.AddTransient<AccountsViewModel>();
-        services.AddTransient<AccountsPage>();
-        services.AddTransient<ServersViewModel>();
-        services.AddTransient<ServersPage>();
+        // Singletons so an in-flight sequential launch queue survives page navigation (a transient VM would be
+        // orphaned mid-delay) and is cancelled/disposed exactly once on shutdown.
+        services.AddSingleton<AccountsViewModel>();
+        services.AddSingleton<AccountsPage>();
+        services.AddSingleton<ServersViewModel>();
+        services.AddSingleton<ServersPage>();
         services.AddTransient<RunningViewModel>();
         services.AddTransient<RunningPage>();
         services.AddTransient<SettingsViewModel>();
@@ -294,6 +296,7 @@ public partial class App : Application
 
     private static void CleanupLeftoverLoginFolders()
     {
+        CleanupLeftoverBrowserProfiles();
         try
         {
             string rbxTemp = Path.Combine(Path.GetTempPath(), "RbxManager");
@@ -335,6 +338,37 @@ public partial class App : Application
         }
     }
 
+    // CDP Chrome profiles from a crashed/killed previous run would otherwise accumulate in %TEMP% forever.
+    private static void CleanupLeftoverBrowserProfiles()
+    {
+        try
+        {
+            string[] leftoverProfiles = Directory.GetDirectories(Path.GetTempPath(), "RbxManager_Browser_*");
+            int deletedCount = 0;
+            foreach (string dir in leftoverProfiles)
+            {
+                try
+                {
+                    Directory.Delete(dir, recursive: true);
+                    deletedCount++;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Still locked by a live Chrome instance; next startup retries.
+                }
+            }
+
+            if (leftoverProfiles.Length > 0)
+            {
+                Log.Information("Startup browser profile cleanup: found {Total}, deleted {Deleted}.", leftoverProfiles.Length, deletedCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Startup browser profile cleanup failed: {ExceptionType}.", ex.GetType().Name);
+        }
+    }
+
     private static void ApplyTheme(string theme)
     {
         try
@@ -356,6 +390,18 @@ public partial class App : Application
     protected override async void OnExit(ExitEventArgs e)
     {
         Log.Information("RbxManager application shutting down.");
+
+        try
+        {
+            // Stop in-flight 60–120s launch queues and any CDP Chrome left open before the host disposes services.
+            _host.Services.GetService<AccountsViewModel>()?.CancelBulkLaunch();
+            _host.Services.GetService<ServersViewModel>()?.CancelJoin();
+            RbxManager.App.Services.IncognitoBrowserLauncher.CleanupAllSessions();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Shutdown cancellation failed: {ExceptionType}.", ex.GetType().Name);
+        }
 
         try
         {

@@ -21,8 +21,9 @@ using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Extensions;
 
-public partial class ServersViewModel : ObservableObject
+public partial class ServersViewModel : ObservableObject, IDisposable
 {
+    private CancellationTokenSource? _joinCts;
     private readonly IServerBrowserService _serverBrowserService;
     private readonly IAccountStore _accountStore;
     private readonly ILauncher _launcher;
@@ -157,27 +158,48 @@ public partial class ServersViewModel : ObservableObject
 
         int successCount = 0;
         int currentIndex = 0;
-        foreach (Account account in queue)
+        CancellationTokenSource joinCts = new();
+        _joinCts = joinCts;
+        CancellationToken ct = joinCts.Token;
+        try
         {
-            currentIndex++;
-            LaunchRequest request = new(account.Id, placeId, server.Id);
-            RunningSession? session = await _sessionTracker.TrackLaunchAsync(
-                account.Id,
-                request,
-                () => _launcher.LaunchAsync(request));
-
-            if (session != null)
+            foreach (Account account in queue)
             {
-                successCount++;
+                currentIndex++;
+                ct.ThrowIfCancellationRequested();
+                LaunchRequest request = new(account.Id, placeId, server.Id);
+                RunningSession? session = await _sessionTracker.TrackLaunchAsync(
+                    account.Id,
+                    request,
+                    () => _launcher.LaunchAsync(request, ct));
+
+                if (session != null)
+                {
+                    successCount++;
+                }
+
+                if (currentIndex < queue.Count)
+                {
+                    int randomSeconds = Random.Shared.Next(
+                        AccountsViewModel.MinSequentialLaunchDelaySeconds,
+                        AccountsViewModel.MaxSequentialLaunchDelaySeconds + 1);
+                    await Task.Delay(TimeSpan.FromSeconds(randomSeconds), ct);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Serilog.Log.Information("Server join queue cancelled after {Success} launches", successCount);
+            return;
+        }
+        finally
+        {
+            if (ReferenceEquals(_joinCts, joinCts))
+            {
+                _joinCts = null;
             }
 
-            if (currentIndex < queue.Count)
-            {
-                int randomSeconds = Random.Shared.Next(
-                    AccountsViewModel.MinSequentialLaunchDelaySeconds,
-                    AccountsViewModel.MaxSequentialLaunchDelaySeconds + 1);
-                await Task.Delay(TimeSpan.FromSeconds(randomSeconds));
-            }
+            joinCts.Dispose();
         }
 
         if (successCount > 0)
@@ -188,6 +210,25 @@ public partial class ServersViewModel : ObservableObject
         {
             _snackbarService.Show(Strings.ErrorTitle, Strings.ErrorTitle, ControlAppearance.Danger);
         }
+    }
+
+    [RelayCommand]
+    public void CancelJoin()
+    {
+        try
+        {
+            _joinCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Queue finished between the null-check and Cancel().
+        }
+    }
+
+    public void Dispose()
+    {
+        CancelJoin();
+        GC.SuppressFinalize(this);
     }
 
     private async Task LoadServersInternalAsync(string? cursor, bool append = false)

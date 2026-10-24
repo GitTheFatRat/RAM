@@ -1,6 +1,7 @@
 namespace RbxManager.App.Services;
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -25,7 +26,20 @@ public static class IncognitoBrowserLauncher
         Timeout = TimeSpan.FromSeconds(3)
     };
 
+    private static readonly ConcurrentDictionary<int, (Process Process, CancellationTokenSource Cts, string ProfileDir)> ActiveSessions = new();
+
     public static event Action<string>? CookieCaptured;
+
+    public static void CleanupAllSessions()
+    {
+        foreach (var kvp in ActiveSessions.ToArray())
+        {
+            if (ActiveSessions.TryRemove(kvp.Key, out var session))
+            {
+                TerminateAndCleanupSession(session.Process, session.Cts, session.ProfileDir);
+            }
+        }
+    }
 
     public static bool TryLaunch(string url = LoginUrl)
     {
@@ -168,30 +182,80 @@ public static class IncognitoBrowserLauncher
 
     private static async Task RunCdpSessionAsync(int port, string targetUrl, bool isSignUp, string profileDir, Process browserProcess)
     {
-        using (browserProcess)
+        CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
+        int sessionId = browserProcess.Id;
+        ActiveSessions[sessionId] = (browserProcess, cts, profileDir);
+
+        try
+        {
+            string? wsUrl = await WaitForPageWebSocketAsync(port, browserProcess, cts.Token).ConfigureAwait(false);
+            if (wsUrl != null)
+            {
+                await DrivePageOverCdpAsync(wsUrl, targetUrl, isSignUp, browserProcess, cts.Token).ConfigureAwait(false);
+            }
+        }
+        catch
+        {
+            // Ignore background CDP session teardown errors
+        }
+        finally
+        {
+            ActiveSessions.TryRemove(sessionId, out _);
+            TerminateAndCleanupSession(browserProcess, cts, profileDir);
+        }
+    }
+
+    private static void TerminateAndCleanupSession(Process browserProcess, CancellationTokenSource cts, string profileDir)
+    {
+        try
+        {
+            cts.Cancel();
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if (!browserProcess.HasExited)
+            {
+                browserProcess.Kill(entireProcessTree: true);
+                browserProcess.WaitForExit(3000);
+            }
+        }
+        catch
+        {
+        }
+        finally
         {
             try
             {
-                using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
-                string? wsUrl = await WaitForPageWebSocketAsync(port, browserProcess, cts.Token).ConfigureAwait(false);
-                if (wsUrl != null)
-                {
-                    await DrivePageOverCdpAsync(wsUrl, targetUrl, isSignUp, browserProcess, cts.Token).ConfigureAwait(false);
-                }
-
-                while (!browserProcess.HasExited && !cts.IsCancellationRequested)
-                {
-                    await Task.Delay(1000, cts.Token).ConfigureAwait(false);
-                }
+                browserProcess.Dispose();
             }
             catch
             {
-                // Ignore background CDP session teardown errors
             }
-            finally
+
+            try
             {
-                await Task.Delay(1000).ConfigureAwait(false);
-                TryDeleteDirectory(profileDir);
+                cts.Dispose();
+            }
+            catch
+            {
+            }
+        }
+
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            if (!Directory.Exists(profileDir))
+            {
+                break;
+            }
+
+            TryDeleteDirectory(profileDir);
+            if (Directory.Exists(profileDir))
+            {
+                Thread.Sleep(200);
             }
         }
     }
@@ -231,43 +295,59 @@ public static class IncognitoBrowserLauncher
     private static async Task DrivePageOverCdpAsync(string wsUrl, string targetUrl, bool isSignUp, Process browserProcess, CancellationToken ct)
     {
         using ClientWebSocket ws = new();
-        await ws.ConnectAsync(new Uri(wsUrl), ct).ConfigureAwait(false);
-
-        int msgId = 1;
-        await SendCdpCommandAsync(ws, msgId++, "Page.enable", "{}", ct).ConfigureAwait(false);
-        await SendCdpCommandAsync(ws, msgId++, "Page.setBypassCSP", "{\"enabled\":true}", ct).ConfigureAwait(false);
-        await SendCdpCommandAsync(ws, msgId++, "Network.enable", "{}", ct).ConfigureAwait(false);
-
-        if (isSignUp)
+        try
         {
-            string addScriptParams = JsonSerializer.Serialize(new { source = SignUpDomScript });
-            await SendCdpCommandAsync(ws, msgId++, "Page.addScriptToEvaluateOnNewDocument", addScriptParams, ct).ConfigureAwait(false);
-        }
+            await ws.ConnectAsync(new Uri(wsUrl), ct).ConfigureAwait(false);
 
-        string navParams = JsonSerializer.Serialize(new { url = targetUrl });
-        await SendCdpCommandAsync(ws, msgId++, "Page.navigate", navParams, ct).ConfigureAwait(false);
+            int msgId = 1;
+            await SendCdpCommandAsync(ws, msgId++, "Page.enable", "{}", ct).ConfigureAwait(false);
+            await SendCdpCommandAsync(ws, msgId++, "Page.setBypassCSP", "{\"enabled\":true}", ct).ConfigureAwait(false);
+            await SendCdpCommandAsync(ws, msgId++, "Network.enable", "{}", ct).ConfigureAwait(false);
 
-        bool cookieReported = false;
-        while (!browserProcess.HasExited && ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
-        {
-            int cookieCmdId = msgId++;
-            await SendCdpCommandAsync(ws, cookieCmdId, "Network.getAllCookies", "{}", ct).ConfigureAwait(false);
-            string? capturedCookie = await ReadUntilCommandResponseAsync(ws, cookieCmdId, ct).ConfigureAwait(false);
-
-            if (!string.IsNullOrWhiteSpace(capturedCookie))
+            if (isSignUp)
             {
-                string showBannerJs = $"window.__showCapturedRobloxCookie && window.__showCapturedRobloxCookie({JsonSerializer.Serialize(capturedCookie)});";
-                string bannerParams = JsonSerializer.Serialize(new { expression = showBannerJs, returnByValue = true });
-                await SendCdpCommandAsync(ws, msgId++, "Runtime.evaluate", bannerParams, ct).ConfigureAwait(false);
-
-                if (!cookieReported)
-                {
-                    cookieReported = true;
-                    CookieCaptured?.Invoke(capturedCookie);
-                }
+                string addScriptParams = JsonSerializer.Serialize(new { source = SignUpDomScript });
+                await SendCdpCommandAsync(ws, msgId++, "Page.addScriptToEvaluateOnNewDocument", addScriptParams, ct).ConfigureAwait(false);
             }
 
-            await Task.Delay(1500, ct).ConfigureAwait(false);
+            string navParams = JsonSerializer.Serialize(new { url = targetUrl });
+            await SendCdpCommandAsync(ws, msgId++, "Page.navigate", navParams, ct).ConfigureAwait(false);
+
+            while (!browserProcess.HasExited && ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
+            {
+                int cookieCmdId = msgId++;
+                await SendCdpCommandAsync(ws, cookieCmdId, "Network.getAllCookies", "{}", ct).ConfigureAwait(false);
+                string? capturedCookie = await ReadUntilCommandResponseAsync(ws, cookieCmdId, ct).ConfigureAwait(false);
+
+                if (!string.IsNullOrWhiteSpace(capturedCookie))
+                {
+                    string showBannerJs = $"window.__showCapturedRobloxCookie && window.__showCapturedRobloxCookie({JsonSerializer.Serialize(capturedCookie)});";
+                    string bannerParams = JsonSerializer.Serialize(new { expression = showBannerJs, returnByValue = true });
+                    await SendCdpCommandAsync(ws, msgId++, "Runtime.evaluate", bannerParams, ct).ConfigureAwait(false);
+
+                    CookieCaptured?.Invoke(capturedCookie);
+
+                    await Task.Delay(1200, ct).ConfigureAwait(false);
+                    await SendCdpCommandAsync(ws, msgId++, "Browser.close", "{}", ct).ConfigureAwait(false);
+                    break;
+                }
+
+                await Task.Delay(1500, ct).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            if (ws.State is WebSocketState.Open or WebSocketState.CloseReceived)
+            {
+                try
+                {
+                    using CancellationTokenSource closeCts = new(TimeSpan.FromSeconds(1));
+                    await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, string.Empty, closeCts.Token).ConfigureAwait(false);
+                }
+                catch
+                {
+                }
+            }
         }
     }
 

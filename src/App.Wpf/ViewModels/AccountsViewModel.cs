@@ -189,6 +189,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 .ToHashSet();
 
             IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
+            foreach (AccountItemViewModel staleItem in _allAccounts)
+            {
+                staleItem.PropertyChanged -= OnAccountItemPropertyChanged;
+            }
+
             _allAccounts.Clear();
             foreach (Account account in accounts)
             {
@@ -1015,13 +1020,17 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _instanceGate.TryEnable();
         }
 
-        _bulkLaunchCts = new CancellationTokenSource();
+        // The loop owns this CTS through a local reference: Cancel()/Dispose() from the UI or app shutdown
+        // only signal it, so the loop never dereferences a field that was nulled/disposed mid-delay.
+        CancellationTokenSource launchCts = new();
+        _bulkLaunchCts = launchCts;
+        CancellationToken ct = launchCts.Token;
         int successCount = 0;
         int failCount = 0;
-        IsBulkLaunching = true;
+        RunOnUiThread(() => IsBulkLaunching = true);
 
         string queueStatus = string.Create(CultureInfo.InvariantCulture, $"Queued {queue.Count} accounts for launch...");
-        BulkLaunchQueueText = queueStatus;
+        RunOnUiThread(() => BulkLaunchQueueText = queueStatus);
         Console.WriteLine(queueStatus);
         Serilog.Log.Information("Queued {Count} accounts for launch: {Aliases}", queue.Count, string.Join(", ", queue.Select(a => a.Alias)));
 
@@ -1032,18 +1041,15 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             foreach (AccountItemViewModel account in queue)
             {
                 currentIndex++;
-                if (_bulkLaunchCts.IsCancellationRequested)
-                {
-                    _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
-                    return;
-                }
+                ct.ThrowIfCancellationRequested();
 
-                BulkLaunchQueueText = string.Create(
+                string progressText = string.Create(
                     CultureInfo.InvariantCulture,
                     $"Queued {queue.Count} accounts for launch... ({currentIndex} / {queue.Count}: {account.Alias})");
+                RunOnUiThread(() => BulkLaunchQueueText = progressText);
 
                 LaunchRequest req = new(account.Id, placeId, jobId);
-                Result launchResult = await _launcher.LaunchAsync(req, _bulkLaunchCts.Token);
+                Result launchResult = await _launcher.LaunchAsync(req, ct);
 
                 if (launchResult.IsSuccess)
                 {
@@ -1052,54 +1058,91 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 else
                 {
                     failCount++;
-                    _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
+                    ShowSnackbar(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
                 }
 
                 bool isLastAccount = currentIndex >= queue.Count;
-                if (!isLastAccount && !_bulkLaunchCts.IsCancellationRequested)
+                if (!isLastAccount)
                 {
+                    ct.ThrowIfCancellationRequested();
                     int randomSeconds = _randomDelayGenerator(
                         MinSequentialLaunchDelaySeconds,
                         MaxSequentialLaunchDelaySeconds + 1);
 
                     CompositeFormat nextAccountFormat = CompositeFormat.Parse(Strings.NextAccountCountdown);
-                    BulkLaunchCountdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, randomSeconds);
+                    string countdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, randomSeconds);
+                    RunOnUiThread(() => BulkLaunchCountdownText = countdownText);
 
                     if (ReferenceEquals(_timeProvider, TimeProvider.System))
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), _bulkLaunchCts.Token);
+                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), ct);
                     }
                     else
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), _timeProvider, _bulkLaunchCts.Token);
+                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), _timeProvider, ct);
                     }
 
-                    BulkLaunchCountdownText = string.Empty;
+                    RunOnUiThread(() => BulkLaunchCountdownText = string.Empty);
                 }
             }
 
             CompositeFormat bulkFormat = CompositeFormat.Parse(Strings.BulkLaunchCompleted);
             string summary = string.Format(CultureInfo.CurrentCulture, bulkFormat, successCount, failCount);
-            _snackbarService.Show(Strings.SuccessTitle, summary, ControlAppearance.Success);
+            ShowSnackbar(Strings.SuccessTitle, summary, ControlAppearance.Success);
         }
         catch (OperationCanceledException)
         {
-            _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
+            Serilog.Log.Information("Sequential launch queue cancelled after {Success} success / {Fail} failed", successCount, failCount);
+            if (!_disposed)
+            {
+                ShowSnackbar(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
+            }
         }
         finally
         {
-            IsBulkLaunching = false;
-            BulkLaunchCountdownText = string.Empty;
-            BulkLaunchQueueText = string.Empty;
-            _bulkLaunchCts?.Dispose();
-            _bulkLaunchCts = null;
+            if (ReferenceEquals(_bulkLaunchCts, launchCts))
+            {
+                _bulkLaunchCts = null;
+            }
+
+            launchCts.Dispose();
+            RunOnUiThread(() =>
+            {
+                IsBulkLaunching = false;
+                BulkLaunchCountdownText = string.Empty;
+                BulkLaunchQueueText = string.Empty;
+            });
         }
     }
 
     [RelayCommand]
     public void CancelBulkLaunch()
     {
-        _bulkLaunchCts?.Cancel();
+        try
+        {
+            _bulkLaunchCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Queue finished between the null-check and Cancel(); nothing left to cancel.
+        }
+    }
+
+    private void ShowSnackbar(string title, string message, ControlAppearance appearance) =>
+        RunOnUiThread(() => _snackbarService.Show(title, message, appearance));
+
+    private static void RunOnUiThread(Action action)
+    {
+        System.Windows.Threading.Dispatcher? dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess())
+        {
+            action();
+            return;
+        }
+
+        // BeginInvoke (not Invoke): a synchronous hop would deadlock if the UI thread is itself blocked waiting
+        // on this queue (e.g. during shutdown); FIFO dispatcher ordering keeps status updates in sequence.
+        dispatcher.BeginInvoke(action);
     }
 
     [RelayCommand]
@@ -1259,11 +1302,12 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _checkAllCts = null;
         }
 
-        if (_bulkLaunchCts != null)
+        // The running queue owns and disposes its CTS; we only signal cancellation here.
+        CancelBulkLaunch();
+
+        foreach (AccountItemViewModel item in _allAccounts)
         {
-            _bulkLaunchCts.Cancel();
-            _bulkLaunchCts.Dispose();
-            _bulkLaunchCts = null;
+            item.PropertyChanged -= OnAccountItemPropertyChanged;
         }
 
         _searchDebouncer.Dispose();

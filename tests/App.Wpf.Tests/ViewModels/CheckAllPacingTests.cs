@@ -248,6 +248,102 @@ public sealed class CheckAllPacingTests
         });
     }
 
+    private sealed class GatedLauncher : ILauncher
+    {
+        public List<AccountId> LaunchedAccounts { get; } = new();
+        // Inline continuations keep the queue on the StaRunner thread; async continuations would Dispatcher.Invoke
+        // back onto that thread while it is blocked in GetResult() and deadlock the shared STA runner.
+        public TaskCompletionSource<Result> Gate { get; } = new();
+
+        public Task<Result> LaunchAsync(LaunchRequest request, CancellationToken ct = default)
+        {
+            LaunchedAccounts.Add(request.AccountId);
+            return Gate.Task;
+        }
+    }
+
+    // Cancellation resumes the queue on a pool thread, which posts UI resets to the STA dispatcher; drain them.
+    private static void FlushDispatcher()
+    {
+        System.Windows.Threading.DispatcherFrame frame = new();
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Background,
+            new Action(() => frame.Continue = false));
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+    }
+
+    private static AccountsViewModel CreateQueueVm(TimeProvider timeProvider, ILauncher launcher, params Account[] accounts)
+    {
+        return new AccountsViewModel(
+            new FakeAccountStore(accounts),
+            Substitute.For<IContentDialogService>(),
+            Substitute.For<ISnackbarService>(),
+            new FakeAuthService(timeProvider),
+            launcher,
+            timeProvider: timeProvider,
+            randomDelayGenerator: (_, _) => 90);
+    }
+
+    [Fact]
+    public void CancelBulkLaunch_DuringRandomizedDelay_StopsQueueWithoutLaunchingRemaining()
+    {
+        StaRunner.Run(() =>
+        {
+            FakeTimeProvider timeProvider = new();
+            using SecretValue c1 = SecretValue.FromString("fake-cookie-1");
+            using SecretValue c2 = SecretValue.FromString("fake-cookie-2");
+            FakeLauncher launcher = new(timeProvider);
+            AccountsViewModel vm = CreateQueueVm(
+                timeProvider,
+                launcher,
+                new Account(new AccountId(1), "A1", null, null, c1, DateTimeOffset.UtcNow),
+                new Account(new AccountId(2), "A2", null, null, c2, DateTimeOffset.UtcNow));
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+            Assert.Single(launcher.LaunchedAccounts);
+            Assert.True(vm.IsBulkLaunching);
+
+            vm.CancelBulkLaunch();
+            launchTask.GetAwaiter().GetResult();
+            timeProvider.Advance(TimeSpan.FromSeconds(200));
+            FlushDispatcher();
+
+            Assert.Single(launcher.LaunchedAccounts);
+            Assert.False(vm.IsBulkLaunching);
+            Assert.Equal(string.Empty, vm.BulkLaunchCountdownText);
+        });
+    }
+
+    [Fact]
+    public void Dispose_WhileLaunchInFlight_CancelsQueueWithoutThrowing()
+    {
+        StaRunner.Run(() =>
+        {
+            FakeTimeProvider timeProvider = new();
+            using SecretValue c1 = SecretValue.FromString("fake-cookie-1");
+            using SecretValue c2 = SecretValue.FromString("fake-cookie-2");
+            GatedLauncher launcher = new();
+            AccountsViewModel vm = CreateQueueVm(
+                timeProvider,
+                launcher,
+                new Account(new AccountId(1), "A1", null, null, c1, DateTimeOffset.UtcNow),
+                new Account(new AccountId(2), "A2", null, null, c2, DateTimeOffset.UtcNow));
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+            Assert.Single(launcher.LaunchedAccounts);
+
+            // Regression: Dispose used to null the CTS while the loop was awaiting LaunchAsync → NullReferenceException.
+            vm.Dispose();
+            launcher.Gate.SetResult(Result.Success());
+            launchTask.GetAwaiter().GetResult();
+
+            Assert.Single(launcher.LaunchedAccounts);
+            Assert.False(vm.IsBulkLaunching);
+        });
+    }
+
     [Fact]
     public void CheckAll_RunsSequentiallyWithTwoSecondGap()
     {

@@ -17,7 +17,16 @@ public partial class AccountsPage : Page
 
         InitializeComponent();
 
-        Loaded += async (_, _) => await ViewModel.LoadAccountsCommand.ExecuteAsync(null);
+        Loaded += async (_, _) =>
+        {
+            // Page is a singleton now; reloading mid-queue would swap the item instances the queue is iterating.
+            if (ViewModel.IsBulkLaunching || ViewModel.IsCheckingAll)
+            {
+                return;
+            }
+
+            await ViewModel.LoadAccountsCommand.ExecuteAsync(null);
+        };
     }
 
     private void OnPagePreviewKeyDown(object sender, KeyEventArgs e)
