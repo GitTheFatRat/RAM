@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -87,12 +88,14 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
         {
             Exception? ex = e.ExceptionObject as Exception;
+            WriteCrashLog("AppDomain.UnhandledException", ex);
             Log.Error(ex, "AppDomain unhandled exception: {Message}. IsTerminating: {IsTerminating}.",
                 ex?.Message, e.IsTerminating);
         };
 
         TaskScheduler.UnobservedTaskException += (s, e) =>
         {
+            WriteCrashLog("TaskScheduler.UnobservedTaskException", e.Exception);
             Log.Error(e.Exception, "Unobserved task exception: {Message}.",
                 e.Exception?.Message);
             e.SetObserved();
@@ -101,6 +104,7 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        WriteCrashLog("Application.DispatcherUnhandledException", e.Exception);
         Log.Error(e.Exception, "Dispatcher unhandled exception: {Message}.", e.Exception.Message);
         if (e.Exception.InnerException != null)
         {
@@ -111,7 +115,7 @@ public partial class App : Application
         try
         {
             MessageBox.Show(
-                $"Đã xảy ra lỗi không mong muốn trong ứng dụng:\n\n{e.Exception.Message}",
+                $"A fatal error occurred. Check crash_log.txt for details.\n\n{e.Exception.Message}",
                 "RbxManager",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -119,6 +123,46 @@ public partial class App : Application
         catch
         {
             // Ignore failure displaying message box during critical UI failure
+        }
+    }
+
+    private static void WriteCrashLog(string source, Exception? exception)
+    {
+        try
+        {
+            string crashLogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash_log.txt");
+            StringBuilder sb = new();
+            sb.AppendLine("==================================================");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Timestamp: {DateTimeOffset.Now:O}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Source: {source}");
+            if (exception != null)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"Exception Type: {exception.GetType().FullName}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"Message: {exception.Message}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"StackTrace:\n{exception.StackTrace}");
+
+                Exception? inner = exception.InnerException;
+                int depth = 1;
+                while (inner != null)
+                {
+                    sb.AppendLine(CultureInfo.InvariantCulture, $"--- InnerException [{depth}] ({inner.GetType().FullName}) ---");
+                    sb.AppendLine(CultureInfo.InvariantCulture, $"Message: {inner.Message}");
+                    sb.AppendLine(CultureInfo.InvariantCulture, $"StackTrace:\n{inner.StackTrace}");
+                    inner = inner.InnerException;
+                    depth++;
+                }
+            }
+            else
+            {
+                sb.AppendLine("Exception: <null>");
+            }
+            sb.AppendLine();
+
+            File.AppendAllText(crashLogPath, sb.ToString());
+        }
+        catch
+        {
+            // Best-effort crash file logging
         }
     }
 

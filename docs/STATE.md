@@ -38,3 +38,5 @@
 - M23: done - full system verification; fixed orphaned CDP Chrome/temp profiles, dispose-mid-launch NRE, orphaned launch queues, missing cancellation tokens, cross-thread UI updates
 - M24: done - C# WPF application protection & obfuscation (Obfuscar post-build + ReadyToRun + trimmed self-contained single-file publish)
 - M25.1: done - fix System.Text.Json reflection crash in trimmed builds via source-generated JsonSerializerContext
+- M25.2: done - fix WPF Baml2006 TypeConverterMarkupExtension crash by disabling PublishTrimmed/PublishReadyToRun and enabling IncludeAllContentForSelfExtract
+- M25.3: done - add global exception handlers writing detailed stack traces + inner exceptions to crash_log.txt
