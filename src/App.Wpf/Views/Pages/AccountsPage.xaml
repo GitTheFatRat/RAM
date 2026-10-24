@@ -393,6 +393,13 @@
                                                 <ui:SymbolIcon Symbol="Play24" />
                                             </MenuItem.Icon>
                                         </MenuItem>
+                                        <MenuItem Header="{x:Static resources:Strings.KillInstance}"
+                                                  Command="{Binding KillInstanceCommand}"
+                                                  Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="DismissCircle24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
                                         <MenuItem Header="{x:Static resources:Strings.Check}"
                                                   Command="{Binding DataContext.CheckAccountCommand, RelativeSource={RelativeSource AncestorType=Page}}">
                                             <MenuItem.Icon>
@@ -559,6 +566,49 @@
                                             SortMemberPath="Created"
                                             Width="1.4*"
                                             MinWidth="90" />
+
+                        <!-- Active Instance Indicator & Kill Switch Column -->
+                        <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnAction}"
+                                                Width="170"
+                                                CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
+                                        <Border CornerRadius="{StaticResource RadiusPill}"
+                                                Padding="8,3"
+                                                Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Background="{DynamicResource StatusValidBackgroundBrush}"
+                                                BorderBrush="{DynamicResource StatusValidBorderBrush}"
+                                                BorderThickness="1">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="7"
+                                                         Height="7"
+                                                         Margin="0,0,5,0"
+                                                         VerticalAlignment="Center"
+                                                         Fill="{DynamicResource StatusValidForegroundBrush}" />
+                                                <TextBlock Text="{x:Static resources:Strings.RunningIndicator}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource StatusValidForegroundBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <ui:Button Content="{x:Static resources:Strings.KillInstance}"
+                                                   AutomationProperties.AutomationId="Accounts_KillInstanceButton"
+                                                   AutomationProperties.Name="{x:Static resources:Strings.KillInstance}"
+                                                   Appearance="Danger"
+                                                   Icon="{ui:SymbolIcon DismissCircle24}"
+                                                   Padding="8,3"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}"
+                                                   Command="{Binding KillInstanceCommand}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </ui:DataGrid.Columns>
                 </ui:DataGrid>
 

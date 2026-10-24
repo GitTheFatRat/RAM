@@ -3,6 +3,7 @@ namespace RbxManager.App.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -193,10 +194,15 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 .Select(a => a.Id)
                 .ToHashSet();
 
+            Dictionary<AccountId, int> activePids = _allAccounts
+                .Where(a => a.ActiveProcessId.HasValue)
+                .ToDictionary(a => a.Id, a => a.ActiveProcessId!.Value);
+
             IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
             foreach (AccountItemViewModel staleItem in _allAccounts)
             {
                 staleItem.PropertyChanged -= OnAccountItemPropertyChanged;
+                staleItem.Dispose();
             }
 
             _allAccounts.Clear();
@@ -204,7 +210,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             {
                 AccountItemViewModel item = new(account)
                 {
-                    IsSelected = checkedIds.Contains(account.Id)
+                    IsSelected = checkedIds.Contains(account.Id),
+                    ActiveProcessId = activePids.TryGetValue(account.Id, out int pid) ? pid : null
                 };
                 item.PropertyChanged += OnAccountItemPropertyChanged;
                 _allAccounts.Add(item);
@@ -662,11 +669,17 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 _instanceGate.TryEnable();
             }
 
+            HashSet<int> beforePids = SnapshotRobloxProcessIds();
             LaunchRequest launchRequest = new(targetAccount.Id, placeId, jobId);
             Result launchResult = await _launcher.LaunchAsync(launchRequest);
 
             if (launchResult.IsSuccess)
             {
+                if (ReferenceEquals(_timeProvider, TimeProvider.System))
+                {
+                    _ = TrackSpawnedRobloxProcessAsync(targetAccount, beforePids, CancellationToken.None);
+                }
+
                 _snackbarService.Show(Strings.SuccessTitle, Strings.LaunchSuccess, ControlAppearance.Success);
             }
             else
@@ -1065,12 +1078,17 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     $"Queued {queue.Count} accounts for launch... ({currentIndex} / {queue.Count}: {account.Alias})");
                 RunOnUiThread(() => BulkLaunchQueueText = progressText);
 
+                HashSet<int> beforePids = SnapshotRobloxProcessIds();
                 LaunchRequest req = new(account.Id, placeId, jobId);
                 Result launchResult = await _launcher.LaunchAsync(req, ct);
 
                 if (launchResult.IsSuccess)
                 {
                     successCount++;
+                    if (ReferenceEquals(_timeProvider, TimeProvider.System))
+                    {
+                        _ = TrackSpawnedRobloxProcessAsync(account, beforePids, ct);
+                    }
                 }
                 else
                 {
@@ -1148,6 +1166,75 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             // Queue finished between the null-check and Cancel(); nothing left to cancel.
         }
     }
+
+    [RelayCommand]
+    public void KillInstance(AccountItemViewModel? item = null)
+    {
+        AccountItemViewModel? target = item ?? SelectedAccount;
+        target?.KillInstance();
+    }
+
+    private static HashSet<int> SnapshotRobloxProcessIds()
+    {
+        HashSet<int> pids = new();
+        try
+        {
+            foreach (Process proc in Process.GetProcessesByName("RobloxPlayerBeta"))
+            {
+                try
+                {
+                    pids.Add(proc.Id);
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    proc.Dispose();
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return pids;
+    }
+
+    private async Task TrackSpawnedRobloxProcessAsync(
+        AccountItemViewModel account,
+        HashSet<int> beforePids,
+        CancellationToken ct)
+    {
+        const int maxPolls = 30;
+        for (int attempt = 0; attempt < maxPolls && !ct.IsCancellationRequested && !_disposed; attempt++)
+        {
+            try
+            {
+                await Task.Delay(500, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            HashSet<int> currentPids = SnapshotRobloxProcessIds();
+            int? newPid = currentPids.FirstOrDefault(pid =>
+                !beforePids.Contains(pid) &&
+                !_allAccounts.Any(a => a.ActiveProcessId == pid));
+
+            if (newPid is > 0)
+            {
+                int capturedPid = newPid.Value;
+                RunOnUiThread(() => account.ActiveProcessId = capturedPid);
+                await OnRobloxProcessCapturedAsync(capturedPid, ct).ConfigureAwait(false);
+                return;
+            }
+        }
+    }
+
+    protected virtual Task OnRobloxProcessCapturedAsync(int processId, CancellationToken ct) =>
+        Task.CompletedTask;
 
     private void ShowSnackbar(string title, string message, ControlAppearance appearance) =>
         RunOnUiThread(() => _snackbarService.Show(title, message, appearance));
@@ -1329,6 +1416,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         foreach (AccountItemViewModel item in _allAccounts)
         {
             item.PropertyChanged -= OnAccountItemPropertyChanged;
+            item.Dispose();
         }
 
         _searchDebouncer.Dispose();

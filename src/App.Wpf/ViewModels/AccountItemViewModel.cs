@@ -1,19 +1,50 @@
 namespace RbxManager.App.ViewModels;
 
 using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using RbxManager.App.Resources;
 using RbxManager.Core.Common;
 using RbxManager.Core.Models;
 using Wpf.Ui.Controls;
 
-public partial class AccountItemViewModel : ObservableObject
+public partial class AccountItemViewModel : ObservableObject, IDisposable
 {
+    private int? _activeProcessId;
+    private Process? _watchedProcess;
+
     public Account Account { get; }
 
     [ObservableProperty]
     private bool _isSelected;
+
+    public int? ActiveProcessId
+    {
+        get => _activeProcessId;
+        set
+        {
+            if (_activeProcessId == value)
+            {
+                return;
+            }
+
+            DetachProcessWatcher();
+            _activeProcessId = value;
+            Account.ActiveProcessId = value;
+            OnPropertyChanged(nameof(ActiveProcessId));
+            OnPropertyChanged(nameof(IsRunning));
+
+            if (value.HasValue)
+            {
+                AttachProcessWatcher(value.Value);
+            }
+        }
+    }
+
+    public bool IsRunning => ActiveProcessId.HasValue;
 
     public AccountId Id => Account.Id;
     public string Alias => Account.Alias;
@@ -65,5 +96,96 @@ public partial class AccountItemViewModel : ObservableObject
     public AccountItemViewModel(Account account)
     {
         Account = account ?? throw new ArgumentNullException(nameof(account));
+        if (account.ActiveProcessId.HasValue)
+        {
+            ActiveProcessId = account.ActiveProcessId;
+        }
+    }
+
+    [RelayCommand]
+    public void KillInstance()
+    {
+        int? pid = ActiveProcessId;
+        if (!pid.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            using Process process = Process.GetProcessById(pid.Value);
+            process.Kill();
+        }
+        catch
+        {
+            // Process may have already exited or become inaccessible.
+        }
+        finally
+        {
+            ActiveProcessId = null;
+        }
+    }
+
+    private void AttachProcessWatcher(int pid)
+    {
+        try
+        {
+            Process process = Process.GetProcessById(pid);
+            process.EnableRaisingEvents = true;
+            process.Exited += OnWatchedProcessExited;
+            if (process.HasExited)
+            {
+                process.Exited -= OnWatchedProcessExited;
+                process.Dispose();
+                _activeProcessId = null;
+                Account.ActiveProcessId = null;
+                OnPropertyChanged(nameof(ActiveProcessId));
+                OnPropertyChanged(nameof(IsRunning));
+                return;
+            }
+
+            _watchedProcess = process;
+        }
+        catch
+        {
+            // Ignore in unit tests or if the process exited immediately before attachment.
+        }
+    }
+
+    private void OnWatchedProcessExited(object? sender, EventArgs e)
+    {
+        System.Windows.Threading.Dispatcher? dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher != null && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(() => ActiveProcessId = null);
+        }
+        else
+        {
+            ActiveProcessId = null;
+        }
+    }
+
+    private void DetachProcessWatcher()
+    {
+        Process? existing = _watchedProcess;
+        _watchedProcess = null;
+        if (existing != null)
+        {
+            try
+            {
+                existing.Exited -= OnWatchedProcessExited;
+            }
+            catch
+            {
+            }
+
+            existing.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        DetachProcessWatcher();
+        GC.SuppressFinalize(this);
     }
 }

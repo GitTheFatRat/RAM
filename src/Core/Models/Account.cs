@@ -12,4 +12,8 @@ public sealed record Account(
     string? Username = null,
     long? UserId = null,
     AccountStatus Status = AccountStatus.Unknown,
-    DateTimeOffset? LastCheckedAt = null);
+    DateTimeOffset? LastCheckedAt = null)
+{
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int? ActiveProcessId { get; set; }
+}

@@ -246,6 +246,8 @@ public static class Strings
     public static string GoodbyeDpiDownloadFailed => GetString(nameof(GoodbyeDpiDownloadFailed));
     public static string GoodbyeDpiLaunchFailed => GetString(nameof(GoodbyeDpiLaunchFailed));
     public static string IncognitoCookieNote => GetString(nameof(IncognitoCookieNote));
+    public static string RunningIndicator => GetString(nameof(RunningIndicator));
+    public static string KillInstance => GetString(nameof(KillInstance));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

@@ -763,4 +763,10 @@
   <data name="IncognitoCookieNote" xml:space="preserve">
     <value>Note: After logging in, the page may keep spinning or show an error, but the Cookie is already saved. Press F12 -&gt; Application -&gt; Cookies to copy it immediately!</value>
   </data>
+  <data name="RunningIndicator" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="KillInstance" xml:space="preserve">
+    <value>Kill</value>
+  </data>
 </root>
