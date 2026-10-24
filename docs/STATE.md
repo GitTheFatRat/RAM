@@ -49,4 +49,5 @@
 - M28.1: done (27d9b95) - make custom resolution settings persistent across navigation
 - M28.3: done (393e285) - ensure SetWindowPos uses saved resolution and waits for window initialization
 - M28.5: done - strip WS_THICKFRAME and use SWP_NOMOVE to prevent window snap-back on drag
-- M28.6: done - inject DFIntWindowSizeMinX/Y FastFlags into ClientAppSettings.json before launch; removed WS_THICKFRAME stripping
+- M28.6: superseded - Roblox denies DFIntWindowSizeMinX/Y (not on FFlag allowlist)
+- M28.7: done - SWP_NOSENDCHANGING initial resize + out-of-context WinEvent WindowSizeLock restores size after drags

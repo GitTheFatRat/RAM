@@ -13,6 +13,8 @@ public static class User32
 {
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOZORDER = 0x0004;
+    public const uint SWP_NOACTIVATE = 0x0010;
+    public const uint SWP_NOSENDCHANGING = 0x0400;
 
     [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -25,7 +27,8 @@ public static class User32
         int cy,
         uint uFlags);
 
-    public static async Task<bool> ResizeProcessMainWindowAsync(
+    /// <summary>Waits for the process's main window, resizes it once, and returns its handle (Zero on failure).</summary>
+    public static async Task<IntPtr> ResizeProcessMainWindowAsync(
         int processId,
         int width,
         int height,
@@ -33,7 +36,7 @@ public static class User32
     {
         if (processId <= 0 || width <= 0 || height <= 0)
         {
-            return false;
+            return IntPtr.Zero;
         }
 
         try
@@ -48,7 +51,7 @@ public static class User32
                 if (waitedMs >= maxWaitMs)
                 {
                     Console.WriteLine($"[User32] Timed out waiting for MainWindowHandle on PID {processId}.");
-                    return false;
+                    return IntPtr.Zero;
                 }
 
                 await Task.Delay(pollIntervalMs, ct).ConfigureAwait(false);
@@ -58,7 +61,7 @@ public static class User32
 
             if (process.HasExited || process.MainWindowHandle == IntPtr.Zero)
             {
-                return false;
+                return IntPtr.Zero;
             }
 
             // Wait for the Roblox window and D3D11SwapChain to finish initial creation before resizing once.
@@ -67,35 +70,37 @@ public static class User32
 
             if (process.HasExited || process.MainWindowHandle == IntPtr.Zero)
             {
-                return false;
+                return IntPtr.Zero;
             }
 
             IntPtr hWnd = process.MainWindowHandle;
-
-            // One-shot initial sizing only: drag/resize persistence comes from the injected FastFlags
-            // (RobloxFastFlagInjector), so the window keeps its native frame and normal Windows messages.
-            uint flags = SWP_NOMOVE | SWP_NOZORDER;
-            bool resized = SetWindowPos(
-                hWnd,
-                IntPtr.Zero,
-                0,
-                0,
-                width,
-                height,
-                flags);
-
+            bool resized = ResizeWindow(hWnd, width, height);
             int win32Error = resized ? 0 : Marshal.GetLastWin32Error();
             Console.WriteLine($"[User32] SetWindowPos(PID={processId}, hWnd=0x{hWnd:X}, {width}x{height}) => {resized} (err={win32Error})");
-            return resized;
+            return resized ? hWnd : IntPtr.Zero;
         }
         catch (OperationCanceledException)
         {
-            return false;
+            return IntPtr.Zero;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[User32] Failed to resize window for PID {processId}: {ex.Message}");
-            return false;
+            return IntPtr.Zero;
         }
     }
+
+    /// <summary>
+    /// Size-only change. SWP_NOSENDCHANGING is required: without it Roblox's WM_GETMINMAXINFO
+    /// (ptMinTrackSize = 800x600) clamps any request below that floor.
+    /// </summary>
+    public static bool ResizeWindow(IntPtr hWnd, int width, int height) =>
+        SetWindowPos(
+            hWnd,
+            IntPtr.Zero,
+            0,
+            0,
+            width,
+            height,
+            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
 }

@@ -672,7 +672,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             if (ReferenceEquals(_timeProvider, TimeProvider.System))
             {
                 KillHeadlessRobloxProcesses();
-                InjectResolutionFastFlagsIfEnabled();
             }
 
             HashSet<int> beforePids = SnapshotRobloxProcessIds();
@@ -1087,7 +1086,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 if (ReferenceEquals(_timeProvider, TimeProvider.System))
                 {
                     KillHeadlessRobloxProcesses();
-                    InjectResolutionFastFlagsIfEnabled();
                 }
 
                 HashSet<int> beforePids = SnapshotRobloxProcessIds();
@@ -1220,16 +1218,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void InjectResolutionFastFlagsIfEnabled()
-    {
-        if (_settingsService?.CurrentSettings is { EnableCustomResolution: true } settings)
-        {
-            RbxManager.Infrastructure.Launch.RobloxFastFlagInjector.InjectIntoInstalledClients(
-                settings.ResolutionWidth,
-                settings.ResolutionHeight);
-        }
-    }
-
     private static HashSet<int> SnapshotRobloxProcessIds()
     {
         HashSet<int> pids = new();
@@ -1293,30 +1281,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
     }
 
-    protected virtual async Task OnRobloxProcessCapturedAsync(int processId, CancellationToken ct)
-    {
-        if (_settingsService != null && _settingsService.CurrentSettings.EnableCustomResolution)
-        {
-            int width = _settingsService.CurrentSettings.ResolutionWidth;
-            int height = _settingsService.CurrentSettings.ResolutionHeight;
-            Serilog.Log.Information(
-                "Applying custom window resolution {Width}x{Height} to Roblox PID {ProcessId}",
-                width,
-                height,
-                processId);
-            bool resized = await RbxManager.Infrastructure.Native.User32.ResizeProcessMainWindowAsync(
-                processId,
-                width,
-                height,
-                ct).ConfigureAwait(false);
-            Serilog.Log.Information(
-                "Custom window resolution {Width}x{Height} for PID {ProcessId} completed with result={Result}",
-                width,
-                height,
-                processId,
-                resized);
-        }
-    }
+    protected virtual Task OnRobloxProcessCapturedAsync(int processId, CancellationToken ct) =>
+        RbxManager.App.Services.RobloxWindowSizer.ApplyIfEnabledAsync(_settingsService, processId, ct);
 
     private void ShowSnackbar(string title, string message, ControlAppearance appearance) =>
         RunOnUiThread(() => _snackbarService.Show(title, message, appearance));
