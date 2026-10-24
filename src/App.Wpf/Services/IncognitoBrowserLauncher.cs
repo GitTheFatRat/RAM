@@ -106,7 +106,8 @@ public static class IncognitoBrowserLauncher
         try
         {
             Directory.CreateDirectory(profileDir);
-            string fullArgs = $"--user-data-dir=\"{profileDir}\" --no-first-run --no-default-browser-check --remote-debugging-port={cdpPort} {baseArguments}";
+            string startupArgs = baseArguments.Replace($"\"{url}\"", "\"about:blank\"", StringComparison.Ordinal);
+            string fullArgs = $"--user-data-dir=\"{profileDir}\" --no-first-run --no-default-browser-check --disable-blink-features=AutomationControlled --remote-debugging-port={cdpPort} {startupArgs}";
             ProcessStartInfo psi = new()
             {
                 FileName = fileName,
@@ -122,7 +123,7 @@ public static class IncognitoBrowserLauncher
             }
 
             bool isSignUp = url.Contains("#signup", StringComparison.OrdinalIgnoreCase);
-            _ = Task.Run(() => RunCdpSessionAsync(cdpPort, isSignUp, profileDir, proc));
+            _ = Task.Run(() => RunCdpSessionAsync(cdpPort, url, isSignUp, profileDir, proc));
             return true;
         }
         catch
@@ -165,17 +166,17 @@ public static class IncognitoBrowserLauncher
         }
     }
 
-    private static async Task RunCdpSessionAsync(int port, bool isSignUp, string profileDir, Process browserProcess)
+    private static async Task RunCdpSessionAsync(int port, string targetUrl, bool isSignUp, string profileDir, Process browserProcess)
     {
         using (browserProcess)
         {
             try
             {
                 using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
-                string? wsUrl = await WaitForRobloxPageWebSocketAsync(port, browserProcess, cts.Token).ConfigureAwait(false);
+                string? wsUrl = await WaitForPageWebSocketAsync(port, browserProcess, cts.Token).ConfigureAwait(false);
                 if (wsUrl != null)
                 {
-                    await DrivePageOverCdpAsync(wsUrl, isSignUp, browserProcess, cts.Token).ConfigureAwait(false);
+                    await DrivePageOverCdpAsync(wsUrl, targetUrl, isSignUp, browserProcess, cts.Token).ConfigureAwait(false);
                 }
 
                 while (!browserProcess.HasExited && !cts.IsCancellationRequested)
@@ -195,7 +196,7 @@ public static class IncognitoBrowserLauncher
         }
     }
 
-    private static async Task<string?> WaitForRobloxPageWebSocketAsync(int port, Process browserProcess, CancellationToken ct)
+    private static async Task<string?> WaitForPageWebSocketAsync(int port, Process browserProcess, CancellationToken ct)
     {
         string listEndpoint = $"http://127.0.0.1:{port}/json";
         for (int attempt = 0; attempt < 80 && !browserProcess.HasExited && !ct.IsCancellationRequested; attempt++)
@@ -207,13 +208,10 @@ public static class IncognitoBrowserLauncher
                 foreach (JsonElement item in doc.RootElement.EnumerateArray())
                 {
                     string? type = item.TryGetProperty("type", out JsonElement typeProp) ? typeProp.GetString() : null;
-                    string? url = item.TryGetProperty("url", out JsonElement urlProp) ? urlProp.GetString() : null;
                     string? ws = item.TryGetProperty("webSocketDebuggerUrl", out JsonElement wsProp) ? wsProp.GetString() : null;
 
                     if (string.Equals(type, "page", StringComparison.OrdinalIgnoreCase) &&
-                        !string.IsNullOrWhiteSpace(ws) &&
-                        url != null &&
-                        url.Contains("roblox.com", StringComparison.OrdinalIgnoreCase))
+                        !string.IsNullOrWhiteSpace(ws))
                     {
                         return ws;
                     }
@@ -224,40 +222,34 @@ public static class IncognitoBrowserLauncher
                 // Browser HTTP server not ready yet
             }
 
-            await Task.Delay(250, ct).ConfigureAwait(false);
+            await Task.Delay(150, ct).ConfigureAwait(false);
         }
 
         return null;
     }
 
-    private static async Task DrivePageOverCdpAsync(string wsUrl, bool isSignUp, Process browserProcess, CancellationToken ct)
+    private static async Task DrivePageOverCdpAsync(string wsUrl, string targetUrl, bool isSignUp, Process browserProcess, CancellationToken ct)
     {
         using ClientWebSocket ws = new();
         await ws.ConnectAsync(new Uri(wsUrl), ct).ConfigureAwait(false);
 
         int msgId = 1;
         await SendCdpCommandAsync(ws, msgId++, "Page.enable", "{}", ct).ConfigureAwait(false);
-        await SendCdpCommandAsync(ws, msgId++, "Runtime.enable", "{}", ct).ConfigureAwait(false);
+        await SendCdpCommandAsync(ws, msgId++, "Page.setBypassCSP", "{\"enabled\":true}", ct).ConfigureAwait(false);
         await SendCdpCommandAsync(ws, msgId++, "Network.enable", "{}", ct).ConfigureAwait(false);
 
         if (isSignUp)
         {
             string addScriptParams = JsonSerializer.Serialize(new { source = SignUpDomScript });
             await SendCdpCommandAsync(ws, msgId++, "Page.addScriptToEvaluateOnNewDocument", addScriptParams, ct).ConfigureAwait(false);
-
-            string evalParams = JsonSerializer.Serialize(new { expression = SignUpDomScript, returnByValue = true });
-            await SendCdpCommandAsync(ws, msgId++, "Runtime.evaluate", evalParams, ct).ConfigureAwait(false);
         }
+
+        string navParams = JsonSerializer.Serialize(new { url = targetUrl });
+        await SendCdpCommandAsync(ws, msgId++, "Page.navigate", navParams, ct).ConfigureAwait(false);
 
         bool cookieReported = false;
         while (!browserProcess.HasExited && ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
         {
-            if (isSignUp)
-            {
-                string evalParams = JsonSerializer.Serialize(new { expression = SignUpDomScript, returnByValue = true });
-                await SendCdpCommandAsync(ws, msgId++, "Runtime.evaluate", evalParams, ct).ConfigureAwait(false);
-            }
-
             int cookieCmdId = msgId++;
             await SendCdpCommandAsync(ws, cookieCmdId, "Network.getAllCookies", "{}", ct).ConfigureAwait(false);
             string? capturedCookie = await ReadUntilCommandResponseAsync(ws, cookieCmdId, ct).ConfigureAwait(false);
@@ -275,7 +267,7 @@ public static class IncognitoBrowserLauncher
                 }
             }
 
-            await Task.Delay(1200, ct).ConfigureAwait(false);
+            await Task.Delay(1500, ct).ConfigureAwait(false);
         }
     }
 
@@ -388,10 +380,18 @@ public static class IncognitoBrowserLauncher
             }
           };
 
-          if (document.getElementById('rbx-mgr-signup-root')) return 'already_mounted';
-          if (!document.body) return 'no_body';
+          try {
+            delete Object.getPrototypeOf(navigator).webdriver;
+          } catch (e) {}
 
-          var style = document.getElementById('rbx-mgr-signup-style');
+          function mountSignUpUi() {
+            if (document.getElementById('rbx-mgr-signup-root')) return 'already_mounted';
+            if (!document.body || !document.head || !document.getElementById('content')) {
+              setTimeout(mountSignUpUi, 60);
+              return 'waiting_dom';
+            }
+
+            var style = document.getElementById('rbx-mgr-signup-style');
           if (!style) {
             style = document.createElement('style');
             style.id = 'rbx-mgr-signup-style';
@@ -677,6 +677,9 @@ public static class IncognitoBrowserLauncher
           };
 
           return 'mounted';
+          }
+
+          return mountSignUpUi();
         })();
         """;
 }
