@@ -180,5 +180,46 @@ public sealed class NamedMutexInstanceGateTests
 
         using NamedMutexInstanceGate gate = new(provider);
         Assert.True(gate.IsAvailable);
+        Assert.Equal(@"Global\ROBLOX_singletonEvent", NamedMutexInstanceGate.DefaultEventName);
+        Assert.Equal("ROBLOX_singletonMutex", NamedMutexInstanceGate.DefaultMutexName);
+    }
+
+    [Fact]
+    public void CreateLenientMutex_AppliesWorldFullControlAndAttachesIfAlreadyCreated()
+    {
+        string name = CreateUniqueEventName();
+
+        using Mutex first = NamedMutexInstanceGate.CreateLenientMutex(name, initiallyOwned: false, out bool createdNew1)!;
+        Assert.True(createdNew1);
+
+        using Mutex second = NamedMutexInstanceGate.CreateLenientMutex(name, initiallyOwned: false, out bool createdNew2)!;
+        Assert.False(createdNew2);
+    }
+
+    [Fact]
+    public void RobloxHandleCloser_ClosesMatchingNamedHandleInCurrentProcess()
+    {
+        string uniqueEventName = $"RbxManagerTest_HandleClose_{Guid.NewGuid():N}";
+        EventWaitHandle targetEvent = new(false, EventResetMode.ManualReset, uniqueEventName);
+        try
+        {
+            HashSet<int> pids = [Environment.ProcessId];
+            int closed = RobloxHandleCloser.CloseMatchingHandlesInProcesses(pids, [uniqueEventName]);
+            Assert.True(closed >= 1);
+
+            // Because the kernel handle was closed in our process, creating a new EventWaitHandle with the same name creates a brand new one
+            using EventWaitHandle probe = new(false, EventResetMode.ManualReset, uniqueEventName, out bool createdNew);
+            Assert.True(createdNew);
+        }
+        finally
+        {
+            try
+            {
+                targetEvent.Dispose();
+            }
+            catch
+            {
+            }
+        }
     }
 }

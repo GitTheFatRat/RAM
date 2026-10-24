@@ -41,3 +41,6 @@
 - M25.2: done - fix WPF Baml2006 TypeConverterMarkupExtension crash by disabling PublishTrimmed/PublishReadyToRun and enabling IncludeAllContentForSelfExtract
 - M25.3: done - add global exception handlers writing detailed stack traces + inner exceptions to crash_log.txt
 - M25.4: done - live 1-second visual countdown for sequential launch delay in AccountsViewModel and ServersViewModel
+- M25.5: done - make Place ID persistent across navigation and app restarts via AppSettings.LastPlaceId
+- M26: done - robust multi-instance bypass using permanent Global Mutex & WorldSid FullControl security rules
+- M26.1: done - replicate Multiple Roblox V2.2 handle-closing logic & RobloxCookies.dat lock for stable multi-instance
