@@ -15,6 +15,7 @@
                   Width="680"
                   MinWidth="500"
                   MinHeight="440"
+                  Icon="pack://application:,,,/Assets/app.ico"
                   WindowStartupLocation="CenterOwner"
                   Background="{DynamicResource ApplicationBackgroundBrush}">
     <ui:FluentWindow.Resources>
@@ -28,7 +29,8 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0"
-                     Title="{x:Static resources:Strings.AddAccountWindowTitle}" />
+                     Title="{x:Static resources:Strings.AddAccountWindowTitle}"
+                     Icon="{ui:ImageIcon 'pack://application:,,,/Assets/app.ico'}" />
 
         <Grid Grid.Row="1" Margin="{StaticResource MarginLarge}">
             <Grid.RowDefinitions>

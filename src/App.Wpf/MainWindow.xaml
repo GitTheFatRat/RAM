@@ -24,7 +24,7 @@
         <ui:TitleBar Grid.Row="0"
                      AutomationProperties.AutomationId="MainTitleBar"
                      Title="{x:Static resources:Strings.AppTitle}"
-                     Icon="{ui:SymbolIcon AppGeneric24}" />
+                     Icon="{ui:ImageIcon 'pack://application:,,,/Assets/app.ico'}" />
 
         <ui:NavigationView x:Name="RootNavigation"
                            AutomationProperties.AutomationId="RootNavigation"
