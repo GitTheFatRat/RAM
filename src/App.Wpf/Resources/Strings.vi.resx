@@ -713,7 +713,7 @@
     <value>Nhập hàng loạt Cookie &amp; Trình duyệt Ẩn danh</value>
   </data>
   <data name="AntiGeoBanHint" xml:space="preserve">
-    <value>Nếu không truy cập được Roblox Quốc tế, vui lòng sử dụng GoodbyeDPI hoặc WARP 1.1.1.1, sau đó mở trình duyệt ẩn danh để lấy Cookie.</value>
+    <value>Nếu không truy cập được Roblox Quốc tế hoặc cần đăng ký tài khoản mới, hãy bật Cloudflare WARP (1.1.1.1) bên dưới rồi mở trình duyệt ẩn danh.</value>
   </data>
   <data name="OpenIncognitoBrowser" xml:space="preserve">
     <value>Mở Trình duyệt Ẩn danh (Lấy Cookie)</value>
@@ -743,19 +743,19 @@
     <value>Ghi lại chi tiết luồng thực thi (đã che giấu mã bí mật) ra tệp RbxManager_UAT_Trace.txt ngoài Desktop để kiểm thử minh bạch.</value>
   </data>
   <data name="InstallAndStartGoodbyeDpi" xml:space="preserve">
-    <value>Cài đặt &amp; Bật GoodbyeDPI</value>
+    <value>Cài đặt &amp; Bật Cloudflare WARP (1.1.1.1)</value>
   </data>
   <data name="GoodbyeDpiActive" xml:space="preserve">
-    <value>✅ GoodbyeDPI đang hoạt động</value>
+    <value>✅ Cloudflare WARP đang hoạt động</value>
   </data>
   <data name="GoodbyeDpiUacDenied" xml:space="preserve">
-    <value>Bạn đã từ chối cấp quyền Quản trị viên (UAC). GoodbyeDPI cần quyền Quản trị viên để hoạt động.</value>
+    <value>Bạn đã từ chối cấp quyền Quản trị viên (UAC). Cần quyền Quản trị viên để cài đặt Cloudflare WARP.</value>
   </data>
   <data name="GoodbyeDpiDownloadFailed" xml:space="preserve">
-    <value>Không thể tải xuống GoodbyeDPI từ GitHub. Vui lòng kiểm tra kết nối mạng của bạn.</value>
+    <value>Không thể tải xuống bộ cài Cloudflare WARP. Vui lòng kiểm tra kết nối mạng của bạn.</value>
   </data>
   <data name="GoodbyeDpiLaunchFailed" xml:space="preserve">
-    <value>Không thể khởi động GoodbyeDPI. Vui lòng kiểm tra phần mềm diệt virus và thử lại.</value>
+    <value>Không thể khởi động hoặc kết nối Cloudflare WARP. Vui lòng thử lại.</value>
   </data>
   <data name="IncognitoCookieNote" xml:space="preserve">
     <value>Lưu ý: Sau khi đăng nhập xong, trang web sẽ xoay tròn hoặc báo lỗi, nhưng Cookie đã được lưu. Hãy bấm F12 -&gt; Application -&gt; Cookies để lấy luôn!</value>

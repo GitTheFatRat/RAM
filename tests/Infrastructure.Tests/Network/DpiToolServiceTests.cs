@@ -1,10 +1,10 @@
 namespace RbxManager.Infrastructure.Tests.Network;
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.Versioning;
@@ -24,7 +24,7 @@ public sealed class DpiToolServiceTests : IDisposable
 
     public DpiToolServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "RbxManager_DpiToolTests_" + Guid.NewGuid().ToString("N"));
+        _tempDir = Path.Combine(Path.GetTempPath(), "RbxManager_WarpToolTests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempDir);
     }
 
@@ -43,23 +43,11 @@ public sealed class DpiToolServiceTests : IDisposable
         }
     }
 
-    private static byte[] CreateFakeGoodbyeDpiZip()
-    {
-        using MemoryStream ms = new();
-        using (ZipArchive archive = new(ms, ZipArchiveMode.Create, leaveOpen: true))
-        {
-            ZipArchiveEntry entry = archive.CreateEntry("goodbyedpi-0.2.2/2_any_country.cmd");
-            using StreamWriter writer = new(entry.Open());
-            writer.WriteLine("@echo off");
-        }
-        return ms.ToArray();
-    }
-
     [Fact]
-    public void DefaultDownloadUri_PointsToPinnedV022Release()
+    public void DefaultDownloadUri_PointsToOfficialCloudflareWarpRelease()
     {
         Assert.Equal(
-            "https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.2/goodbyedpi-0.2.2.zip",
+            "https://1111-releases.cloudflareclient.com/win/latest",
             DpiToolService.DefaultDownloadUri.ToString());
     }
 
@@ -74,15 +62,15 @@ public sealed class DpiToolServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task EnsureInstalledAndStartAsync_WhenNotInstalled_DownloadsExtractsAndLaunchesWithRunAs()
+    public async Task EnsureInstalledAndStartAsync_WhenNotInstalled_DownloadsMsiAndLaunchesMsiexecWithRunAs()
     {
         IProcessProvider processProvider = Substitute.For<IProcessProvider>();
         processProvider.IsProcessRunning(DpiToolService.ProcessName).Returns(false);
 
-        byte[] zipBytes = CreateFakeGoodbyeDpiZip();
+        byte[] fakeMsiBytes = [0xD0, 0xCF, 0x11, 0xE0];
         using HttpClient httpClient = new(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new ByteArrayContent(zipBytes)
+            Content = new ByteArrayContent(fakeMsiBytes)
         }));
 
         ProcessStartInfo? capturedPsi = null;
@@ -102,36 +90,36 @@ public sealed class DpiToolServiceTests : IDisposable
         Assert.NotNull(capturedPsi);
         Assert.True(capturedPsi!.UseShellExecute);
         Assert.Equal("runas", capturedPsi.Verb);
-        Assert.EndsWith("2_any_country.cmd", capturedPsi.FileName, StringComparison.OrdinalIgnoreCase);
-        Assert.True(File.Exists(capturedPsi.FileName));
+        Assert.Equal("msiexec.exe", capturedPsi.FileName);
+        Assert.Contains(DpiToolService.InstallerFileName, capturedPsi.Arguments, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(Path.Combine(_tempDir, DpiToolService.InstallerFileName)));
     }
 
     [Fact]
-    public async Task EnsureInstalledAndStartAsync_WhenDefaultScriptMissing_FallsBackToDnsRedirScript()
+    public async Task EnsureInstalledAndStartAsync_WhenWarpCliInstalled_ExecutesWarpCliConnect()
     {
         IProcessProvider processProvider = Substitute.For<IProcessProvider>();
         processProvider.IsProcessRunning(DpiToolService.ProcessName).Returns(false);
 
-        string subDir = Path.Combine(_tempDir, "goodbyedpi-0.2.2");
-        Directory.CreateDirectory(subDir);
-        string fallbackPath = Path.Combine(subDir, DpiToolService.FallbackScriptFileName);
-        await File.WriteAllTextAsync(fallbackPath, "@echo off");
+        string warpCliPath = Path.Combine(_tempDir, DpiToolService.WarpCliFileName);
+        await File.WriteAllTextAsync(warpCliPath, "fake-warp-cli");
 
-        ProcessStartInfo? capturedPsi = null;
+        List<ProcessStartInfo> capturedCalls = [];
         using DpiToolService service = new(
             processProvider: processProvider,
             toolsDirectory: _tempDir,
             processRunner: psi =>
             {
-                capturedPsi = psi;
+                capturedCalls.Add(psi);
                 return true;
             });
 
         Result result = await service.EnsureInstalledAndStartAsync();
 
         Assert.True(result.IsSuccess);
-        Assert.NotNull(capturedPsi);
-        Assert.EndsWith(DpiToolService.FallbackScriptFileName, capturedPsi!.FileName, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(capturedCalls, psi =>
+            psi.FileName.EndsWith(DpiToolService.WarpCliFileName, StringComparison.OrdinalIgnoreCase) &&
+            psi.Arguments == "--accept-tos connect");
     }
 
     [Fact]
@@ -140,10 +128,14 @@ public sealed class DpiToolServiceTests : IDisposable
         IProcessProvider processProvider = Substitute.For<IProcessProvider>();
         processProvider.IsProcessRunning(DpiToolService.ProcessName).Returns(false);
 
-        string scriptPath = Path.Combine(_tempDir, DpiToolService.DefaultScriptFileName);
-        await File.WriteAllTextAsync(scriptPath, "@echo off");
+        byte[] fakeMsiBytes = [0xD0, 0xCF, 0x11, 0xE0];
+        using HttpClient httpClient = new(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(fakeMsiBytes)
+        }));
 
         using DpiToolService service = new(
+            httpClient: httpClient,
             processProvider: processProvider,
             toolsDirectory: _tempDir,
             processRunner: _ => throw new Win32Exception(1223));
