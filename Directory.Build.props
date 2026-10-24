@@ -5,7 +5,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>latest</LangVersion>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
     <_SuppressWpfTrimError>true</_SuppressWpfTrimError>
     <TrimMode>partial</TrimMode>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>

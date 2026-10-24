@@ -11,6 +11,7 @@ using System.Net.WebSockets;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -306,11 +307,11 @@ public static class IncognitoBrowserLauncher
 
             if (isSignUp)
             {
-                string addScriptParams = JsonSerializer.Serialize(new { source = SignUpDomScript });
+                string addScriptParams = JsonSerializer.Serialize(new CdpScriptParams(SignUpDomScript), CdpJsonContext.Default.CdpScriptParams);
                 await SendCdpCommandAsync(ws, msgId++, "Page.addScriptToEvaluateOnNewDocument", addScriptParams, ct).ConfigureAwait(false);
             }
 
-            string navParams = JsonSerializer.Serialize(new { url = targetUrl });
+            string navParams = JsonSerializer.Serialize(new CdpNavigateParams(targetUrl), CdpJsonContext.Default.CdpNavigateParams);
             await SendCdpCommandAsync(ws, msgId++, "Page.navigate", navParams, ct).ConfigureAwait(false);
 
             while (!browserProcess.HasExited && ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
@@ -321,8 +322,8 @@ public static class IncognitoBrowserLauncher
 
                 if (!string.IsNullOrWhiteSpace(capturedCookie))
                 {
-                    string showBannerJs = $"window.__showCapturedRobloxCookie && window.__showCapturedRobloxCookie({JsonSerializer.Serialize(capturedCookie)});";
-                    string bannerParams = JsonSerializer.Serialize(new { expression = showBannerJs, returnByValue = true });
+                    string showBannerJs = $"window.__showCapturedRobloxCookie && window.__showCapturedRobloxCookie({JsonSerializer.Serialize(capturedCookie, CdpJsonContext.Default.String)});";
+                    string bannerParams = JsonSerializer.Serialize(new CdpEvaluateParams(showBannerJs, true), CdpJsonContext.Default.CdpEvaluateParams);
                     await SendCdpCommandAsync(ws, msgId++, "Runtime.evaluate", bannerParams, ct).ConfigureAwait(false);
 
                     CookieCaptured?.Invoke(capturedCookie);
@@ -763,3 +764,15 @@ public static class IncognitoBrowserLauncher
         })();
         """;
 }
+
+internal sealed record CdpScriptParams([property: JsonPropertyName("source")] string Source);
+internal sealed record CdpNavigateParams([property: JsonPropertyName("url")] string Url);
+internal sealed record CdpEvaluateParams(
+    [property: JsonPropertyName("expression")] string Expression,
+    [property: JsonPropertyName("returnByValue")] bool ReturnByValue);
+
+[JsonSerializable(typeof(CdpScriptParams))]
+[JsonSerializable(typeof(CdpNavigateParams))]
+[JsonSerializable(typeof(CdpEvaluateParams))]
+[JsonSerializable(typeof(string))]
+internal sealed partial class CdpJsonContext : JsonSerializerContext;

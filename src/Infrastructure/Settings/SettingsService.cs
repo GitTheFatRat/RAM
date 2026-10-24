@@ -8,11 +8,10 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RbxManager.Core.Settings;
+using RbxManager.Infrastructure.Serialization;
 
 public sealed partial class SettingsService : ISettingsService, IDisposable
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
     public static readonly string DefaultPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "RbxManager",
@@ -49,7 +48,7 @@ public sealed partial class SettingsService : ISettingsService, IDisposable
             try
             {
                 byte[] bytes = await File.ReadAllBytesAsync(_filePath, ct).ConfigureAwait(false);
-                AppSettings? loaded = JsonSerializer.Deserialize<AppSettings>(bytes);
+                AppSettings? loaded = JsonSerializer.Deserialize(bytes, RbxManagerJsonContext.Default.AppSettings);
                 _currentSettings = (loaded ?? AppSettings.Default).Clamp();
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
@@ -80,7 +79,7 @@ public sealed partial class SettingsService : ISettingsService, IDisposable
             }
 
             string tempPath = _filePath + ".tmp";
-            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(clamped, SerializerOptions);
+            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(clamped, RbxManagerJsonContext.Indented.AppSettings);
 
             await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
 

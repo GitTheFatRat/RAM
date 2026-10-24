@@ -18,6 +18,7 @@ using RbxManager.Core.Exceptions;
 using RbxManager.Core.Models;
 using RbxManager.Core.Storage;
 using RbxManager.Core.Validation;
+using RbxManager.Infrastructure.Serialization;
 
 [SupportedOSPlatform("windows")]
 public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
@@ -277,7 +278,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         List<AccountDto>? dtos;
         try
         {
-            dtos = JsonSerializer.Deserialize<List<AccountDto>>(plaintextBytes);
+            dtos = JsonSerializer.Deserialize(plaintextBytes, RbxManagerJsonContext.Default.ListAccountDto);
         }
         catch (JsonException ex)
         {
@@ -539,7 +540,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             });
         }
 
-        byte[] plaintextBytes = JsonSerializer.SerializeToUtf8Bytes(dtos);
+        byte[] plaintextBytes = JsonSerializer.SerializeToUtf8Bytes(dtos, RbxManagerJsonContext.Default.ListAccountDto);
 
         bool useArgon2 = _keyProvider != null && _keyProvider.HasKey;
         byte kdfType = useArgon2 ? KdfTypeArgon2idDpapi : KdfTypeDpapi;

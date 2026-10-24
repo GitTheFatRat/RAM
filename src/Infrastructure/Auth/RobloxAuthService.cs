@@ -18,6 +18,7 @@ using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Models;
 using RbxManager.Infrastructure.Http;
+using RbxManager.Infrastructure.Serialization;
 
 public sealed partial class RobloxAuthService : IRobloxAuthService
 {
@@ -69,7 +70,7 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
             if (response.IsSuccessStatusCode)
             {
                 using Stream stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-                AuthenticatedUserDto? userDto = await JsonSerializer.DeserializeAsync<AuthenticatedUserDto>(stream, cancellationToken: ct).ConfigureAwait(false);
+                AuthenticatedUserDto? userDto = await JsonSerializer.DeserializeAsync(stream, RbxManagerJsonContext.Default.AuthenticatedUserDto, ct).ConfigureAwait(false);
 
                 if (userDto != null && userDto.Id > 0 && !string.IsNullOrWhiteSpace(userDto.Name))
                 {
@@ -388,7 +389,7 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
     [LoggerMessage(EventId = 208, Level = LogLevel.Error, Message = "Exception during authentication ticket acquisition: {ExceptionType}.")]
     private partial void LogTicketError(string exceptionType);
 
-    private sealed class AuthenticatedUserDto
+    internal sealed class AuthenticatedUserDto
     {
         [JsonPropertyName("id")]
         public long Id { get; set; }

@@ -15,6 +15,7 @@ using RbxManager.Core.Backup;
 using RbxManager.Core.Common;
 using RbxManager.Core.Models;
 using RbxManager.Core.Storage;
+using RbxManager.Infrastructure.Serialization;
 
 public sealed partial class EncryptedBackupService : IBackupService
 {
@@ -74,7 +75,7 @@ public sealed partial class EncryptedBackupService : IBackupService
             });
         }
 
-        byte[] plaintextBytes = JsonSerializer.SerializeToUtf8Bytes(dtos);
+        byte[] plaintextBytes = JsonSerializer.SerializeToUtf8Bytes(dtos, RbxManagerJsonContext.Default.ListBackupAccountDto);
         byte[] salt = RandomNumberGenerator.GetBytes(SaltLength);
         byte[] nonce = RandomNumberGenerator.GetBytes(NonceLength);
         byte[] tag = new byte[TagLength];
@@ -196,7 +197,7 @@ public sealed partial class EncryptedBackupService : IBackupService
                 aesGcm.Decrypt(nonce, ciphertext, tag, plaintextBytes, aad);
             }
 
-            dtos = JsonSerializer.Deserialize<List<BackupAccountDto>>(plaintextBytes);
+            dtos = JsonSerializer.Deserialize(plaintextBytes, RbxManagerJsonContext.Default.ListBackupAccountDto);
         }
         catch (Exception ex) when (ex is AuthenticationTagMismatchException or CryptographicException or JsonException)
         {

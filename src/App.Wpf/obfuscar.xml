@@ -14,9 +14,16 @@
   <Var name="SuppressIldasm" value="true" />
 
   <Module file="$(InPath)\RbxManager.Core.dll" />
-  <Module file="$(InPath)\RbxManager.Infrastructure.dll" />
+  <Module file="$(InPath)\RbxManager.Infrastructure.dll">
+    <SkipType name="*Dto" skipProperties="true" skipMethods="true" skipFields="true" />
+    <SkipType name="*Response" skipProperties="true" skipMethods="true" skipFields="true" />
+    <SkipType name="*ServerItem" skipProperties="true" skipMethods="true" skipFields="true" />
+    <SkipType name="*JsonContext*" skipProperties="true" skipMethods="true" skipFields="true" />
+  </Module>
   <Module file="$(InPath)\RbxManager.App.dll">
     <SkipProperty type="RbxManager.App.ViewModels.*" rx=".*" attrib="public" />
     <SkipType name="RbxManager.App.Views.*" skipProperties="true" skipMethods="false" skipFields="false" />
+    <SkipType name="*JsonContext*" skipProperties="true" skipMethods="true" skipFields="true" />
+    <SkipType name="*Cdp*Params" skipProperties="true" skipMethods="true" skipFields="true" />
   </Module>
 </Obfuscator>

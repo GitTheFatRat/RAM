@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RbxManager.Core.Common;
 using RbxManager.Core.Servers;
+using RbxManager.Infrastructure.Serialization;
 
 public sealed partial class ServerBrowserService : IServerBrowserService
 {
@@ -64,7 +65,7 @@ public sealed partial class ServerBrowserService : IServerBrowserService
             }
 
             using Stream stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            RobloxServerListResponse? doc = await JsonSerializer.DeserializeAsync<RobloxServerListResponse>(stream, cancellationToken: ct).ConfigureAwait(false);
+            RobloxServerListResponse? doc = await JsonSerializer.DeserializeAsync(stream, RbxManagerJsonContext.Default.RobloxServerListResponse, ct).ConfigureAwait(false);
 
             if (doc == null || doc.Data == null)
             {
@@ -127,7 +128,7 @@ public sealed partial class ServerBrowserService : IServerBrowserService
     [LoggerMessage(EventId = 404, Level = LogLevel.Error, Message = "Exception fetching servers: {ExceptionType}.")]
     private partial void LogFetchError(string exceptionType);
 
-    private sealed class RobloxServerListResponse
+    internal sealed class RobloxServerListResponse
     {
         [JsonPropertyName("previousPageCursor")]
         public string? PreviousPageCursor { get; set; }
@@ -139,7 +140,7 @@ public sealed partial class ServerBrowserService : IServerBrowserService
         public List<RobloxServerItem>? Data { get; set; }
     }
 
-    private sealed class RobloxServerItem
+    internal sealed class RobloxServerItem
     {
         [JsonPropertyName("id")]
         public string? Id { get; set; }
