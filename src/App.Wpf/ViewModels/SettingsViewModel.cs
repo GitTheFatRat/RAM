@@ -121,7 +121,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         LaunchDelaySeconds = settings.LaunchDelaySeconds;
         RejoinDelaySeconds = settings.RejoinDelaySeconds;
         RejoinMaxAttempts = settings.RejoinMaxAttempts;
-        MultiInstanceEnabled = _instanceGate.IsMultiInstanceEnabled;
+        MultiInstanceEnabled = settings.MultiInstanceEnabled || _instanceGate.IsMultiInstanceEnabled;
+        if (MultiInstanceEnabled && !_instanceGate.IsMultiInstanceEnabled)
+        {
+            _instanceGate.TryEnable();
+        }
         IsMasterPasswordEnabled = settings.IsMasterPasswordEnabled;
         ThrottleBackgroundRoblox = settings.ThrottleBackgroundRoblox;
         EnableRamCleaner = settings.EnableRamCleaner;
@@ -157,6 +161,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         IsBusy = true;
         try
         {
+            if (MultiInstanceEnabled && !_instanceGate.IsMultiInstanceEnabled)
+            {
+                _instanceGate.TryEnable();
+            }
+            else if (!MultiInstanceEnabled && _instanceGate.IsMultiInstanceEnabled)
+            {
+                _instanceGate.Disable();
+            }
+
             AppSettings current = _settingsService.CurrentSettings;
             AppSettings updated = new(
                 Language: SelectedLanguage,
@@ -165,7 +178,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 RejoinDelaySeconds: RejoinDelaySeconds,
                 RejoinMaxAttempts: RejoinMaxAttempts,
                 MultiInstanceEnabled: MultiInstanceEnabled,
-                MultiInstanceAcknowledged: current.MultiInstanceAcknowledged,
+                MultiInstanceAcknowledged: current.MultiInstanceAcknowledged || MultiInstanceEnabled,
                 IsMasterPasswordEnabled: IsMasterPasswordEnabled,
                 ThrottleBackgroundRoblox: ThrottleBackgroundRoblox,
                 ThrottleBackgroundAcknowledged: current.ThrottleBackgroundAcknowledged,
@@ -224,7 +237,8 @@ public sealed partial class SettingsViewModel : ObservableObject
                     return;
                 }
 
-                await _settingsService.SaveSettingsAsync(current with { MultiInstanceAcknowledged = true });
+                current = current with { MultiInstanceAcknowledged = true };
+                await _settingsService.SaveSettingsAsync(current);
             }
 
             Result enableResult = _instanceGate.TryEnable();
@@ -246,12 +260,20 @@ public sealed partial class SettingsViewModel : ObservableObject
             else
             {
                 MultiInstanceEnabled = true;
+                AppSettings updated = _settingsService.CurrentSettings with
+                {
+                    MultiInstanceEnabled = true,
+                    MultiInstanceAcknowledged = true
+                };
+                await _settingsService.SaveSettingsAsync(updated);
             }
         }
         else
         {
             _instanceGate.Disable();
             MultiInstanceEnabled = false;
+            AppSettings updated = _settingsService.CurrentSettings with { MultiInstanceEnabled = false };
+            await _settingsService.SaveSettingsAsync(updated);
         }
     }
 

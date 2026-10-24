@@ -346,4 +346,42 @@ public sealed class CheckAllPacingTests
             Assert.False(vm.IsCheckingAll);
         });
     }
+
+    [Fact]
+    public void SettingsViewModel_MultiInstanceToggle_EnablesMutexGateAndPersistsSetting()
+    {
+        StaRunner.Run(() =>
+        {
+            RbxManager.Core.Settings.ISettingsService settingsService = Substitute.For<RbxManager.Core.Settings.ISettingsService>();
+            RbxManager.Core.Settings.AppSettings currentSettings = RbxManager.Core.Settings.AppSettings.Default with
+            {
+                MultiInstanceAcknowledged = true
+            };
+            settingsService.CurrentSettings.Returns(_ => currentSettings);
+            settingsService.SaveSettingsAsync(Arg.Do<RbxManager.Core.Settings.AppSettings>(s => currentSettings = s))
+                .Returns(Task.CompletedTask);
+
+            RbxManager.Core.Instance.IInstanceGate instanceGate = Substitute.For<RbxManager.Core.Instance.IInstanceGate>();
+            instanceGate.IsAvailable.Returns(true);
+            instanceGate.TryEnable().Returns(Result.Success());
+
+            IContentDialogService dialogService = Substitute.For<IContentDialogService>();
+            ISnackbarService snackbarService = Substitute.For<ISnackbarService>();
+
+            SettingsViewModel vm = new(settingsService, instanceGate, dialogService, snackbarService);
+            Assert.True(vm.IsMultiInstanceAvailable);
+
+            vm.MultiInstanceToggledCommand.ExecuteAsync(true).GetAwaiter().GetResult();
+
+            Assert.True(vm.MultiInstanceEnabled);
+            Assert.True(currentSettings.IsMultiInstanceEnabled);
+            instanceGate.Received(1).TryEnable();
+
+            vm.MultiInstanceToggledCommand.ExecuteAsync(false).GetAwaiter().GetResult();
+
+            Assert.False(vm.MultiInstanceEnabled);
+            Assert.False(currentSettings.IsMultiInstanceEnabled);
+            instanceGate.Received(1).Disable();
+        });
+    }
 }

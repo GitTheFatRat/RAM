@@ -274,7 +274,6 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -298,22 +297,9 @@
                                   AutomationProperties.AutomationId="Settings_MultiInstanceToggle"
                                   AutomationProperties.Name="{x:Static resources:Strings.MultiInstanceLabel}"
                                   IsChecked="{Binding MultiInstanceEnabled, Mode=TwoWay}"
-                                  IsEnabled="{Binding IsMultiInstanceAvailable}"
+                                  Command="{Binding MultiInstanceToggledCommand}"
+                                  CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
                                   VerticalAlignment="Center" />
-
-                        <!-- Warning banner -->
-                        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                Background="{DynamicResource StatusExpiredBackgroundBrush}"
-                                BorderBrush="{DynamicResource StatusExpiredBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource RadiusSmall}"
-                                Padding="{StaticResource PaddingBase}"
-                                Margin="{StaticResource MarginTopBase}">
-                            <TextBlock Text="{x:Static resources:Strings.MultiInstanceNotAvailable}"
-                                       Foreground="{DynamicResource StatusExpiredForegroundBrush}"
-                                       FontSize="{StaticResource FontSizeCaption}"
-                                       TextWrapping="Wrap" />
-                        </Border>
                     </Grid>
                 </Border>
 

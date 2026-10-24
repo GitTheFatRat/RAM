@@ -106,6 +106,9 @@ public sealed record AppSettings(
     public static AppSettings Default => new();
 
     [JsonIgnore]
+    public bool IsMultiInstanceEnabled => MultiInstanceEnabled;
+
+    [JsonIgnore]
     public bool EnableGhostDisconnectDetection => GhostDisconnectMode != GhostDisconnectMode.Off;
 
     public AppSettings Clamp()
