@@ -25,10 +25,16 @@ public sealed class CheckAllPacingTests
 
         public void Advance(TimeSpan delta)
         {
-            _utcNow += delta;
-            foreach (FakeTimer timer in _timers.ToArray())
+            TimeSpan remaining = delta;
+            while (remaining > TimeSpan.Zero)
             {
-                timer.CheckTrigger(_utcNow);
+                TimeSpan step = remaining > TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : remaining;
+                _utcNow += step;
+                remaining -= step;
+                foreach (FakeTimer timer in _timers.ToArray())
+                {
+                    timer.CheckTrigger(_utcNow);
+                }
             }
         }
 
@@ -224,9 +230,11 @@ public sealed class CheckAllPacingTests
             Assert.Single(requestedRanges);
             Assert.Equal((60, 121), requestedRanges[0]);
 
-            // Advance 64s: still waiting for the 65s randomized delay
+            // Advance 64s: still waiting for the 65s randomized delay, and countdown ticked down to 1s
+            Assert.Contains("65", vm.BulkLaunchCountdownText, StringComparison.Ordinal);
             timeProvider.Advance(TimeSpan.FromSeconds(64));
             Assert.Single(launcher.LaunchedAccounts);
+            Assert.Contains("1", vm.BulkLaunchCountdownText, StringComparison.Ordinal);
 
             // Advance 1s (total 65s): Account 2 launched, second delay (115s) scheduled
             timeProvider.Advance(TimeSpan.FromSeconds(1));

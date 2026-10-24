@@ -1070,16 +1070,20 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                         MaxSequentialLaunchDelaySeconds + 1);
 
                     CompositeFormat nextAccountFormat = CompositeFormat.Parse(Strings.NextAccountCountdown);
-                    string countdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, randomSeconds);
-                    RunOnUiThread(() => BulkLaunchCountdownText = countdownText);
+                    for (int remainingSeconds = randomSeconds; remainingSeconds >= 1; remainingSeconds--)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        string countdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, remainingSeconds);
+                        RunOnUiThread(() => BulkLaunchCountdownText = countdownText);
 
-                    if (ReferenceEquals(_timeProvider, TimeProvider.System))
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), ct);
-                    }
-                    else
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(randomSeconds), _timeProvider, ct);
+                        if (ReferenceEquals(_timeProvider, TimeProvider.System))
+                        {
+                            await Task.Delay(1000, ct);
+                        }
+                        else
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(1), _timeProvider, ct);
+                        }
                     }
 
                     RunOnUiThread(() => BulkLaunchCountdownText = string.Empty);

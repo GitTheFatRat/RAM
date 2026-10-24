@@ -193,11 +193,16 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                     int randomSeconds = Random.Shared.Next(
                         AccountsViewModel.MinSequentialLaunchDelaySeconds,
                         AccountsViewModel.MaxSequentialLaunchDelaySeconds + 1);
-                    JoinStatusText = string.Format(
-                        System.Globalization.CultureInfo.CurrentCulture,
-                        System.Text.CompositeFormat.Parse(Strings.NextAccountCountdown),
-                        randomSeconds);
-                    await Task.Delay(TimeSpan.FromSeconds(randomSeconds), ct);
+                    System.Text.CompositeFormat countdownFormat = System.Text.CompositeFormat.Parse(Strings.NextAccountCountdown);
+                    for (int remainingSeconds = randomSeconds; remainingSeconds >= 1; remainingSeconds--)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        JoinStatusText = string.Format(
+                            System.Globalization.CultureInfo.CurrentCulture,
+                            countdownFormat,
+                            remainingSeconds);
+                        await Task.Delay(1000, ct);
+                    }
                 }
             }
         }
