@@ -47,4 +47,5 @@
 - M27: done (850b776) - add instance tracking and kill switch for active accounts
 - M28: done (2353179) - add Win32 automatic window resizing for custom Roblox resolution
 - M28.1: done (27d9b95) - make custom resolution settings persistent across navigation
-- M28.3: done - ensure SetWindowPos uses saved resolution and waits for window initialization
+- M28.3: done (393e285) - ensure SetWindowPos uses saved resolution and waits for window initialization
+- M28.5: done - strip WS_THICKFRAME and use SWP_NOMOVE to prevent window snap-back on drag
