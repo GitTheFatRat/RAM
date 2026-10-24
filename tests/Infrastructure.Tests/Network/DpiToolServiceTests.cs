@@ -119,6 +119,9 @@ public sealed class DpiToolServiceTests : IDisposable
         Assert.True(result.IsSuccess);
         Assert.Contains(capturedCalls, psi =>
             psi.FileName.EndsWith(DpiToolService.WarpCliFileName, StringComparison.OrdinalIgnoreCase) &&
+            psi.Arguments == "--accept-tos mode warp+doh");
+        Assert.Contains(capturedCalls, psi =>
+            psi.FileName.EndsWith(DpiToolService.WarpCliFileName, StringComparison.OrdinalIgnoreCase) &&
             psi.Arguments == "--accept-tos connect");
     }
 

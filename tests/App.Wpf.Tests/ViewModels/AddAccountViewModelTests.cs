@@ -56,7 +56,7 @@ public sealed class AddAccountViewModelTests
         vm.OpenSignUpBrowserCommand.Execute(null);
 
         Assert.Equal(
-            ["https://www.roblox.com/NewLogin", "https://www.roblox.com/"],
+            [IncognitoBrowserLauncher.LoginUrl, IncognitoBrowserLauncher.SignUpUrl],
             launchedUrls);
         Assert.False(vm.HasErrorMessage);
     }
@@ -64,26 +64,29 @@ public sealed class AddAccountViewModelTests
     [Fact]
     public void IncognitoBrowserLauncher_IncludesDpiBypassFlagsInBrowserArguments()
     {
-        string expectedIncognito = "--incognito --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/NewLogin\"";
-        string expectedInPrivate = "--inprivate --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"https://www.roblox.com/NewLogin\"";
-
-        Assert.Equal(expectedIncognito, IncognitoBrowserLauncher.BuildIncognitoArguments());
-        Assert.Equal(expectedInPrivate, IncognitoBrowserLauncher.BuildInPrivateArguments());
-
-        foreach (var (cmdName, args) in IncognitoBrowserLauncher.GetPathBrowserCommands())
+        foreach (string targetUrl in new[] { IncognitoBrowserLauncher.LoginUrl, IncognitoBrowserLauncher.SignUpUrl })
         {
-            string expected = cmdName.Equals("msedge.exe", StringComparison.OrdinalIgnoreCase)
-                ? expectedInPrivate
-                : expectedIncognito;
-            Assert.Equal(expected, args);
-        }
+            string expectedIncognito = $"--incognito --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"{targetUrl}\"";
+            string expectedInPrivate = $"--inprivate --disable-quic --disable-features=EncryptedClientHello,Kyber,PostQuantumCECPQ2 \"{targetUrl}\"";
 
-        foreach (var (exePath, args) in IncognitoBrowserLauncher.GetCandidateBrowserPaths())
-        {
-            string expected = exePath.EndsWith("msedge.exe", StringComparison.OrdinalIgnoreCase)
-                ? expectedInPrivate
-                : expectedIncognito;
-            Assert.Equal(expected, args);
+            Assert.Equal(expectedIncognito, IncognitoBrowserLauncher.BuildIncognitoArguments(targetUrl));
+            Assert.Equal(expectedInPrivate, IncognitoBrowserLauncher.BuildInPrivateArguments(targetUrl));
+
+            foreach (var (cmdName, args) in IncognitoBrowserLauncher.GetPathBrowserCommands(targetUrl))
+            {
+                string expected = cmdName.Equals("msedge.exe", StringComparison.OrdinalIgnoreCase)
+                    ? expectedInPrivate
+                    : expectedIncognito;
+                Assert.Equal(expected, args);
+            }
+
+            foreach (var (exePath, args) in IncognitoBrowserLauncher.GetCandidateBrowserPaths(targetUrl))
+            {
+                string expected = exePath.EndsWith("msedge.exe", StringComparison.OrdinalIgnoreCase)
+                    ? expectedInPrivate
+                    : expectedIncognito;
+                Assert.Equal(expected, args);
+            }
         }
     }
 

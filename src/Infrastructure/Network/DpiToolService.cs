@@ -88,9 +88,9 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
         if (_useSystemInstallLookup)
         {
             string? warpCli = FindWarpCliPath();
-            if (warpCli != null && IsWarpTunnelConnected(warpCli))
+            if (warpCli != null)
             {
-                return true;
+                return IsWarpTunnelConnected(warpCli);
             }
         }
 
@@ -189,6 +189,7 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
 
             RunCliOptional(warpCliPath, workingDir, "--accept-tos registration new");
             RunCliOptional(warpCliPath, workingDir, "--accept-tos mode warp");
+            RunCliOptional(warpCliPath, workingDir, "--accept-tos mode warp+doh");
 
             ProcessStartInfo connectPsi = new()
             {
