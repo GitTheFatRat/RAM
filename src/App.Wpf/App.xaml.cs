@@ -6,6 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +22,7 @@ using RbxManager.App.Views.Pages;
 using RbxManager.Core.Instance;
 using RbxManager.Core.Storage;
 using RbxManager.Infrastructure;
+using RbxManager.Infrastructure.Instance;
 using RbxManager.Infrastructure.Logging;
 using RbxManager.Infrastructure.Settings;
 using RbxManager.Infrastructure.Storage;
@@ -31,6 +34,8 @@ public partial class App : Application
     private const string AppMutexName = @"Local\RbxManager_Application_SingleInstance_Mutex";
 
     private static Mutex? _appSingleInstanceMutex;
+    private static Mutex? _globalRobloxMutex;
+    private static Mutex? _globalRobloxSingletonMutex;
     private readonly IHost _host;
 
     [DllImport("user32.dll")]
@@ -316,6 +321,7 @@ public partial class App : Application
         bool isUiTest = Environment.GetEnvironmentVariable("RBXMANAGER_UITEST") == "1";
         if (!isUiTest || settings.MultiInstanceEnabled)
         {
+            EnsureGlobalRobloxMutexHeld();
             IInstanceGate? instanceGate = _host.Services.GetService<IInstanceGate>();
             instanceGate?.TryEnable();
         }
@@ -478,8 +484,70 @@ public partial class App : Application
             _appSingleInstanceMutex = null;
         }
 
+        GC.KeepAlive(_globalRobloxMutex);
+        GC.KeepAlive(_globalRobloxSingletonMutex);
+        ReleaseGlobalRobloxMutex(ref _globalRobloxMutex);
+        ReleaseGlobalRobloxMutex(ref _globalRobloxSingletonMutex);
+
         await Log.CloseAndFlushAsync();
 
         base.OnExit(e);
+    }
+
+    private static void EnsureGlobalRobloxMutexHeld()
+    {
+        try
+        {
+            if (_globalRobloxMutex == null)
+            {
+                _globalRobloxMutex = new Mutex(false, @"Global\ROBLOX_singletonEvent", out bool _);
+                ApplyLenientMutexSecurity(_globalRobloxMutex);
+                GC.KeepAlive(_globalRobloxMutex);
+            }
+
+            if (_globalRobloxSingletonMutex == null)
+            {
+                _globalRobloxSingletonMutex = new Mutex(false, "ROBLOX_singletonMutex", out bool _);
+                ApplyLenientMutexSecurity(_globalRobloxSingletonMutex);
+                GC.KeepAlive(_globalRobloxSingletonMutex);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Failed to initialize global Roblox singleton mutex: {ExceptionType}.", ex.GetType().Name);
+        }
+    }
+
+    private static void ApplyLenientMutexSecurity(Mutex mutex)
+    {
+        try
+        {
+            MutexSecurity security = mutex.GetAccessControl();
+            MutexAccessRule securityBehavior = new(
+                new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                MutexRights.FullControl,
+                AccessControlType.Allow);
+            security.AddAccessRule(securityBehavior);
+            mutex.SetAccessControl(security);
+        }
+        catch
+        {
+            // Ignore when attached to a pre-existing mutex with restricted ACL modification rights
+        }
+    }
+
+    private static void ReleaseGlobalRobloxMutex(ref Mutex? mutex)
+    {
+        if (mutex != null)
+        {
+            try
+            {
+                mutex.Dispose();
+            }
+            catch
+            {
+            }
+            mutex = null;
+        }
     }
 }
