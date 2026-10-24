@@ -91,6 +91,24 @@ public sealed class AddAccountViewModelTests
     }
 
     [Fact]
+    public void AppendCapturedCookie_AppendsUniqueCookieAndEnablesImport()
+    {
+        FakeAccountStore store = new();
+        IRobloxAuthService auth = Substitute.For<IRobloxAuthService>();
+        AddAccountViewModel vm = new(store, auth);
+
+        Assert.False(vm.CanImport);
+
+        vm.AppendCapturedCookie("_|WARNING:-DO-NOT-SHARE-THIS._|CAPTURED_COOKIE_1");
+        Assert.Equal("_|WARNING:-DO-NOT-SHARE-THIS._|CAPTURED_COOKIE_1", vm.RawCookiesText);
+        Assert.True(vm.CanImport);
+
+        // Duplicate is ignored
+        vm.AppendCapturedCookie("_|WARNING:-DO-NOT-SHARE-THIS._|CAPTURED_COOKIE_1");
+        Assert.Equal("_|WARNING:-DO-NOT-SHARE-THIS._|CAPTURED_COOKIE_1", vm.RawCookiesText);
+    }
+
+    [Fact]
     public async Task ImportAccountsAsync_ValidatesAndStoresMultipleAccounts()
     {
         FakeAccountStore store = new();

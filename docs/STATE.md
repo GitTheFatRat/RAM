@@ -30,4 +30,5 @@
 - M21.2: done (8987a3f) - pin exact GoodbyeDPI v0.2.2 release url for stable downloads
 - M21.3: done (4fa947a) - switch GoodbyeDPI execution to 2_any_country.cmd to bypass global SNI blocks
 - M21.4: done (5573eb8) - inject Chrome CLI args to disable QUIC and ECH automatically
-- M21.6: done - resolve infinite spin on registration page and verify full flow
+- M21.6: done (f9dc87e) - resolve infinite spin on registration page and verify full flow
+- M21.7: done - native Sign-Up UI injection via CDP on /NewLogin#signup with Arkose CAPTCHA & auto cookie capture

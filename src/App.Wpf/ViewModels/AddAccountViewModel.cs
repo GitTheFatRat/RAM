@@ -90,6 +90,24 @@ public partial class AddAccountViewModel : ObservableObject
         IsGoodbyeDpiRunning = _dpiToolService?.IsRunning() == true;
     }
 
+    public void AppendCapturedCookie(string cookie)
+    {
+        if (string.IsNullOrWhiteSpace(cookie))
+        {
+            return;
+        }
+
+        string trimmed = cookie.Trim();
+        if (RawCookiesText.Contains(trimmed, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        RawCookiesText = string.IsNullOrWhiteSpace(RawCookiesText)
+            ? trimmed
+            : $"{RawCookiesText.TrimEnd()}{Environment.NewLine}{trimmed}";
+    }
+
     [RelayCommand]
     public async Task InstallAndStartGoodbyeDpiAsync()
     {
