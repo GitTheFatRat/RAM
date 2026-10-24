@@ -9,5 +9,6 @@ public partial class SettingsPage : Page
     {
         InitializeComponent();
         DataContext = viewModel;
+        Loaded += (_, _) => viewModel.LoadFromCurrentSettings();
     }
 }

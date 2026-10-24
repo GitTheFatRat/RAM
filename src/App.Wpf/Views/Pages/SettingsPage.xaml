@@ -459,7 +459,7 @@
                         <ui:ToggleSwitch Grid.Row="7" Grid.Column="1"
                                          AutomationProperties.AutomationId="Settings_CustomResolutionToggle"
                                          AutomationProperties.Name="{x:Static resources:Strings.EnableCustomResolution}"
-                                         IsChecked="{Binding EnableCustomResolution, Mode=OneWay}"
+                                         IsChecked="{Binding EnableCustomResolution, Mode=TwoWay}"
                                          Command="{Binding EnableCustomResolutionToggledCommand}"
                                          CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
                                          VerticalAlignment="Center" />
@@ -473,27 +473,21 @@
                                        Style="{StaticResource SettingLabelStyle}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,8,0" />
-                            <ui:NumberBox Width="140"
-                                          AutomationProperties.AutomationId="Settings_ResolutionWidthNumberBox"
-                                          AutomationProperties.Name="{x:Static resources:Strings.ResolutionWidthLabel}"
-                                          Value="{Binding ResolutionWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          Minimum="200"
-                                          Maximum="7680"
-                                          SpinButtonPlacementMode="Inline"
-                                          Margin="0,0,24,0"
-                                          VerticalAlignment="Center" />
+                            <TextBox Width="140"
+                                     AutomationProperties.AutomationId="Settings_ResolutionWidthTextBox"
+                                     AutomationProperties.Name="{x:Static resources:Strings.ResolutionWidthLabel}"
+                                     Text="{Binding ResolutionWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,24,0"
+                                     VerticalAlignment="Center" />
                             <TextBlock Text="{x:Static resources:Strings.ResolutionHeightLabel}"
                                        Style="{StaticResource SettingLabelStyle}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,8,0" />
-                            <ui:NumberBox Width="140"
-                                          AutomationProperties.AutomationId="Settings_ResolutionHeightNumberBox"
-                                          AutomationProperties.Name="{x:Static resources:Strings.ResolutionHeightLabel}"
-                                          Value="{Binding ResolutionHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          Minimum="200"
-                                          Maximum="7680"
-                                          SpinButtonPlacementMode="Inline"
-                                          VerticalAlignment="Center" />
+                            <TextBox Width="140"
+                                     AutomationProperties.AutomationId="Settings_ResolutionHeightTextBox"
+                                     AutomationProperties.Name="{x:Static resources:Strings.ResolutionHeightLabel}"
+                                     Text="{Binding ResolutionHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Border>

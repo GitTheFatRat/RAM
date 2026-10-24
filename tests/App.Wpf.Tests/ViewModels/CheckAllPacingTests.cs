@@ -530,13 +530,19 @@ public sealed class CheckAllPacingTests
             Assert.Equal(800, vm.ResolutionWidth);
             Assert.Equal(600, vm.ResolutionHeight);
 
-            vm.ResolutionWidth = 640;
-            vm.ResolutionHeight = 480;
-            vm.EnableCustomResolutionToggledCommand.ExecuteAsync(true).GetAwaiter().GetResult();
+            vm.EnableCustomResolution = true;
+            vm.ResolutionWidth = 200;
+            vm.ResolutionHeight = 400;
 
             Assert.True(currentSettings.EnableCustomResolution);
-            Assert.Equal(640, currentSettings.ResolutionWidth);
-            Assert.Equal(480, currentSettings.ResolutionHeight);
+            Assert.Equal(200, currentSettings.ResolutionWidth);
+            Assert.Equal(400, currentSettings.ResolutionHeight);
+
+            // Simulate navigating away and returning to Settings tab (new ViewModel instance):
+            SettingsViewModel vmAfterNavigation = new(settingsService, instanceGate, dialogService, snackbarService);
+            Assert.True(vmAfterNavigation.EnableCustomResolution);
+            Assert.Equal(200, vmAfterNavigation.ResolutionWidth);
+            Assert.Equal(400, vmAfterNavigation.ResolutionHeight);
         });
     }
 }

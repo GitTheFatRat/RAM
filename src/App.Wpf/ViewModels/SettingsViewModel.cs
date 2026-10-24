@@ -90,15 +90,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _enableCustomResolution;
 
     [ObservableProperty]
-    private int _resolutionWidth = AppSettings.DefaultResolutionWidth;
+    private int _resolutionWidth;
 
     [ObservableProperty]
-    private int _resolutionHeight = AppSettings.DefaultResolutionHeight;
+    private int _resolutionHeight;
 
     [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
+    private bool _isLoadingSettings;
 
     public SettingsViewModel(
         ISettingsService settingsService,
@@ -123,43 +124,51 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public void LoadFromCurrentSettings()
     {
-        AppSettings settings = _settingsService.CurrentSettings;
-        SelectedLanguage = settings.Language;
-        _initialLanguage = settings.Language;
-        SelectedTheme = settings.Theme;
-        LaunchDelaySeconds = settings.LaunchDelaySeconds;
-        RejoinDelaySeconds = settings.RejoinDelaySeconds;
-        RejoinMaxAttempts = settings.RejoinMaxAttempts;
-        MultiInstanceEnabled = settings.MultiInstanceEnabled || _instanceGate.IsMultiInstanceEnabled;
-        if (MultiInstanceEnabled && !_instanceGate.IsMultiInstanceEnabled)
+        _isLoadingSettings = true;
+        try
         {
-            _instanceGate.TryEnable();
+            AppSettings settings = _settingsService.CurrentSettings;
+            SelectedLanguage = settings.Language;
+            _initialLanguage = settings.Language;
+            SelectedTheme = settings.Theme;
+            LaunchDelaySeconds = settings.LaunchDelaySeconds;
+            RejoinDelaySeconds = settings.RejoinDelaySeconds;
+            RejoinMaxAttempts = settings.RejoinMaxAttempts;
+            MultiInstanceEnabled = settings.MultiInstanceEnabled || _instanceGate.IsMultiInstanceEnabled;
+            if (MultiInstanceEnabled && !_instanceGate.IsMultiInstanceEnabled)
+            {
+                _instanceGate.TryEnable();
+            }
+            IsMasterPasswordEnabled = settings.IsMasterPasswordEnabled;
+            ThrottleBackgroundRoblox = settings.ThrottleBackgroundRoblox;
+            EnableRamCleaner = settings.EnableRamCleaner;
+            RamCleanerIntervalMinutes = settings.RamCleanerIntervalMinutes;
+            EnableSmartServerHopping = settings.EnableSmartServerHopping;
+            EnableGhostDisconnectDetection = settings.GhostDisconnectMode != Core.Processes.GhostDisconnectMode.Off;
+            SelectedGhostDisconnectMode = settings.GhostDisconnectMode;
+            EnableUatTelemetry = settings.EnableUatTelemetry;
+            EnableCustomResolution = settings.EnableCustomResolution;
+            ResolutionWidth = settings.ResolutionWidth;
+            ResolutionHeight = settings.ResolutionHeight;
+
+            string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
+            LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
+                ? Strings.TemplateDefault
+                : Core.Launch.LaunchTemplateValidator.ValidateLaunchUriTemplate(launchUriTpl).IsSuccess
+                    ? Strings.TemplateCustomValid
+                    : Strings.TemplateCustomInvalid;
+
+            string? placeLauncherTpl = settings.Advanced?.PlaceLauncherUrlTemplate;
+            PlaceLauncherUrlTemplateStatus = string.IsNullOrWhiteSpace(placeLauncherTpl)
+                ? Strings.TemplateDefault
+                : Core.Launch.LaunchTemplateValidator.ValidatePlaceLauncherUrlTemplate(placeLauncherTpl).IsSuccess
+                    ? Strings.TemplateCustomValid
+                    : Strings.TemplateCustomInvalid;
         }
-        IsMasterPasswordEnabled = settings.IsMasterPasswordEnabled;
-        ThrottleBackgroundRoblox = settings.ThrottleBackgroundRoblox;
-        EnableRamCleaner = settings.EnableRamCleaner;
-        RamCleanerIntervalMinutes = settings.RamCleanerIntervalMinutes;
-        EnableSmartServerHopping = settings.EnableSmartServerHopping;
-        EnableGhostDisconnectDetection = settings.GhostDisconnectMode != Core.Processes.GhostDisconnectMode.Off;
-        SelectedGhostDisconnectMode = settings.GhostDisconnectMode;
-        EnableUatTelemetry = settings.EnableUatTelemetry;
-        EnableCustomResolution = settings.EnableCustomResolution;
-        ResolutionWidth = settings.ResolutionWidth;
-        ResolutionHeight = settings.ResolutionHeight;
-
-        string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
-        LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
-            ? Strings.TemplateDefault
-            : Core.Launch.LaunchTemplateValidator.ValidateLaunchUriTemplate(launchUriTpl).IsSuccess
-                ? Strings.TemplateCustomValid
-                : Strings.TemplateCustomInvalid;
-
-        string? placeLauncherTpl = settings.Advanced?.PlaceLauncherUrlTemplate;
-        PlaceLauncherUrlTemplateStatus = string.IsNullOrWhiteSpace(placeLauncherTpl)
-            ? Strings.TemplateDefault
-            : Core.Launch.LaunchTemplateValidator.ValidatePlaceLauncherUrlTemplate(placeLauncherTpl).IsSuccess
-                ? Strings.TemplateCustomValid
-                : Strings.TemplateCustomInvalid;
+        finally
+        {
+            _isLoadingSettings = false;
+        }
     }
 
     [RelayCommand]
@@ -404,10 +413,45 @@ public sealed partial class SettingsViewModel : ObservableObject
     private async Task OnEnableCustomResolutionToggledAsync(bool enabled)
     {
         EnableCustomResolution = enabled;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with
+        await PersistCustomResolutionAsync();
+    }
+
+    async partial void OnEnableCustomResolutionChanged(bool value)
+    {
+        if (_isLoadingSettings)
         {
-            EnableCustomResolution = enabled,
+            return;
+        }
+
+        await PersistCustomResolutionAsync();
+    }
+
+    async partial void OnResolutionWidthChanged(int value)
+    {
+        if (_isLoadingSettings || value <= 0)
+        {
+            return;
+        }
+
+        await PersistCustomResolutionAsync();
+    }
+
+    async partial void OnResolutionHeightChanged(int value)
+    {
+        if (_isLoadingSettings || value <= 0)
+        {
+            return;
+        }
+
+        await PersistCustomResolutionAsync();
+    }
+
+    private Task PersistCustomResolutionAsync()
+    {
+        AppSettings current = _settingsService.CurrentSettings;
+        return _settingsService.SaveSettingsAsync(current with
+        {
+            EnableCustomResolution = EnableCustomResolution,
             ResolutionWidth = ResolutionWidth,
             ResolutionHeight = ResolutionHeight
         });

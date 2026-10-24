@@ -108,7 +108,7 @@ public sealed record AppSettings(
     public const int MaximumRamCleanerIntervalMinutes = 120;
     public const int DefaultResolutionWidth = 800;
     public const int DefaultResolutionHeight = 600;
-    public const int MinimumResolutionDimension = 200;
+    public const int MinimumResolutionDimension = 64;
     public const int MaximumResolutionDimension = 7680;
 
     public static AppSettings Default => new();
