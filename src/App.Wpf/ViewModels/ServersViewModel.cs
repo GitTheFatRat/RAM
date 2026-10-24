@@ -60,6 +60,12 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _errorMessage = string.Empty;
 
+    [ObservableProperty]
+    private bool _isJoining;
+
+    [ObservableProperty]
+    private string _joinStatusText = string.Empty;
+
     public ObservableCollection<ServerInfo> Servers { get; } = new();
 
     public ServersViewModel(
@@ -161,12 +167,16 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         CancellationTokenSource joinCts = new();
         _joinCts = joinCts;
         CancellationToken ct = joinCts.Token;
+        IsJoining = true;
         try
         {
             foreach (Account account in queue)
             {
                 currentIndex++;
                 ct.ThrowIfCancellationRequested();
+                JoinStatusText = string.Create(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    $"Launching {currentIndex} / {queue.Count}: {account.Alias}");
                 LaunchRequest request = new(account.Id, placeId, server.Id);
                 RunningSession? session = await _sessionTracker.TrackLaunchAsync(
                     account.Id,
@@ -183,6 +193,10 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                     int randomSeconds = Random.Shared.Next(
                         AccountsViewModel.MinSequentialLaunchDelaySeconds,
                         AccountsViewModel.MaxSequentialLaunchDelaySeconds + 1);
+                    JoinStatusText = string.Format(
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        System.Text.CompositeFormat.Parse(Strings.NextAccountCountdown),
+                        randomSeconds);
                     await Task.Delay(TimeSpan.FromSeconds(randomSeconds), ct);
                 }
             }
@@ -190,6 +204,7 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         catch (OperationCanceledException)
         {
             Serilog.Log.Information("Server join queue cancelled after {Success} launches", successCount);
+            _snackbarService.Show(Strings.AppTitle, Strings.BulkLaunchCancelled, ControlAppearance.Caution);
             return;
         }
         finally
@@ -200,6 +215,8 @@ public partial class ServersViewModel : ObservableObject, IDisposable
             }
 
             joinCts.Dispose();
+            IsJoining = false;
+            JoinStatusText = string.Empty;
         }
 
         if (successCount > 0)

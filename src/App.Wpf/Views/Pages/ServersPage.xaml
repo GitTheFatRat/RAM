@@ -56,6 +56,29 @@
 
             <Border Grid.Column="2" Style="{StaticResource ToolbarSeparatorStyle}" />
 
+            <!-- Join queue status: only visible while a sequential server join is waiting/launching -->
+            <StackPanel Grid.Column="4"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="{StaticResource MarginTight}"
+                        Visibility="{Binding IsJoining, Converter={StaticResource BoolToVis}}">
+                <ui:ProgressRing IsIndeterminate="True"
+                                 Width="16"
+                                 Height="16"
+                                 Margin="0,0,8,0" />
+                <TextBlock AutomationProperties.AutomationId="Servers_JoinStatusText"
+                           Text="{Binding JoinStatusText}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                <ui:Button AutomationProperties.AutomationId="Servers_CancelJoinButton"
+                           Content="{x:Static res:Strings.Cancel}"
+                           Icon="{ui:SymbolIcon Dismiss24}"
+                           Command="{Binding CancelJoinCommand}"
+                           Margin="8,0,0,0" />
+            </StackPanel>
+
             <ui:Button Grid.Column="3"
                        AutomationProperties.AutomationId="Servers_RefreshButton"
                        Content="{x:Static res:Strings.Refresh}"
