@@ -46,4 +46,5 @@
 - M26.1: done (184f917) - replicate Multiple Roblox V2.2 handle-closing logic & RobloxCookies.dat lock for stable multi-instance
 - M27: done (850b776) - add instance tracking and kill switch for active accounts
 - M28: done (2353179) - add Win32 automatic window resizing for custom Roblox resolution
-- M28.1: done - make custom resolution settings persistent across navigation
+- M28.1: done (27d9b95) - make custom resolution settings persistent across navigation
+- M28.3: done - ensure SetWindowPos uses saved resolution and waits for window initialization

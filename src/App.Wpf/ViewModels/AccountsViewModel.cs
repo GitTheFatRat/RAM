@@ -1087,7 +1087,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     successCount++;
                     if (ReferenceEquals(_timeProvider, TimeProvider.System))
                     {
-                        _ = TrackSpawnedRobloxProcessAsync(account, beforePids, ct);
+                        _ = TrackSpawnedRobloxProcessAsync(account, beforePids, CancellationToken.None);
                     }
                 }
                 else
@@ -1235,13 +1235,26 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     protected virtual async Task OnRobloxProcessCapturedAsync(int processId, CancellationToken ct)
     {
-        if (_settingsService?.CurrentSettings is { EnableCustomResolution: true } settings)
+        if (_settingsService != null && _settingsService.CurrentSettings.EnableCustomResolution)
         {
-            await RbxManager.Infrastructure.Native.User32.ResizeProcessMainWindowAsync(
+            int width = _settingsService.CurrentSettings.ResolutionWidth;
+            int height = _settingsService.CurrentSettings.ResolutionHeight;
+            Serilog.Log.Information(
+                "Applying custom window resolution {Width}x{Height} to Roblox PID {ProcessId}",
+                width,
+                height,
+                processId);
+            bool resized = await RbxManager.Infrastructure.Native.User32.ResizeProcessMainWindowAsync(
                 processId,
-                settings.ResolutionWidth,
-                settings.ResolutionHeight,
+                width,
+                height,
                 ct).ConfigureAwait(false);
+            Serilog.Log.Information(
+                "Custom window resolution {Width}x{Height} for PID {ProcessId} completed with result={Result}",
+                width,
+                height,
+                processId,
+                resized);
         }
     }
 

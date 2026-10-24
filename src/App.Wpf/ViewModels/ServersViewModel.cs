@@ -213,13 +213,15 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                 {
                     successCount++;
                     account.ActiveProcessId = session.ProcessId;
-                    if (_settingsService?.CurrentSettings is { EnableCustomResolution: true } settings)
+                    if (_settingsService != null && _settingsService.CurrentSettings.EnableCustomResolution)
                     {
+                        int width = _settingsService.CurrentSettings.ResolutionWidth;
+                        int height = _settingsService.CurrentSettings.ResolutionHeight;
                         _ = RbxManager.Infrastructure.Native.User32.ResizeProcessMainWindowAsync(
                             session.ProcessId,
-                            settings.ResolutionWidth,
-                            settings.ResolutionHeight,
-                            ct);
+                            width,
+                            height,
+                            CancellationToken.None);
                     }
                 }
 
