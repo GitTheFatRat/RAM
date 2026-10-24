@@ -716,7 +716,10 @@
     <value>Nếu không truy cập được Roblox Quốc tế hoặc cần đăng ký tài khoản mới, hãy bật Cloudflare WARP (1.1.1.1) bên dưới rồi mở trình duyệt ẩn danh.</value>
   </data>
   <data name="OpenIncognitoBrowser" xml:space="preserve">
-    <value>Mở Trình duyệt Ẩn danh (Lấy Cookie)</value>
+    <value>Mở trang Đăng nhập</value>
+  </data>
+  <data name="OpenSignUpBrowser" xml:space="preserve">
+    <value>Mở trang Đăng ký</value>
   </data>
   <data name="ImportAccounts" xml:space="preserve">
     <value>Nhập tài khoản</value>

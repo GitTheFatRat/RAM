@@ -44,16 +44,20 @@ public sealed class AddAccountViewModelTests
     {
         FakeAccountStore store = new();
         IRobloxAuthService auth = Substitute.For<IRobloxAuthService>();
-        bool launched = false;
+        List<string> launchedUrls = [];
 
-        AddAccountViewModel vm = new(store, auth, browserLauncher: () =>
+        AddAccountViewModel vm = new(store, auth, urlBrowserLauncher: url =>
         {
-            launched = true;
+            launchedUrls.Add(url);
             return true;
         });
 
         vm.OpenIncognitoBrowserCommand.Execute(null);
-        Assert.True(launched);
+        vm.OpenSignUpBrowserCommand.Execute(null);
+
+        Assert.Equal(
+            ["https://www.roblox.com/NewLogin", "https://www.roblox.com/"],
+            launchedUrls);
         Assert.False(vm.HasErrorMessage);
     }
 

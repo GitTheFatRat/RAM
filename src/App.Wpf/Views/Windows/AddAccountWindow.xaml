@@ -86,15 +86,29 @@
                 </Grid>
             </Border>
 
-            <!-- Prominent Native Incognito Browser Launcher Button & Post-Login Hint -->
+            <!-- Prominent Native Incognito Browser Launcher Buttons & Post-Login Hint -->
             <StackPanel Grid.Row="1" Margin="{StaticResource MarginBottomMedium}">
-                <ui:Button AutomationProperties.AutomationId="AddAccount_OpenIncognitoButton"
-                           AutomationProperties.Name="{x:Static resources:Strings.OpenIncognitoBrowser}"
-                           Content="{x:Static resources:Strings.OpenIncognitoBrowser}"
-                           Icon="{ui:SymbolIcon Globe24}"
-                           HorizontalAlignment="Stretch"
-                           Margin="0,0,0,6"
-                           Command="{Binding OpenIncognitoBrowserCommand}" />
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:Button Grid.Column="0"
+                               AutomationProperties.AutomationId="AddAccount_OpenIncognitoButton"
+                               AutomationProperties.Name="{x:Static resources:Strings.OpenIncognitoBrowser}"
+                               Content="{x:Static resources:Strings.OpenIncognitoBrowser}"
+                               Icon="{ui:SymbolIcon Globe24}"
+                               HorizontalAlignment="Stretch"
+                               Command="{Binding OpenIncognitoBrowserCommand}" />
+                    <ui:Button Grid.Column="2"
+                               AutomationProperties.AutomationId="AddAccount_OpenSignUpButton"
+                               AutomationProperties.Name="{x:Static resources:Strings.OpenSignUpBrowser}"
+                               Content="{x:Static resources:Strings.OpenSignUpBrowser}"
+                               Icon="{ui:SymbolIcon PersonAdd24}"
+                               HorizontalAlignment="Stretch"
+                               Command="{Binding OpenSignUpBrowserCommand}" />
+                </Grid>
                 <TextBlock AutomationProperties.AutomationId="AddAccount_IncognitoCookieNote"
                            Text="{x:Static resources:Strings.IncognitoCookieNote}"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"

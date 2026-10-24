@@ -28,7 +28,7 @@ public partial class AddAccountViewModel : ObservableObject
     private readonly IRobloxAuthService _authService;
     private readonly IDpiToolService? _dpiToolService;
     private readonly ISnackbarService? _snackbarService;
-    private readonly Func<bool> _browserLauncher;
+    private readonly Func<string, bool> _browserLauncher;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanImport))]
@@ -71,12 +71,16 @@ public partial class AddAccountViewModel : ObservableObject
         IRobloxAuthService authService,
         ISnackbarService? snackbarService = null,
         Func<bool>? browserLauncher = null,
-        IDpiToolService? dpiToolService = null)
+        IDpiToolService? dpiToolService = null,
+        Func<string, bool>? urlBrowserLauncher = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _snackbarService = snackbarService;
-        _browserLauncher = browserLauncher ?? (() => IncognitoBrowserLauncher.TryLaunch());
+        _browserLauncher = urlBrowserLauncher
+            ?? (browserLauncher != null
+                ? (_ => browserLauncher())
+                : IncognitoBrowserLauncher.TryLaunch);
         _dpiToolService = dpiToolService;
         IsGoodbyeDpiRunning = _dpiToolService?.IsRunning() == true;
     }
@@ -129,8 +133,19 @@ public partial class AddAccountViewModel : ObservableObject
     [RelayCommand]
     private void OpenIncognitoBrowser()
     {
+        LaunchBrowserUrl(IncognitoBrowserLauncher.LoginUrl);
+    }
+
+    [RelayCommand]
+    private void OpenSignUpBrowser()
+    {
+        LaunchBrowserUrl(IncognitoBrowserLauncher.SignUpUrl);
+    }
+
+    private void LaunchBrowserUrl(string url)
+    {
         ErrorMessage = string.Empty;
-        if (!_browserLauncher())
+        if (!_browserLauncher(url))
         {
             ErrorMessage = Strings.IncognitoBrowserFailed;
         }

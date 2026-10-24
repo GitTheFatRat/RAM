@@ -231,6 +231,7 @@ public static class Strings
     public static string AddAccountWindowTitle => GetString(nameof(AddAccountWindowTitle));
     public static string AntiGeoBanHint => GetString(nameof(AntiGeoBanHint));
     public static string OpenIncognitoBrowser => GetString(nameof(OpenIncognitoBrowser));
+    public static string OpenSignUpBrowser => GetString(nameof(OpenSignUpBrowser));
     public static string ImportAccounts => GetString(nameof(ImportAccounts));
     public static string BulkCookiePlaceholder => GetString(nameof(BulkCookiePlaceholder));
     public static string BulkImportProgress => GetString(nameof(BulkImportProgress));
