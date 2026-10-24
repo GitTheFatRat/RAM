@@ -3,6 +3,8 @@ namespace RbxManager.App.ViewModels;
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,6 +17,7 @@ public partial class AccountItemViewModel : ObservableObject, IDisposable
 {
     private int? _activeProcessId;
     private Process? _watchedProcess;
+    private CancellationTokenSource? _watcherCts;
 
     public Account Account { get; }
 
@@ -145,10 +148,67 @@ public partial class AccountItemViewModel : ObservableObject, IDisposable
             }
 
             _watchedProcess = process;
+            CancellationTokenSource cts = new();
+            _watcherCts = cts;
+            _ = MonitorWindowLifecycleAsync(pid, cts.Token);
         }
         catch
         {
             // Ignore in unit tests or if the process exited immediately before attachment.
+        }
+    }
+
+    private async Task MonitorWindowLifecycleAsync(int pid, CancellationToken ct)
+    {
+        bool sawMainWindow = false;
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(2000, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            try
+            {
+                using Process proc = Process.GetProcessById(pid);
+                if (proc.HasExited)
+                {
+                    OnWatchedProcessExited(this, EventArgs.Empty);
+                    return;
+                }
+
+                proc.Refresh();
+                if (proc.MainWindowHandle != IntPtr.Zero)
+                {
+                    sawMainWindow = true;
+                }
+                else if (sawMainWindow)
+                {
+                    // User closed the Roblox game window, causing RobloxPlayerBeta to drop into headless tray mode.
+                    try
+                    {
+                        proc.Kill();
+                    }
+                    catch
+                    {
+                    }
+
+                    OnWatchedProcessExited(this, EventArgs.Empty);
+                    return;
+                }
+            }
+            catch (ArgumentException)
+            {
+                OnWatchedProcessExited(this, EventArgs.Empty);
+                return;
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -167,6 +227,21 @@ public partial class AccountItemViewModel : ObservableObject, IDisposable
 
     private void DetachProcessWatcher()
     {
+        CancellationTokenSource? cts = _watcherCts;
+        _watcherCts = null;
+        if (cts != null)
+        {
+            try
+            {
+                cts.Cancel();
+            }
+            catch
+            {
+            }
+
+            cts.Dispose();
+        }
+
         Process? existing = _watchedProcess;
         _watchedProcess = null;
         if (existing != null)

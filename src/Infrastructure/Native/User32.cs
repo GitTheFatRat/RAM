@@ -13,7 +13,17 @@ public static class User32
 {
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOZORDER = 0x0004;
+    public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_NOSENDCHANGING = 0x0400;
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
 
     [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -25,6 +35,10 @@ public static class User32
         int cx,
         int cy,
         uint uFlags);
+
+    [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     public static async Task<bool> ResizeProcessMainWindowAsync(
         int processId,
@@ -84,19 +98,33 @@ public static class User32
             int win32Error = resized ? 0 : Marshal.GetLastWin32Error();
             Console.WriteLine($"[User32] SetWindowPos(PID={processId}, hWnd=0x{process.MainWindowHandle:X}, {width}x{height}) => {resized} (err={win32Error})");
 
-            // Re-apply once more after 1.5s in case the Roblox client overrides window bounds during place load.
-            await Task.Delay(1500, ct).ConfigureAwait(false);
-            process.Refresh();
-            if (!process.HasExited && process.MainWindowHandle != IntPtr.Zero)
+            // Roblox's D3D11SwapChain initializes ~1-3s after window creation and may reset bounds to 800x600.
+            // Monitor for 5 seconds and re-apply custom resolution if the window size differs.
+            for (int verifyAttempt = 0; verifyAttempt < 5 && !ct.IsCancellationRequested; verifyAttempt++)
             {
-                resized = SetWindowPos(
-                    process.MainWindowHandle,
-                    IntPtr.Zero,
-                    0,
-                    0,
-                    width,
-                    height,
-                    flags);
+                await Task.Delay(1000, ct).ConfigureAwait(false);
+                process.Refresh();
+                if (process.HasExited || process.MainWindowHandle == IntPtr.Zero)
+                {
+                    break;
+                }
+
+                if (GetWindowRect(process.MainWindowHandle, out RECT rect))
+                {
+                    int currentWidth = rect.Right - rect.Left;
+                    int currentHeight = rect.Bottom - rect.Top;
+                    if (Math.Abs(currentWidth - width) > 4 || Math.Abs(currentHeight - height) > 4)
+                    {
+                        resized = SetWindowPos(
+                            process.MainWindowHandle,
+                            IntPtr.Zero,
+                            0,
+                            0,
+                            width,
+                            height,
+                            flags);
+                    }
+                }
             }
 
             return resized;

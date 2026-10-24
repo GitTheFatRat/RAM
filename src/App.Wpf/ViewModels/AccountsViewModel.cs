@@ -669,6 +669,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 _instanceGate.TryEnable();
             }
 
+            if (ReferenceEquals(_timeProvider, TimeProvider.System))
+            {
+                KillHeadlessRobloxProcesses();
+            }
+
             HashSet<int> beforePids = SnapshotRobloxProcessIds();
             LaunchRequest launchRequest = new(targetAccount.Id, placeId, jobId);
             Result launchResult = await _launcher.LaunchAsync(launchRequest);
@@ -1078,6 +1083,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     $"Queued {queue.Count} accounts for launch... ({currentIndex} / {queue.Count}: {account.Alias})");
                 RunOnUiThread(() => BulkLaunchQueueText = progressText);
 
+                if (ReferenceEquals(_timeProvider, TimeProvider.System))
+                {
+                    KillHeadlessRobloxProcesses();
+                }
+
                 HashSet<int> beforePids = SnapshotRobloxProcessIds();
                 LaunchRequest req = new(account.Id, placeId, jobId);
                 Result launchResult = await _launcher.LaunchAsync(req, ct);
@@ -1174,6 +1184,40 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         target?.KillInstance();
     }
 
+    private void KillHeadlessRobloxProcesses()
+    {
+        try
+        {
+            foreach (Process proc in Process.GetProcessesByName("RobloxPlayerBeta"))
+            {
+                try
+                {
+                    int pid = proc.Id;
+                    if (_allAccounts.Any(a => a.ActiveProcessId == pid))
+                    {
+                        continue;
+                    }
+
+                    proc.Refresh();
+                    if (proc.MainWindowHandle == IntPtr.Zero)
+                    {
+                        proc.Kill();
+                    }
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    proc.Dispose();
+                }
+            }
+        }
+        catch
+        {
+        }
+    }
+
     private static HashSet<int> SnapshotRobloxProcessIds()
     {
         HashSet<int> pids = new();
@@ -1183,7 +1227,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             {
                 try
                 {
-                    pids.Add(proc.Id);
+                    proc.Refresh();
+                    if (proc.MainWindowHandle != IntPtr.Zero)
+                    {
+                        pids.Add(proc.Id);
+                    }
                 }
                 catch
                 {
@@ -1206,12 +1254,12 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         HashSet<int> beforePids,
         CancellationToken ct)
     {
-        const int maxPolls = 30;
+        const int maxPolls = 120; // 120 * 250ms = 30 seconds
         for (int attempt = 0; attempt < maxPolls && !ct.IsCancellationRequested && !_disposed; attempt++)
         {
             try
             {
-                await Task.Delay(500, ct).ConfigureAwait(false);
+                await Task.Delay(250, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
