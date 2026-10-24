@@ -22,7 +22,9 @@
   </Module>
   <Module file="$(InPath)\RbxManager.App.dll">
     <SkipProperty type="RbxManager.App.ViewModels.*" rx=".*" attrib="public" />
-    <SkipType name="RbxManager.App.Views.*" skipProperties="true" skipMethods="false" skipFields="false" />
+    <SkipType name="RbxManager.App.App" skipProperties="true" skipMethods="true" skipFields="true" />
+    <SkipType name="RbxManager.App.MainWindow" skipProperties="true" skipMethods="true" skipFields="true" />
+    <SkipType name="RbxManager.App.Views.*" skipProperties="true" skipMethods="true" skipFields="true" />
     <SkipType name="*JsonContext*" skipProperties="true" skipMethods="true" skipFields="true" />
     <SkipType name="*Cdp*Params" skipProperties="true" skipMethods="true" skipFields="true" />
   </Module>

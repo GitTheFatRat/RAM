@@ -9,14 +9,6 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
-    <TrimmerRootAssembly Include="RbxManager.Core" />
-    <TrimmerRootAssembly Include="RbxManager.Infrastructure" />
-    <TrimmerRootAssembly Include="RbxManager.App" />
-    <TrimmerRootAssembly Include="Wpf.Ui" />
-    <TrimmerRootAssembly Include="CommunityToolkit.Mvvm" />
-  </ItemGroup>
-
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
   </ItemGroup>
