@@ -152,6 +152,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _sortColumn = _settingsService.CurrentSettings.UiState.SortColumn ?? "Alias";
             _sortDescending = _settingsService.CurrentSettings.UiState.SortDescending;
         }
+
+        if (!string.IsNullOrWhiteSpace(_settingsService?.CurrentSettings.LastPlaceId))
+        {
+            _lastPlaceId = _settingsService.CurrentSettings.LastPlaceId;
+        }
     }
 
     partial void OnSelectedGroupChanged(string? value) => ApplyFilter();
@@ -608,7 +613,9 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
         LaunchDialogControl dialogControl = new()
         {
-            PlaceIdText = _lastPlaceId,
+            PlaceIdText = !string.IsNullOrWhiteSpace(_settingsService?.CurrentSettings.LastPlaceId)
+                ? _settingsService.CurrentSettings.LastPlaceId
+                : _lastPlaceId,
             DryRunBuilder = (placeId, jobId) =>
             {
                 long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -645,6 +652,10 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             }
 
             _lastPlaceId = placeIdStr;
+            if (_settingsService != null && !string.Equals(_settingsService.CurrentSettings.LastPlaceId, placeIdStr, StringComparison.Ordinal))
+            {
+                _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings with { LastPlaceId = placeIdStr });
+            }
 
             if (_instanceGate is { IsMultiInstanceEnabled: false })
             {
@@ -958,7 +969,9 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
         LaunchDialogControl dialogControl = new()
         {
-            PlaceIdText = _lastPlaceId,
+            PlaceIdText = !string.IsNullOrWhiteSpace(_settingsService?.CurrentSettings.LastPlaceId)
+                ? _settingsService.CurrentSettings.LastPlaceId
+                : _lastPlaceId,
             DryRunBuilder = (placeId, jobId) =>
             {
                 long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -989,6 +1002,10 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
 
         _lastPlaceId = placeIdStr;
+        if (_settingsService != null && !string.Equals(_settingsService.CurrentSettings.LastPlaceId, placeIdStr, StringComparison.Ordinal))
+        {
+            _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings with { LastPlaceId = placeIdStr });
+        }
         string? jobId = dialogControl.JobIdText;
         if (!string.IsNullOrWhiteSpace(jobId) && !Guid.TryParse(jobId, out _))
         {

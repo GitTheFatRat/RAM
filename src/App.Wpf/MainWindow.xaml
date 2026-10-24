@@ -10,7 +10,7 @@
                   Width="1100"
                   MinWidth="960"
                   MinHeight="600"
-                  Icon="Assets/app.ico"
+                  Icon="pack://application:,,,/RbxManager.App;component/Assets/app.ico"
                   WindowStartupLocation="CenterScreen"
                   Background="{DynamicResource ApplicationBackgroundBrush}"
                   TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -24,7 +24,7 @@
         <ui:TitleBar Grid.Row="0"
                      AutomationProperties.AutomationId="MainTitleBar"
                      Title="{x:Static resources:Strings.AppTitle}"
-                     Icon="{ui:ImageIcon 'pack://application:,,,/Assets/app.ico'}" />
+                     Icon="{ui:ImageIcon 'pack://application:,,,/RbxManager.App;component/Assets/app.ico'}" />
 
         <ui:NavigationView x:Name="RootNavigation"
                            AutomationProperties.AutomationId="RootNavigation"

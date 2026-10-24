@@ -274,4 +274,34 @@ public sealed class XamlSmokeTests
             Assert.NotNull(window);
         });
     }
+
+    [Fact]
+    public void ServersViewModel_PlaceIdText_LoadsFromAndSavesToSettingsService()
+    {
+        IServerBrowserService serverBrowser = Substitute.For<IServerBrowserService>();
+        IAccountStore accountStore = Substitute.For<IAccountStore>();
+        ILauncher launcher = Substitute.For<ILauncher>();
+        ISessionTracker sessionTracker = Substitute.For<ISessionTracker>();
+        IContentDialogService contentDialogService = Substitute.For<IContentDialogService>();
+        ISnackbarService snackbarService = Substitute.For<ISnackbarService>();
+        ISettingsService settingsService = Substitute.For<ISettingsService>();
+        settingsService.CurrentSettings.Returns(new AppSettings(LastPlaceId: "2753915549"));
+
+        ServersViewModel viewModel = new(
+            serverBrowser,
+            accountStore,
+            launcher,
+            sessionTracker,
+            contentDialogService,
+            snackbarService,
+            settingsService: settingsService);
+
+        Assert.Equal("2753915549", viewModel.PlaceIdText);
+        settingsService.DidNotReceiveWithAnyArgs().SaveSettingsAsync(default!);
+
+        viewModel.PlaceIdText = "1537690962";
+
+        settingsService.Received(1).SaveSettingsAsync(
+            Arg.Is<AppSettings>(s => s.LastPlaceId == "1537690962"));
+    }
 }

@@ -81,6 +81,7 @@ public sealed record AppSettings(
     bool EnableSmartServerHopping = true,
     GhostDisconnectMode GhostDisconnectMode = GhostDisconnectMode.NotifyOnly,
     bool EnableUatTelemetry = false,
+    string? LastPlaceId = null,
     [property: JsonPropertyName("EnableGhostDisconnectDetection")]
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     bool? LegacyEnableGhostDisconnectDetection = null,

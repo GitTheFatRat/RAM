@@ -15,7 +15,7 @@
                   Width="680"
                   MinWidth="500"
                   MinHeight="440"
-                  Icon="pack://application:,,,/Assets/app.ico"
+                  Icon="pack://application:,,,/RbxManager.App;component/Assets/app.ico"
                   WindowStartupLocation="CenterOwner"
                   Background="{DynamicResource ApplicationBackgroundBrush}">
     <ui:FluentWindow.Resources>
@@ -30,7 +30,7 @@
 
         <ui:TitleBar Grid.Row="0"
                      Title="{x:Static resources:Strings.AddAccountWindowTitle}"
-                     Icon="{ui:ImageIcon 'pack://application:,,,/Assets/app.ico'}" />
+                     Icon="{ui:ImageIcon 'pack://application:,,,/RbxManager.App;component/Assets/app.ico'}" />
 
         <Grid Grid.Row="1" Margin="{StaticResource MarginLarge}">
             <Grid.RowDefinitions>

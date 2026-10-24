@@ -31,9 +31,26 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     private readonly IContentDialogService _contentDialogService;
     private readonly ISnackbarService _snackbarService;
     private readonly Core.Instance.IInstanceGate? _instanceGate;
+    private readonly Core.Settings.ISettingsService? _settingsService;
+    private bool _suppressPlaceIdSave;
 
     [ObservableProperty]
     private string _placeIdText = "1818";
+
+    partial void OnPlaceIdTextChanged(string value)
+    {
+        if (_suppressPlaceIdSave || _settingsService == null)
+        {
+            return;
+        }
+
+        string trimmed = value?.Trim() ?? string.Empty;
+        Core.Settings.AppSettings current = _settingsService.CurrentSettings;
+        if (!string.Equals(current.LastPlaceId, trimmed, StringComparison.Ordinal))
+        {
+            _ = _settingsService.SaveSettingsAsync(current with { LastPlaceId = trimmed });
+        }
+    }
 
     [ObservableProperty]
     private int _selectedSortIndex = 1; // 0: Asc, 1: Desc
@@ -75,7 +92,8 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         ISessionTracker sessionTracker,
         IContentDialogService contentDialogService,
         ISnackbarService snackbarService,
-        Core.Instance.IInstanceGate? instanceGate = null)
+        Core.Instance.IInstanceGate? instanceGate = null,
+        Core.Settings.ISettingsService? settingsService = null)
     {
         _serverBrowserService = serverBrowserService;
         _accountStore = accountStore;
@@ -84,6 +102,14 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         _contentDialogService = contentDialogService;
         _snackbarService = snackbarService;
         _instanceGate = instanceGate;
+        _settingsService = settingsService;
+
+        if (!string.IsNullOrWhiteSpace(_settingsService?.CurrentSettings.LastPlaceId))
+        {
+            _suppressPlaceIdSave = true;
+            _placeIdText = _settingsService.CurrentSettings.LastPlaceId;
+            _suppressPlaceIdSave = false;
+        }
     }
 
     [RelayCommand]

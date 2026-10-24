@@ -188,7 +188,9 @@ public sealed partial class SettingsViewModel : ObservableObject
                 EnableSmartServerHopping: EnableSmartServerHopping,
                 GhostDisconnectMode: SelectedGhostDisconnectMode,
                 EnableUatTelemetry: EnableUatTelemetry,
-                Advanced: current.Advanced);
+                LastPlaceId: current.LastPlaceId,
+                Advanced: current.Advanced,
+                UiState: current.UiState);
 
             await _settingsService.SaveSettingsAsync(updated);
 

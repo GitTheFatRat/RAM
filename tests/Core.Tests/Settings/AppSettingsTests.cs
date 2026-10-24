@@ -95,6 +95,15 @@ public sealed class AppSettingsTests
         Assert.False(clamped.EnableGhostDisconnectDetection);
     }
 
+    [Fact]
+    public void AppSettings_Clamp_PreservesLastPlaceId()
+    {
+        AppSettings settings = new(LastPlaceId: "2753915549");
+        AppSettings clamped = settings.Clamp();
+
+        Assert.Equal("2753915549", clamped.LastPlaceId);
+    }
+
     [Theory]
     [InlineData("{\"LaunchDelayMs\": 3000}", 20)] // Old default -> 20s
     [InlineData("{\"LaunchDelayMs\": 1500}", 2)]  // 1500ms -> rounded up to 2s
