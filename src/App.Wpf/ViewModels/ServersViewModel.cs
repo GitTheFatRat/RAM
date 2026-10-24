@@ -204,6 +204,13 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                     System.Globalization.CultureInfo.InvariantCulture,
                     $"Launching {currentIndex} / {queue.Count}: {account.Alias}");
                 LaunchRequest request = new(account.Id, placeId, server.Id);
+                if (_settingsService?.CurrentSettings is { EnableCustomResolution: true } resolutionSettings)
+                {
+                    RbxManager.Infrastructure.Launch.RobloxFastFlagInjector.InjectIntoInstalledClients(
+                        resolutionSettings.ResolutionWidth,
+                        resolutionSettings.ResolutionHeight);
+                }
+
                 RunningSession? session = await _sessionTracker.TrackLaunchAsync(
                     account.Id,
                     request,

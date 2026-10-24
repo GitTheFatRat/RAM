@@ -672,6 +672,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             if (ReferenceEquals(_timeProvider, TimeProvider.System))
             {
                 KillHeadlessRobloxProcesses();
+                InjectResolutionFastFlagsIfEnabled();
             }
 
             HashSet<int> beforePids = SnapshotRobloxProcessIds();
@@ -1086,6 +1087,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 if (ReferenceEquals(_timeProvider, TimeProvider.System))
                 {
                     KillHeadlessRobloxProcesses();
+                    InjectResolutionFastFlagsIfEnabled();
                 }
 
                 HashSet<int> beforePids = SnapshotRobloxProcessIds();
@@ -1215,6 +1217,16 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
         catch
         {
+        }
+    }
+
+    private void InjectResolutionFastFlagsIfEnabled()
+    {
+        if (_settingsService?.CurrentSettings is { EnableCustomResolution: true } settings)
+        {
+            RbxManager.Infrastructure.Launch.RobloxFastFlagInjector.InjectIntoInstalledClients(
+                settings.ResolutionWidth,
+                settings.ResolutionHeight);
         }
     }
 

@@ -11,19 +11,8 @@ using System.Threading.Tasks;
 [SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible", Justification = "Public Win32 helper per M28 specification")]
 public static class User32
 {
-    public const int GWL_STYLE = -16;
-    public const long WS_THICKFRAME = 0x00040000L;
-
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOZORDER = 0x0004;
-    public const uint SWP_FRAMECHANGED = 0x0020;
-    public const uint SWP_NOSENDCHANGING = 0x0400;
-
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", ExactSpelling = true, SetLastError = true)]
-    public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", ExactSpelling = true, SetLastError = true)]
-    public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -83,12 +72,9 @@ public static class User32
 
             IntPtr hWnd = process.MainWindowHandle;
 
-            // Strip WS_THICKFRAME (0x00040000) so Windows/Roblox does not enforce minimum track size when dragged.
-            long style = GetWindowLongPtr(hWnd, GWL_STYLE).ToInt64();
-            style &= ~WS_THICKFRAME;
-            SetWindowLongPtr(hWnd, GWL_STYLE, new IntPtr(style));
-
-            uint flags = SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOSENDCHANGING;
+            // One-shot initial sizing only: drag/resize persistence comes from the injected FastFlags
+            // (RobloxFastFlagInjector), so the window keeps its native frame and normal Windows messages.
+            uint flags = SWP_NOMOVE | SWP_NOZORDER;
             bool resized = SetWindowPos(
                 hWnd,
                 IntPtr.Zero,
