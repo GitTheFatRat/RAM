@@ -488,4 +488,55 @@ public sealed class CheckAllPacingTests
             instanceGate.Received(1).Disable();
         });
     }
+
+    [Fact]
+    public void AccountItemViewModel_ActiveProcessId_UpdatesIsRunningAndKillResetsIt()
+    {
+        using SecretValue cookie = SecretValue.FromString("fake-cookie-1");
+        Account account = new(new AccountId(1), "A1", null, null, cookie, DateTimeOffset.UtcNow);
+        using AccountItemViewModel item = new(account);
+
+        Assert.False(item.IsRunning);
+        Assert.Null(item.ActiveProcessId);
+
+        item.ActiveProcessId = 99999999; // Non-existent PID: KillInstance should safely catch and reset
+        if (item.IsRunning)
+        {
+            item.KillInstanceCommand.Execute(null);
+        }
+
+        Assert.False(item.IsRunning);
+        Assert.Null(item.ActiveProcessId);
+        Assert.Null(account.ActiveProcessId);
+    }
+
+    [Fact]
+    public void SettingsViewModel_CustomResolution_LoadsAndPersistsSettings()
+    {
+        StaRunner.Run(() =>
+        {
+            RbxManager.Core.Settings.ISettingsService settingsService = Substitute.For<RbxManager.Core.Settings.ISettingsService>();
+            RbxManager.Core.Settings.AppSettings currentSettings = RbxManager.Core.Settings.AppSettings.Default;
+            settingsService.CurrentSettings.Returns(_ => currentSettings);
+            settingsService.SaveSettingsAsync(Arg.Do<RbxManager.Core.Settings.AppSettings>(s => currentSettings = s.Clamp()))
+                .Returns(Task.CompletedTask);
+
+            RbxManager.Core.Instance.IInstanceGate instanceGate = Substitute.For<RbxManager.Core.Instance.IInstanceGate>();
+            IContentDialogService dialogService = Substitute.For<IContentDialogService>();
+            ISnackbarService snackbarService = Substitute.For<ISnackbarService>();
+
+            SettingsViewModel vm = new(settingsService, instanceGate, dialogService, snackbarService);
+            Assert.False(vm.EnableCustomResolution);
+            Assert.Equal(800, vm.ResolutionWidth);
+            Assert.Equal(600, vm.ResolutionHeight);
+
+            vm.ResolutionWidth = 640;
+            vm.ResolutionHeight = 480;
+            vm.EnableCustomResolutionToggledCommand.ExecuteAsync(true).GetAwaiter().GetResult();
+
+            Assert.True(currentSettings.EnableCustomResolution);
+            Assert.Equal(640, currentSettings.ResolutionWidth);
+            Assert.Equal(480, currentSettings.ResolutionHeight);
+        });
+    }
 }

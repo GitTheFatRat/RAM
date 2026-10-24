@@ -82,6 +82,9 @@ public sealed record AppSettings(
     GhostDisconnectMode GhostDisconnectMode = GhostDisconnectMode.NotifyOnly,
     bool EnableUatTelemetry = false,
     string? LastPlaceId = null,
+    bool EnableCustomResolution = false,
+    int ResolutionWidth = AppSettings.DefaultResolutionWidth,
+    int ResolutionHeight = AppSettings.DefaultResolutionHeight,
     [property: JsonPropertyName("EnableGhostDisconnectDetection")]
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     bool? LegacyEnableGhostDisconnectDetection = null,
@@ -103,6 +106,10 @@ public sealed record AppSettings(
     public const int DefaultRamCleanerIntervalMinutes = 15;
     public const int MinimumRamCleanerIntervalMinutes = 5;
     public const int MaximumRamCleanerIntervalMinutes = 120;
+    public const int DefaultResolutionWidth = 800;
+    public const int DefaultResolutionHeight = 600;
+    public const int MinimumResolutionDimension = 200;
+    public const int MaximumResolutionDimension = 7680;
 
     public static AppSettings Default => new();
 
@@ -143,6 +150,12 @@ public sealed record AppSettings(
         int rejoinDelay = Math.Max(MinimumRejoinDelaySeconds, RejoinDelaySeconds);
         int rejoinMax = Math.Max(MinimumRejoinMaxAttempts, RejoinMaxAttempts);
         int ramInterval = Math.Clamp(RamCleanerIntervalMinutes, MinimumRamCleanerIntervalMinutes, MaximumRamCleanerIntervalMinutes);
+        int resWidth = ResolutionWidth <= 0
+            ? DefaultResolutionWidth
+            : Math.Clamp(ResolutionWidth, MinimumResolutionDimension, MaximumResolutionDimension);
+        int resHeight = ResolutionHeight <= 0
+            ? DefaultResolutionHeight
+            : Math.Clamp(ResolutionHeight, MinimumResolutionDimension, MaximumResolutionDimension);
 
         GhostDisconnectMode mode = GhostDisconnectMode;
         if (LegacyEnableGhostDisconnectDetection.HasValue && mode == GhostDisconnectMode.NotifyOnly && !LegacyEnableGhostDisconnectDetection.Value)
@@ -173,6 +186,8 @@ public sealed record AppSettings(
             ThrottleBackgroundRoblox = throttle,
             EnableRamCleaner = ramCleaner,
             RamCleanerIntervalMinutes = ramInterval,
+            ResolutionWidth = resWidth,
+            ResolutionHeight = resHeight,
             GhostDisconnectMode = mode,
             LegacyEnableGhostDisconnectDetection = null,
             LegacyLaunchDelayMs = null,

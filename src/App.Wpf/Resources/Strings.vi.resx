@@ -769,4 +769,16 @@
   <data name="KillInstance" xml:space="preserve">
     <value>Tắt</value>
   </data>
+  <data name="EnableCustomResolution" xml:space="preserve">
+    <value>Ép độ phân giải cửa sổ tùy chỉnh</value>
+  </data>
+  <data name="EnableCustomResolutionDescription" xml:space="preserve">
+    <value>Tự động thu nhỏ cửa sổ Roblox mới mở qua Win32 API để tiết kiệm GPU/CPU khi treo nhiều acc.</value>
+  </data>
+  <data name="ResolutionWidthLabel" xml:space="preserve">
+    <value>Chiều rộng (px)</value>
+  </data>
+  <data name="ResolutionHeightLabel" xml:space="preserve">
+    <value>Chiều cao (px)</value>
+  </data>
 </root>

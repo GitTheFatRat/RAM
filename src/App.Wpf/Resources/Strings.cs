@@ -248,6 +248,10 @@ public static class Strings
     public static string IncognitoCookieNote => GetString(nameof(IncognitoCookieNote));
     public static string RunningIndicator => GetString(nameof(RunningIndicator));
     public static string KillInstance => GetString(nameof(KillInstance));
+    public static string EnableCustomResolution => GetString(nameof(EnableCustomResolution));
+    public static string EnableCustomResolutionDescription => GetString(nameof(EnableCustomResolutionDescription));
+    public static string ResolutionWidthLabel => GetString(nameof(ResolutionWidthLabel));
+    public static string ResolutionHeightLabel => GetString(nameof(ResolutionHeightLabel));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

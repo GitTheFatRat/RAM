@@ -769,4 +769,16 @@
   <data name="KillInstance" xml:space="preserve">
     <value>Kill</value>
   </data>
+  <data name="EnableCustomResolution" xml:space="preserve">
+    <value>Force custom window resolution</value>
+  </data>
+  <data name="EnableCustomResolutionDescription" xml:space="preserve">
+    <value>Automatically resizes newly launched Roblox windows via Win32 API to save GPU/CPU resources.</value>
+  </data>
+  <data name="ResolutionWidthLabel" xml:space="preserve">
+    <value>Width (px)</value>
+  </data>
+  <data name="ResolutionHeightLabel" xml:space="preserve">
+    <value>Height (px)</value>
+  </data>
 </root>

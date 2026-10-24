@@ -1233,8 +1233,17 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
     }
 
-    protected virtual Task OnRobloxProcessCapturedAsync(int processId, CancellationToken ct) =>
-        Task.CompletedTask;
+    protected virtual async Task OnRobloxProcessCapturedAsync(int processId, CancellationToken ct)
+    {
+        if (_settingsService?.CurrentSettings is { EnableCustomResolution: true } settings)
+        {
+            await RbxManager.Infrastructure.Native.User32.ResizeProcessMainWindowAsync(
+                processId,
+                settings.ResolutionWidth,
+                settings.ResolutionHeight,
+                ct).ConfigureAwait(false);
+        }
+    }
 
     private void ShowSnackbar(string title, string message, ControlAppearance appearance) =>
         RunOnUiThread(() => _snackbarService.Show(title, message, appearance));

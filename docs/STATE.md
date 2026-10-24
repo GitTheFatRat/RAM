@@ -42,5 +42,7 @@
 - M25.3: done - add global exception handlers writing detailed stack traces + inner exceptions to crash_log.txt
 - M25.4: done - live 1-second visual countdown for sequential launch delay in AccountsViewModel and ServersViewModel
 - M25.5: done - make Place ID persistent across navigation and app restarts via AppSettings.LastPlaceId
-- M26: done - robust multi-instance bypass using permanent Global Mutex & WorldSid FullControl security rules
-- M26.1: done - replicate Multiple Roblox V2.2 handle-closing logic & RobloxCookies.dat lock for stable multi-instance
+- M26: done (8f6c5a7) - robust multi-instance bypass using permanent Global Mutex & WorldSid FullControl security rules
+- M26.1: done (184f917) - replicate Multiple Roblox V2.2 handle-closing logic & RobloxCookies.dat lock for stable multi-instance
+- M27: done (850b776) - add instance tracking and kill switch for active accounts
+- M28: done - add Win32 automatic window resizing for custom Roblox resolution

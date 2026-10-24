@@ -355,6 +355,9 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -437,6 +440,60 @@
                                        VerticalAlignment="Center"
                                        MinWidth="60"
                                        Margin="8,0,0,0" />
+                        </StackPanel>
+
+                        <!-- Divider 3 -->
+                        <Rectangle Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Height="1"
+                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                   Margin="0,8" />
+
+                        <!-- Row 4: Force Custom Window Resolution Toggle -->
+                        <StackPanel Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
+                            <TextBlock Text="{x:Static resources:Strings.EnableCustomResolution}"
+                                       Style="{StaticResource SettingLabelStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.EnableCustomResolutionDescription}"
+                                       Style="{StaticResource DescriptionTextStyle}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Row="7" Grid.Column="1"
+                                         AutomationProperties.AutomationId="Settings_CustomResolutionToggle"
+                                         AutomationProperties.Name="{x:Static resources:Strings.EnableCustomResolution}"
+                                         IsChecked="{Binding EnableCustomResolution, Mode=OneWay}"
+                                         Command="{Binding EnableCustomResolutionToggledCommand}"
+                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                         VerticalAlignment="Center" />
+
+                        <!-- Row 5: Custom Resolution Width & Height -->
+                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Orientation="Horizontal"
+                                    Margin="4,8,4,0"
+                                    IsEnabled="{Binding EnableCustomResolution}">
+                            <TextBlock Text="{x:Static resources:Strings.ResolutionWidthLabel}"
+                                       Style="{StaticResource SettingLabelStyle}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0" />
+                            <ui:NumberBox Width="140"
+                                          AutomationProperties.AutomationId="Settings_ResolutionWidthNumberBox"
+                                          AutomationProperties.Name="{x:Static resources:Strings.ResolutionWidthLabel}"
+                                          Value="{Binding ResolutionWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="200"
+                                          Maximum="7680"
+                                          SpinButtonPlacementMode="Inline"
+                                          Margin="0,0,24,0"
+                                          VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Static resources:Strings.ResolutionHeightLabel}"
+                                       Style="{StaticResource SettingLabelStyle}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0" />
+                            <ui:NumberBox Width="140"
+                                          AutomationProperties.AutomationId="Settings_ResolutionHeightNumberBox"
+                                          AutomationProperties.Name="{x:Static resources:Strings.ResolutionHeightLabel}"
+                                          Value="{Binding ResolutionHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="200"
+                                          Maximum="7680"
+                                          SpinButtonPlacementMode="Inline"
+                                          VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Border>

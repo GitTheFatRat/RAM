@@ -87,6 +87,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _enableUatTelemetry;
 
     [ObservableProperty]
+    private bool _enableCustomResolution;
+
+    [ObservableProperty]
+    private int _resolutionWidth = AppSettings.DefaultResolutionWidth;
+
+    [ObservableProperty]
+    private int _resolutionHeight = AppSettings.DefaultResolutionHeight;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -134,6 +143,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableGhostDisconnectDetection = settings.GhostDisconnectMode != Core.Processes.GhostDisconnectMode.Off;
         SelectedGhostDisconnectMode = settings.GhostDisconnectMode;
         EnableUatTelemetry = settings.EnableUatTelemetry;
+        EnableCustomResolution = settings.EnableCustomResolution;
+        ResolutionWidth = settings.ResolutionWidth;
+        ResolutionHeight = settings.ResolutionHeight;
 
         string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
         LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -189,6 +201,9 @@ public sealed partial class SettingsViewModel : ObservableObject
                 GhostDisconnectMode: SelectedGhostDisconnectMode,
                 EnableUatTelemetry: EnableUatTelemetry,
                 LastPlaceId: current.LastPlaceId,
+                EnableCustomResolution: EnableCustomResolution,
+                ResolutionWidth: ResolutionWidth,
+                ResolutionHeight: ResolutionHeight,
                 Advanced: current.Advanced,
                 UiState: current.UiState);
 
@@ -383,6 +398,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableUatTelemetry = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { EnableUatTelemetry = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableCustomResolutionToggledAsync(bool enabled)
+    {
+        EnableCustomResolution = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with
+        {
+            EnableCustomResolution = enabled,
+            ResolutionWidth = ResolutionWidth,
+            ResolutionHeight = ResolutionHeight
+        });
     }
 
     [RelayCommand]
