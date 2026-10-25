@@ -65,4 +65,47 @@ public sealed class RobloxLiveIntegrationTests
                 $"Expected Playing in [0, {server.MaxPlayers}], got {server.Playing}");
         }
     }
+
+    [Fact]
+    public async Task GetAuthTicketAsync_WithRealCookie_ReturnsTicket()
+    {
+        string? rawCookie = Environment.GetEnvironmentVariable(LiveTestCookieEnvVar);
+        if (string.IsNullOrWhiteSpace(rawCookie))
+        {
+            return;
+        }
+
+        RobloxAuthService authService = new(new RobloxHttpClientFactory());
+        using SecretValue cookie = SecretValue.FromString(rawCookie.Trim());
+
+        Result<SecretValue> result = await authService.GetAuthTicketAsync(cookie);
+
+        Assert.True(
+            result.IsSuccess,
+            $"Live ticket request failed: {result.Error} ({result.ErrorCode}), HTTP {result.Details?.HttpStatus}, csrf={result.Details?.CsrfTokenObtained}");
+        result.Value!.Dispose();
+    }
+
+    [Fact]
+    public async Task FindUserServerAsync_WithOwnUsername_ReturnsServerOrHiddenNotTransportError()
+    {
+        string? rawCookie = Environment.GetEnvironmentVariable(LiveTestCookieEnvVar);
+        if (string.IsNullOrWhiteSpace(rawCookie))
+        {
+            return;
+        }
+
+        RobloxHttpClientFactory clientFactory = new();
+        using SecretValue cookie = SecretValue.FromString(rawCookie.Trim());
+        Result<RobloxUser> self = await new RobloxAuthService(clientFactory).ValidateCookieAsync(cookie);
+        Assert.True(self.IsSuccess, $"Live cookie validation failed: {self.Error} ({self.ErrorCode})");
+
+        using HttpClient httpClient = clientFactory.CreateClient();
+        Result<TargetServer> result = await new PresenceService(httpClient).FindUserServerAsync(self.Value!.Name, cookie);
+
+        // The cookie owner is usually not in-game while the test runs, so ServerHidden is a valid live answer.
+        Assert.True(
+            result.IsSuccess || result.ErrorCode == PresenceErrorCodes.ServerHidden,
+            $"Live presence lookup failed: {result.Error} ({result.ErrorCode})");
+    }
 }
