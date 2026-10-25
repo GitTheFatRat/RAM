@@ -221,7 +221,7 @@ public sealed class WindowSizeLock : IDisposable
                 break;
             case EVENT_SYSTEM_MOVESIZEEND:
                 _isUserDragging = false;
-                EnforceSize();
+                EnforceSize(preserveDraggedPosition: true);
                 break;
             case EVENT_SYSTEM_MINIMIZESTART:
             case EVENT_SYSTEM_MINIMIZEEND:
@@ -234,7 +234,7 @@ public sealed class WindowSizeLock : IDisposable
         }
     }
 
-    private void EnforceSize()
+    private void EnforceSize(bool preserveDraggedPosition = false)
     {
         if (_isApplying)
         {
@@ -247,9 +247,11 @@ public sealed class WindowSizeLock : IDisposable
             return;
         }
 
+        bool enforceTilePosition = !preserveDraggedPosition && _tilePosition is not null;
         bool isMaximized = User32.IsZoomed(_hWnd);
         if (!isMinimized && !isMaximized && GetWindowRect(_hWnd, out Rect bounds) &&
-            bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height)
+            bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height &&
+            (!enforceTilePosition || (_tilePosition is GridSlot expected && bounds.Left == expected.X && bounds.Top == expected.Y)))
         {
             return;
         }
@@ -276,7 +278,7 @@ public sealed class WindowSizeLock : IDisposable
             }
 
             User32.ForceWindowedMode(_hWnd);
-            if (_tilePosition is GridSlot tile && isMinimized)
+            if (_tilePosition is GridSlot tile && (enforceTilePosition || isMinimized))
             {
                 User32.MoveResizeWindow(_hWnd, tile.X, tile.Y, _width, _height);
             }

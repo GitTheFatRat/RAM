@@ -56,6 +56,91 @@ internal static class RobloxWindowSizer
             applied,
             locked,
             tile?.ToString() ?? "-");
+
+        // Roblox re-centers/recreates its window when the 3D scene initializes ~2-4s after startup; re-apply to lock the grid slot.
+        for (int pass = 0; pass < 2 && !ct.IsCancellationRequested; pass++)
+        {
+            try
+            {
+                await Task.Delay(2500, ct).ConfigureAwait(false);
+                using Process proc = Process.GetProcessById(processId);
+                if (proc.HasExited)
+                {
+                    break;
+                }
+
+                proc.Refresh();
+                IntPtr currentHwnd = proc.MainWindowHandle;
+                if (currentHwnd == IntPtr.Zero)
+                {
+                    continue;
+                }
+
+                if (tile is GridSlot currentSlot)
+                {
+                    User32.MoveResizeWindow(currentHwnd, currentSlot.X, currentSlot.Y, width, height);
+                }
+                else
+                {
+                    User32.ResizeWindow(currentHwnd, width, height);
+                }
+
+                if (currentHwnd != hWnd)
+                {
+                    hWnd = currentHwnd;
+                    _ = AttachOnUiThread(hWnd, width, height, tile);
+                }
+            }
+            catch
+            {
+                break;
+            }
+        }
+    }
+
+    public static void ApplyToRunningProcesses(ISettingsService? settingsService)
+    {
+        if (settingsService?.CurrentSettings is not { EnableCustomResolution: true } settings)
+        {
+            return;
+        }
+
+        int width = settings.ResolutionWidth;
+        int height = settings.ResolutionHeight;
+        foreach (Process proc in Process.GetProcessesByName("RobloxPlayerBeta"))
+        {
+            try
+            {
+                proc.Refresh();
+                IntPtr hWnd = proc.MainWindowHandle;
+                if (hWnd == IntPtr.Zero)
+                {
+                    continue;
+                }
+
+                if (User32.IsIconic(hWnd))
+                {
+                    _ = User32.ShowWindow(hWnd, User32.SW_RESTORE);
+                }
+
+                User32.ForceWindowedMode(hWnd);
+                GridSlot? tile = settings.EnableAutoTile ? ReserveTile(proc.Id, width, height) : null;
+                bool applied = tile is GridSlot slot
+                    ? User32.MoveResizeWindow(hWnd, slot.X, slot.Y, width, height)
+                    : User32.ResizeWindow(hWnd, width, height);
+                if (applied)
+                {
+                    _ = AttachOnUiThread(hWnd, width, height, tile);
+                }
+            }
+            catch
+            {
+            }
+            finally
+            {
+                proc.Dispose();
+            }
+        }
     }
 
     private static GridSlot ReserveTile(int processId, int width, int height)

@@ -57,9 +57,14 @@ public partial class App : Application
             .Build();
     }
 
-    private static void ConfigureCulture()
+    private static void ConfigureCulture(string? language = null)
     {
-        CultureInfo culture = new("vi-VN");
+        string cultureName = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(language, "en-US", StringComparison.OrdinalIgnoreCase)
+            ? "en-US"
+            : "vi-VN";
+        CultureInfo culture = new(cultureName);
+        RbxManager.App.Resources.Strings.Culture = culture;
         CultureInfo.DefaultThreadCurrentCulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
@@ -245,8 +250,8 @@ public partial class App : Application
         services.AddSingleton<AccountsPage>();
         services.AddSingleton<ServersViewModel>();
         services.AddSingleton<ServersPage>();
-        services.AddTransient<RunningViewModel>();
-        services.AddTransient<RunningPage>();
+        services.AddSingleton<RunningViewModel>();
+        services.AddSingleton<RunningPage>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<SettingsPage>();
         services.AddTransient<ViewModels.DiagnosticsViewModel>();
@@ -316,11 +321,37 @@ public partial class App : Application
 
         Core.Settings.ISettingsService settingsService = _host.Services.GetRequiredService<Core.Settings.ISettingsService>();
         Core.Settings.AppSettings settings = await settingsService.LoadSettingsAsync();
+        ConfigureCulture(settings.Language);
         ApplyTheme(settings.Theme);
 
+        Core.Sessions.ISessionTracker sessionTracker = _host.Services.GetRequiredService<Core.Sessions.ISessionTracker>();
+        ISnackbarService snackbarService = _host.Services.GetRequiredService<ISnackbarService>();
+
         // One place sizes/tiles every tracked Roblox window: manual launches, Servers-tab joins and auto-reconnect relaunches.
-        _host.Services.GetRequiredService<Core.Sessions.ISessionTracker>().SessionStarted += session =>
+        sessionTracker.SessionStarted += session =>
             _ = Services.RobloxWindowSizer.ApplyIfEnabledAsync(settingsService, session.ProcessId, CancellationToken.None);
+        Services.RobloxWindowSizer.ApplyToRunningProcesses(settingsService);
+
+        sessionTracker.GhostDisconnectOccurred += (session, keyword) =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                string message = string.Format(
+                    CultureInfo.CurrentCulture,
+                    CompositeFormat.Parse(RbxManager.App.Resources.Strings.GhostDisconnectDetectedNotification),
+                    $"#{session.AccountId.Value} (PID {session.ProcessId})",
+                    keyword);
+                snackbarService.Show(RbxManager.App.Resources.Strings.AppTitle, message, Wpf.Ui.Controls.ControlAppearance.Caution, null, TimeSpan.FromSeconds(5));
+            });
+        };
+
+        Infrastructure.Processes.RamCleanerService.RamCleanerAutoDisabled += () =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                snackbarService.Show(RbxManager.App.Resources.Strings.AppTitle, RbxManager.App.Resources.Strings.RamCleanerAccessDeniedDisabled, Wpf.Ui.Controls.ControlAppearance.Caution, null, TimeSpan.FromSeconds(5));
+            });
+        };
 
         bool isUiTest = Environment.GetEnvironmentVariable("RBXMANAGER_UITEST") == "1";
         if (!isUiTest || settings.MultiInstanceEnabled)

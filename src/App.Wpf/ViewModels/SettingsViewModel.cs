@@ -234,6 +234,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 UiState: current.UiState);
 
             await _settingsService.SaveSettingsAsync(updated);
+            Services.RobloxWindowSizer.ApplyToRunningProcesses(_settingsService);
 
             // Apply theme live
             ApplyTheme(SelectedTheme);
@@ -403,6 +404,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     async partial void OnSelectedGhostDisconnectModeChanged(Core.Processes.GhostDisconnectMode value)
     {
+        if (_isLoadingSettings)
+        {
+            return;
+        }
+
         AppSettings current = _settingsService.CurrentSettings;
         if (current.GhostDisconnectMode != value)
         {
@@ -432,6 +438,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableAutoTile = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { EnableAutoTile = enabled });
+        Services.RobloxWindowSizer.ApplyToRunningProcesses(_settingsService);
     }
 
     [RelayCommand]
@@ -487,15 +494,16 @@ public sealed partial class SettingsViewModel : ObservableObject
         await PersistCustomResolutionAsync();
     }
 
-    private Task PersistCustomResolutionAsync()
+    private async Task PersistCustomResolutionAsync()
     {
         AppSettings current = _settingsService.CurrentSettings;
-        return _settingsService.SaveSettingsAsync(current with
+        await _settingsService.SaveSettingsAsync(current with
         {
             EnableCustomResolution = EnableCustomResolution,
             ResolutionWidth = ResolutionWidth,
             ResolutionHeight = ResolutionHeight
         });
+        Services.RobloxWindowSizer.ApplyToRunningProcesses(_settingsService);
     }
 
     [RelayCommand]
@@ -674,6 +682,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         string? password = dialogControl.GetPassword();
         if (string.IsNullOrEmpty(password))
         {
+            _snackbarService.Show(Strings.ErrorTitle, dialogControl.ErrorTextBlock.Text, ControlAppearance.Danger);
             dialogControl.ClearPasswords();
             return;
         }
@@ -732,6 +741,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         string? password = dialogControl.GetPassword();
         if (string.IsNullOrEmpty(password))
         {
+            _snackbarService.Show(Strings.ErrorTitle, dialogControl.ErrorTextBlock.Text, ControlAppearance.Danger);
             dialogControl.ClearPasswords();
             return;
         }
