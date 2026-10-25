@@ -8,7 +8,7 @@
                   Title="{x:Static resources:Strings.AppTitle}"
                   Height="700"
                   Width="1100"
-                  MinWidth="960"
+                  MinWidth="900"
                   MinHeight="600"
                   Icon="pack://application:,,,/RbxManager.App;component/Assets/app.ico"
                   WindowStartupLocation="CenterScreen"

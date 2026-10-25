@@ -142,11 +142,13 @@
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling"
                              VirtualizingPanel.ScrollUnit="Pixel"
-                             ScrollViewer.CanContentScroll="True">
+                             ScrollViewer.CanContentScroll="True"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto">
                 <ui:DataGrid.Columns>
                     <!-- Server ID (Monospace) -->
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnServerId}"
-                                            Width="280">
+                                            Width="280"
+                                            MinWidth="200">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Id}"
@@ -157,7 +159,8 @@
 
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPlayers}"
                                             SortMemberPath="Playing"
-                                            Width="120">
+                                            Width="120"
+                                            MinWidth="90">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock VerticalAlignment="Center">
@@ -173,12 +176,15 @@
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnFps}"
                                         Binding="{Binding Fps, StringFormat='{}{0:F1}'}"
-                                        Width="100" />
+                                        Width="100"
+                                        MinWidth="80" />
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnPing}"
                                         Binding="{Binding Ping, StringFormat='{}{0} ms'}"
-                                        Width="100" />
+                                        Width="100"
+                                        MinWidth="80" />
                     <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAction}"
-                                            Width="*">
+                                            Width="*"
+                                            MinWidth="260">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">

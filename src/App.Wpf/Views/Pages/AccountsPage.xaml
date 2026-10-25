@@ -381,7 +381,8 @@
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling"
                              VirtualizingPanel.ScrollUnit="Pixel"
-                             ScrollViewer.CanContentScroll="True">
+                             ScrollViewer.CanContentScroll="True"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto">
                     <ui:DataGrid.RowStyle>
                         <Style TargetType="DataGridRow" BasedOn="{StaticResource HighContrastDataGridRowStyle}">
                             <Setter Property="ContextMenu">
@@ -433,7 +434,7 @@
 
                     <ui:DataGrid.Columns>
                         <!-- Checkbox Selection Column -->
-                        <DataGridTemplateColumn Width="44" CanUserResize="False" CanUserSort="False">
+                        <DataGridTemplateColumn Width="44" MinWidth="44" CanUserResize="False" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -469,7 +470,8 @@
                         <!-- Status Chip Column -->
                         <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnStatus}"
                                                 SortMemberPath="Status"
-                                                Width="130">
+                                                Width="130"
+                                                MinWidth="130">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border CornerRadius="{StaticResource RadiusPill}"
@@ -570,10 +572,12 @@
                         <!-- Active Instance Indicator & Kill Switch Column -->
                         <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnAction}"
                                                 Width="170"
+                                                MinWidth="170"
                                                 CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal"
+                                                Margin="4,0"
                                                 VerticalAlignment="Center"
                                                 Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
                                         <Border CornerRadius="{StaticResource RadiusPill}"

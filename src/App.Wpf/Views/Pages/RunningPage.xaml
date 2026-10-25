@@ -154,7 +154,8 @@
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling"
                              VirtualizingPanel.ScrollUnit="Pixel"
-                             ScrollViewer.CanContentScroll="True">
+                             ScrollViewer.CanContentScroll="True"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto">
                 <ui:DataGrid.Columns>
                     <DataGridTextColumn Header="{x:Static res:Strings.ColumnAlias}"
                                         Binding="{Binding Alias}"
