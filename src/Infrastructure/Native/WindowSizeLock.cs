@@ -24,6 +24,8 @@ public sealed class WindowSizeLock : IDisposable
 {
     private const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
     private const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
+    private const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
+    private const uint EVENT_SYSTEM_MINIMIZEEND = 0x0017;
     private const uint EVENT_OBJECT_SHOW = 0x8002;
     private const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
     private const uint WINEVENT_OUTOFCONTEXT = 0x0000;
@@ -32,6 +34,7 @@ public sealed class WindowSizeLock : IDisposable
     private const uint GW_OWNER = 4;
     private const int GWL_STYLE = -16;
     private const long WS_CAPTION = 0x00C00000L;
+    private const long WS_POPUP = 0x80000000L;
     private const int CorrectionBurstWindowMs = 1000;
     private const int MaxCorrectionsPerBurst = 8;
 
@@ -64,6 +67,7 @@ public sealed class WindowSizeLock : IDisposable
         _hooks =
         [
             SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, IntPtr.Zero, _callback, processId, 0, WINEVENT_OUTOFCONTEXT),
+            SetWinEventHook(EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND, IntPtr.Zero, _callback, processId, 0, WINEVENT_OUTOFCONTEXT),
             SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, IntPtr.Zero, _callback, processId, 0, WINEVENT_OUTOFCONTEXT),
             SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, IntPtr.Zero, _callback, processId, 0, WINEVENT_OUTOFCONTEXT),
         ];
@@ -114,17 +118,31 @@ public sealed class WindowSizeLock : IDisposable
         }
     }
 
-    private static bool IsMainWindowCandidate(IntPtr hWnd) =>
-        GetAncestor(hWnd, GA_ROOT) == hWnd &&
-        GetWindow(hWnd, GW_OWNER) == IntPtr.Zero &&
-        IsWindowVisible(hWnd) &&
-        (GetWindowLongPtr(hWnd, GWL_STYLE).ToInt64() & WS_CAPTION) == WS_CAPTION;
+    private static bool IsMainWindowCandidate(IntPtr hWnd)
+    {
+        if (GetAncestor(hWnd, GA_ROOT) != hWnd || GetWindow(hWnd, GW_OWNER) != IntPtr.Zero || !IsWindowVisible(hWnd))
+        {
+            return false;
+        }
+
+        long style = GetWindowLongPtr(hWnd, GWL_STYLE).ToInt64();
+        if ((style & WS_CAPTION) == WS_CAPTION)
+        {
+            return true;
+        }
+
+        return (style & WS_POPUP) != 0 &&
+               GetWindowRect(hWnd, out Rect bounds) &&
+               bounds.Right - bounds.Left >= 200 &&
+               bounds.Bottom - bounds.Top >= 200;
+    }
 
     private void DisposeWhenProcessExits()
     {
+        Process? process = null;
         try
         {
-            Process process = Process.GetProcessById((int)_processId);
+            process = Process.GetProcessById((int)_processId);
             _ = process.WaitForExitAsync().ContinueWith(
                 _ =>
                 {
@@ -135,8 +153,9 @@ public sealed class WindowSizeLock : IDisposable
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
         }
-        catch (ArgumentException)
+        catch (Exception)
         {
+            process?.Dispose();
             Dispose();
         }
     }
@@ -166,7 +185,21 @@ public sealed class WindowSizeLock : IDisposable
             if (_tilePosition is GridSlot tile)
             {
                 // A recreated window (app shell -> game, teleport) spawns centered again; put it back in its tile.
-                User32.MoveResizeWindow(hWnd, tile.X, tile.Y, _width, _height);
+                _isApplying = true;
+                try
+                {
+                    if (User32.IsIconic(hWnd))
+                    {
+                        _ = User32.ShowWindow(hWnd, User32.SW_RESTORE);
+                    }
+
+                    User32.ForceWindowedMode(hWnd);
+                    User32.MoveResizeWindow(hWnd, tile.X, tile.Y, _width, _height);
+                }
+                finally
+                {
+                    _isApplying = false;
+                }
             }
             else
             {
@@ -190,6 +223,10 @@ public sealed class WindowSizeLock : IDisposable
                 _isUserDragging = false;
                 EnforceSize();
                 break;
+            case EVENT_SYSTEM_MINIMIZESTART:
+            case EVENT_SYSTEM_MINIMIZEEND:
+                EnforceSize();
+                break;
             case EVENT_OBJECT_LOCATIONCHANGE when !_isUserDragging:
                 // Fighting the move loop mid-drag only causes flicker; correct after release instead.
                 EnforceSize();
@@ -199,12 +236,20 @@ public sealed class WindowSizeLock : IDisposable
 
     private void EnforceSize()
     {
-        if (_isApplying || IsIconic(_hWnd) || IsZoomed(_hWnd) || !GetWindowRect(_hWnd, out Rect bounds))
+        if (_isApplying)
         {
             return;
         }
 
-        if (bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height)
+        bool isMinimized = User32.IsIconic(_hWnd);
+        if (isMinimized && _tilePosition is null)
+        {
+            return;
+        }
+
+        bool isMaximized = User32.IsZoomed(_hWnd);
+        if (!isMinimized && !isMaximized && GetWindowRect(_hWnd, out Rect bounds) &&
+            bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height)
         {
             return;
         }
@@ -225,7 +270,20 @@ public sealed class WindowSizeLock : IDisposable
         _isApplying = true;
         try
         {
-            User32.ResizeWindow(_hWnd, _width, _height);
+            if (isMinimized)
+            {
+                _ = User32.ShowWindow(_hWnd, User32.SW_RESTORE);
+            }
+
+            User32.ForceWindowedMode(_hWnd);
+            if (_tilePosition is GridSlot tile && isMinimized)
+            {
+                User32.MoveResizeWindow(_hWnd, tile.X, tile.Y, _width, _height);
+            }
+            else
+            {
+                User32.ResizeWindow(_hWnd, _width, _height);
+            }
         }
         finally
         {
@@ -268,12 +326,4 @@ public sealed class WindowSizeLock : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hWnd, out Rect rect);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsIconic(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsZoomed(IntPtr hWnd);
 }

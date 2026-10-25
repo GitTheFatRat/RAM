@@ -36,6 +36,13 @@ internal static class RobloxWindowSizer
             return;
         }
 
+        if (User32.IsIconic(hWnd))
+        {
+            _ = User32.ShowWindow(hWnd, User32.SW_RESTORE);
+        }
+
+        User32.ForceWindowedMode(hWnd);
+
         GridSlot? tile = settings.EnableAutoTile ? ReserveTile(processId, width, height) : null;
         bool applied = tile is GridSlot slot
             ? User32.MoveResizeWindow(hWnd, slot.X, slot.Y, width, height)

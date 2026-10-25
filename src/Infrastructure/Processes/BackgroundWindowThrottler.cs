@@ -39,7 +39,8 @@ public sealed partial class BackgroundWindowThrottler : BackgroundService
             try
             {
                 bool isThrottlingEnabled = _settingsService.CurrentSettings.ThrottleBackgroundRoblox &&
-                                           _settingsService.CurrentSettings.ThrottleBackgroundAcknowledged;
+                                           _settingsService.CurrentSettings.ThrottleBackgroundAcknowledged &&
+                                           !_settingsService.CurrentSettings.EnableAutoTile;
                 if (isThrottlingEnabled && _sessionTracker != null)
                 {
                     int[] trackedPids = _sessionTracker.ActiveSessions
@@ -62,8 +63,6 @@ public sealed partial class BackgroundWindowThrottler : BackgroundService
                     _windowController.RestoreProcesses();
                     _wasThrottling = false;
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -72,6 +71,15 @@ public sealed partial class BackgroundWindowThrottler : BackgroundService
             catch (Exception ex)
             {
                 LogThrottlerError(_logger, ex);
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
             }
         }
 
