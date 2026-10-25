@@ -221,7 +221,7 @@ public sealed class WindowSizeLock : IDisposable
                 break;
             case EVENT_SYSTEM_MOVESIZEEND:
                 _isUserDragging = false;
-                EnforceSize(preserveDraggedPosition: true);
+                EnforceSize();
                 break;
             case EVENT_SYSTEM_MINIMIZESTART:
             case EVENT_SYSTEM_MINIMIZEEND:
@@ -234,7 +234,7 @@ public sealed class WindowSizeLock : IDisposable
         }
     }
 
-    private void EnforceSize(bool preserveDraggedPosition = false)
+    private void EnforceSize()
     {
         if (_isApplying)
         {
@@ -242,16 +242,9 @@ public sealed class WindowSizeLock : IDisposable
         }
 
         bool isMinimized = User32.IsIconic(_hWnd);
-        if (isMinimized && _tilePosition is null)
-        {
-            return;
-        }
-
-        bool enforceTilePosition = !preserveDraggedPosition && _tilePosition is not null;
         bool isMaximized = User32.IsZoomed(_hWnd);
         if (!isMinimized && !isMaximized && GetWindowRect(_hWnd, out Rect bounds) &&
-            bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height &&
-            (!enforceTilePosition || (_tilePosition is GridSlot expected && bounds.Left == expected.X && bounds.Top == expected.Y)))
+            bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height)
         {
             return;
         }
@@ -277,15 +270,7 @@ public sealed class WindowSizeLock : IDisposable
                 _ = User32.ShowWindow(_hWnd, User32.SW_RESTORE);
             }
 
-            User32.ForceWindowedMode(_hWnd);
-            if (_tilePosition is GridSlot tile && (enforceTilePosition || isMinimized))
-            {
-                User32.MoveResizeWindow(_hWnd, tile.X, tile.Y, _width, _height);
-            }
-            else
-            {
-                User32.ResizeWindow(_hWnd, _width, _height);
-            }
+            User32.ResizeWindow(_hWnd, _width, _height);
         }
         finally
         {

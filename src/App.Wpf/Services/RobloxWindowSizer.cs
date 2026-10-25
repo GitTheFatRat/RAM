@@ -76,19 +76,23 @@ internal static class RobloxWindowSizer
                     continue;
                 }
 
-                if (tile is GridSlot currentSlot)
+                if (currentHwnd != hWnd)
                 {
-                    User32.MoveResizeWindow(currentHwnd, currentSlot.X, currentSlot.Y, width, height);
+                    hWnd = currentHwnd;
+                    if (tile is GridSlot currentSlot)
+                    {
+                        User32.MoveResizeWindow(currentHwnd, currentSlot.X, currentSlot.Y, width, height);
+                    }
+                    else
+                    {
+                        User32.ResizeWindow(currentHwnd, width, height);
+                    }
+
+                    _ = AttachOnUiThread(hWnd, width, height, tile);
                 }
                 else
                 {
                     User32.ResizeWindow(currentHwnd, width, height);
-                }
-
-                if (currentHwnd != hWnd)
-                {
-                    hWnd = currentHwnd;
-                    _ = AttachOnUiThread(hWnd, width, height, tile);
                 }
             }
             catch
