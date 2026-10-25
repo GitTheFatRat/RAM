@@ -802,4 +802,16 @@
   <data name="FollowTargetServerHidden" xml:space="preserve">
     <value>Server not found. The target is offline or has Joins disabled.</value>
   </data>
+  <data name="EnableAutoTile" xml:space="preserve">
+    <value>Auto-tile windows</value>
+  </data>
+  <data name="EnableAutoTileDescription" xml:space="preserve">
+    <value>Places each new Roblox window in the next free grid slot of the main screen, using the custom width and height above.</value>
+  </data>
+  <data name="EnableAutoReconnect" xml:space="preserve">
+    <value>Auto-reconnect on network drop</value>
+  </data>
+  <data name="EnableAutoReconnectDescription" xml:space="preserve">
+    <value>Closes a frozen (not responding ~30 s) or disconnected (Error 277, Connection lost) Roblox window and relaunches the account into the same place after a 20-second cooldown.</value>
+  </data>
 </root>

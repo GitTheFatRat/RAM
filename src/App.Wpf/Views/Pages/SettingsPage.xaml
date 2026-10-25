@@ -172,6 +172,8 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -263,6 +265,28 @@
                             <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_NotifyOnly}" Tag="{x:Static processes:GhostDisconnectMode.NotifyOnly}" />
                             <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_KillAndRejoin}" Tag="{x:Static processes:GhostDisconnectMode.KillAndRejoin}" />
                         </ComboBox>
+
+                        <!-- Divider 4 -->
+                        <Rectangle Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Height="1"
+                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                   Margin="0,8" />
+
+                        <!-- Row 5: Auto-Reconnect (hang + disconnect recovery) -->
+                        <StackPanel Grid.Row="9" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
+                            <TextBlock Text="{x:Static resources:Strings.EnableAutoReconnect}"
+                                       Style="{StaticResource SettingLabelStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.EnableAutoReconnectDescription}"
+                                       Style="{StaticResource DescriptionTextStyle}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Row="9" Grid.Column="1"
+                                         AutomationProperties.AutomationId="Settings_AutoReconnectToggle"
+                                         AutomationProperties.Name="{x:Static resources:Strings.EnableAutoReconnect}"
+                                         IsChecked="{Binding EnableAutoReconnect, Mode=OneWay}"
+                                         Command="{Binding EnableAutoReconnectToggledCommand}"
+                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                         VerticalAlignment="Center" />
                     </Grid>
                 </Border>
 
@@ -349,6 +373,7 @@
                 <Border Style="{StaticResource SettingsCardStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -489,6 +514,30 @@
                                      Text="{Binding ResolutionHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      VerticalAlignment="Center" />
                         </StackPanel>
+
+                        <!-- Row 6: Auto-Tile (needs a fixed window size to compute the grid) -->
+                        <Grid Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2"
+                              Margin="0,12,0,0"
+                              IsEnabled="{Binding EnableCustomResolution}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
+                                <TextBlock Text="{x:Static resources:Strings.EnableAutoTile}"
+                                           Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock Text="{x:Static resources:Strings.EnableAutoTileDescription}"
+                                           Style="{StaticResource DescriptionTextStyle}"
+                                           Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1"
+                                             AutomationProperties.AutomationId="Settings_AutoTileToggle"
+                                             AutomationProperties.Name="{x:Static resources:Strings.EnableAutoTile}"
+                                             IsChecked="{Binding EnableAutoTile, Mode=OneWay}"
+                                             Command="{Binding EnableAutoTileToggledCommand}"
+                                             CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                             VerticalAlignment="Center" />
+                        </Grid>
                     </Grid>
                 </Border>
 

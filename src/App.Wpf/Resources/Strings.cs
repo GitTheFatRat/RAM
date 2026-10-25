@@ -85,6 +85,10 @@ public static class Strings
     public static string FollowTargetResolving => GetString(nameof(FollowTargetResolving));
     public static string FollowTargetUserNotFound => GetString(nameof(FollowTargetUserNotFound));
     public static string FollowTargetServerHidden => GetString(nameof(FollowTargetServerHidden));
+    public static string EnableAutoTile => GetString(nameof(EnableAutoTile));
+    public static string EnableAutoTileDescription => GetString(nameof(EnableAutoTileDescription));
+    public static string EnableAutoReconnect => GetString(nameof(EnableAutoReconnect));
+    public static string EnableAutoReconnectDescription => GetString(nameof(EnableAutoReconnectDescription));
     public static string ColumnPlayers => GetString(nameof(ColumnPlayers));
     public static string ColumnFps => GetString(nameof(ColumnFps));
     public static string ColumnPing => GetString(nameof(ColumnPing));

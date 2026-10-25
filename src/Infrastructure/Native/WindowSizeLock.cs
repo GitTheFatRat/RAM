@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using RbxManager.Core.Processes;
 
 /// <summary>
 /// Keeps an external process's top-level window at a fixed size without touching its position.
@@ -40,6 +41,7 @@ public sealed class WindowSizeLock : IDisposable
     private readonly uint _processId;
     private readonly int _width;
     private readonly int _height;
+    private readonly GridSlot? _tilePosition;
     private readonly WinEventProc _callback;
     private readonly IntPtr[] _hooks;
     private readonly SynchronizationContext? _ownerContext;
@@ -50,12 +52,13 @@ public sealed class WindowSizeLock : IDisposable
     private int _burstCorrections;
     private int _disposed;
 
-    private WindowSizeLock(IntPtr hWnd, uint processId, int width, int height)
+    private WindowSizeLock(IntPtr hWnd, uint processId, int width, int height, GridSlot? tilePosition)
     {
         _hWnd = hWnd;
         _processId = processId;
         _width = width;
         _height = height;
+        _tilePosition = tilePosition;
         _callback = OnWinEvent;
         _ownerContext = SynchronizationContext.Current;
         _hooks =
@@ -68,7 +71,8 @@ public sealed class WindowSizeLock : IDisposable
 
     private delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr hWnd, int idObject, int idChild, uint eventThread, uint eventTime);
 
-    public static bool Attach(IntPtr hWnd, int width, int height)
+    /// <param name="tilePosition">Auto-tile slot; when set, recreated main windows are moved back to it.</param>
+    public static bool Attach(IntPtr hWnd, int width, int height, GridSlot? tilePosition = null)
     {
         if (hWnd == IntPtr.Zero || width <= 0 || height <= 0 || GetWindowThreadProcessId(hWnd, out uint processId) == 0)
         {
@@ -80,7 +84,7 @@ public sealed class WindowSizeLock : IDisposable
             previous.Dispose();
         }
 
-        WindowSizeLock sizeLock = new(hWnd, processId, width, height);
+        WindowSizeLock sizeLock = new(hWnd, processId, width, height, tilePosition);
         if (Array.TrueForAll(sizeLock._hooks, hook => hook == IntPtr.Zero))
         {
             return false;
@@ -159,7 +163,16 @@ public sealed class WindowSizeLock : IDisposable
         {
             _hWnd = hWnd;
             _isUserDragging = false;
-            EnforceSize();
+            if (_tilePosition is GridSlot tile)
+            {
+                // A recreated window (app shell -> game, teleport) spawns centered again; put it back in its tile.
+                User32.MoveResizeWindow(hWnd, tile.X, tile.Y, _width, _height);
+            }
+            else
+            {
+                EnforceSize();
+            }
+
             return;
         }
 

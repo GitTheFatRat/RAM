@@ -44,6 +44,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private readonly Core.Backup.IBackupService? _backupService;
     private readonly Core.Network.IDpiToolService? _dpiToolService;
     private readonly Core.Instance.IInstanceGate? _instanceGate;
+    private readonly Core.Sessions.ISessionTracker? _sessionTracker;
     private readonly TimeProvider _timeProvider;
     private readonly Func<int, int, int> _randomDelayGenerator;
     private readonly List<AccountItemViewModel> _allAccounts = new();
@@ -131,7 +132,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         TimeProvider? timeProvider = null,
         Core.Network.IDpiToolService? dpiToolService = null,
         Func<int, int, int>? randomDelayGenerator = null,
-        Core.Instance.IInstanceGate? instanceGate = null)
+        Core.Instance.IInstanceGate? instanceGate = null,
+        Core.Sessions.ISessionTracker? sessionTracker = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _contentDialogService = contentDialogService ?? throw new ArgumentNullException(nameof(contentDialogService));
@@ -144,6 +146,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _dpiToolService = dpiToolService;
         _randomDelayGenerator = randomDelayGenerator ?? Random.Shared.Next;
         _instanceGate = instanceGate;
+        _sessionTracker = sessionTracker;
 
         _searchDebouncer = new DebounceDispatcher(TimeSpan.FromMilliseconds(200));
         _selectedGroup = Strings.GroupFilterAll;
@@ -682,7 +685,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             {
                 if (ReferenceEquals(_timeProvider, TimeProvider.System))
                 {
-                    _ = TrackSpawnedRobloxProcessAsync(targetAccount, beforePids, CancellationToken.None);
+                    _ = TrackSpawnedRobloxProcessAsync(targetAccount, launchRequest, beforePids, CancellationToken.None);
                 }
 
                 _snackbarService.Show(Strings.SuccessTitle, Strings.LaunchSuccess, ControlAppearance.Success);
@@ -1097,7 +1100,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     successCount++;
                     if (ReferenceEquals(_timeProvider, TimeProvider.System))
                     {
-                        _ = TrackSpawnedRobloxProcessAsync(account, beforePids, CancellationToken.None);
+                        _ = TrackSpawnedRobloxProcessAsync(account, req, beforePids, CancellationToken.None);
                     }
                 }
                 else
@@ -1251,6 +1254,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     private async Task TrackSpawnedRobloxProcessAsync(
         AccountItemViewModel account,
+        LaunchRequest request,
         HashSet<int> beforePids,
         CancellationToken ct)
     {
@@ -1275,14 +1279,18 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             {
                 int capturedPid = newPid.Value;
                 RunOnUiThread(() => account.ActiveProcessId = capturedPid);
-                await OnRobloxProcessCapturedAsync(capturedPid, ct).ConfigureAwait(false);
+                await OnRobloxProcessCapturedAsync(capturedPid, request, ct).ConfigureAwait(false);
                 return;
             }
         }
     }
 
-    protected virtual Task OnRobloxProcessCapturedAsync(int processId, CancellationToken ct) =>
-        RbxManager.App.Services.RobloxWindowSizer.ApplyIfEnabledAsync(_settingsService, processId, ct);
+    // Handing the PID to the session tracker enables crash/hang/disconnect recovery for Accounts-tab launches;
+    // its SessionStarted event then drives window sizing. Without a tracker (tests) size the window directly.
+    protected virtual Task OnRobloxProcessCapturedAsync(int processId, LaunchRequest request, CancellationToken ct) =>
+        _sessionTracker?.AttachSession(request.AccountId, request, processId) != null
+            ? Task.CompletedTask
+            : RbxManager.App.Services.RobloxWindowSizer.ApplyIfEnabledAsync(_settingsService, processId, ct);
 
     private void ShowSnackbar(string title, string message, ControlAppearance appearance) =>
         RunOnUiThread(() => _snackbarService.Show(title, message, appearance));

@@ -802,4 +802,16 @@
   <data name="FollowTargetServerHidden" xml:space="preserve">
     <value>Không tìm thấy máy chủ. Mục tiêu đang offline hoặc tắt quyền Joins.</value>
   </data>
+  <data name="EnableAutoTile" xml:space="preserve">
+    <value>Tự động xếp cửa sổ (Auto-Tile)</value>
+  </data>
+  <data name="EnableAutoTileDescription" xml:space="preserve">
+    <value>Đặt mỗi cửa sổ Roblox mới vào ô trống tiếp theo trên màn hình chính, theo chiều rộng và chiều cao tùy chỉnh ở trên.</value>
+  </data>
+  <data name="EnableAutoReconnect" xml:space="preserve">
+    <value>Tự động kết nối lại khi rớt mạng (Auto-Reconnect)</value>
+  </data>
+  <data name="EnableAutoReconnectDescription" xml:space="preserve">
+    <value>Đóng cửa sổ Roblox bị treo (không phản hồi ~30 giây) hoặc mất kết nối (Error 277, Connection lost) và mở lại tài khoản vào cùng place sau 20 giây chờ.</value>
+  </data>
 </root>

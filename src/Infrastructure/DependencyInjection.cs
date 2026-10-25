@@ -125,6 +125,11 @@ public static class InfrastructureServiceExtensions
             uatLogger: sp.GetService<Core.Diagnostics.IUatLogger>()));
         services.AddSingleton<ISessionTracker>(sp => sp.GetRequiredService<SessionTracker>());
         services.AddHostedService(sp => sp.GetRequiredService<SessionTracker>());
+        services.AddHostedService(sp => new InstanceWatchdogService(
+            sp.GetRequiredService<ISessionTracker>(),
+            sp.GetRequiredService<IProcessProvider>(),
+            sp.GetRequiredService<ISettingsService>(),
+            logger: sp.GetService<ILogger<InstanceWatchdogService>>()));
         services.AddHostedService<BackgroundWindowThrottler>();
         services.AddHostedService<RamCleanerService>();
 

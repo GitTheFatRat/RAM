@@ -2,6 +2,7 @@ namespace RbxManager.Infrastructure.Tests.Sessions;
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -656,5 +657,126 @@ public sealed class SessionTrackerTests
         logWatcher.RaiseDisconnect(556, "Connection lost");
 
         Assert.DoesNotContain(556, provider.KilledPids);
+    }
+
+    [Fact]
+    public async Task RecoverSession_RelaunchesSamePlaceAndJob_WithoutPerAccountAutoRejoin()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        provider.Processes.Add(new ProcessSnapshot(700, DateTimeOffset.UtcNow, 1));
+        FakeLauncher launcher = new();
+        launcher.OnLaunch = _ => provider.Processes.Add(new ProcessSnapshot(701, DateTimeOffset.UtcNow, 1));
+        FakeSettingsService settings = new()
+        {
+            CurrentSettings = Core.Settings.AppSettings.Default with { EnableSmartServerHopping = false }
+        };
+
+        using SessionTracker tracker = new(provider, new FakeAccountStore(account), new FakeAuthService(), launcher, null, settings)
+        {
+            RecoveryCooldown = TimeSpan.Zero
+        };
+        LaunchRequest original = new(account.Id, 1818, "0f8fad5b-d9cb-469f-a165-70867728950e");
+        tracker.RegisterSession(new RunningSession(account.Id, original, 700, DateTimeOffset.UtcNow));
+
+        Assert.False(tracker.GetAutoRejoin(account.Id));
+        Assert.True(tracker.RecoverSession(700, "NotResponding"));
+        await tracker.PollProcessesAsync();
+
+        Assert.Equal([700], provider.KilledPids);
+        LaunchRequest relaunch = Assert.Single(launcher.Launches);
+        Assert.Equal(original, relaunch);
+    }
+
+    [Fact]
+    public void RecoverSession_UntrackedPid_DoesNothing()
+    {
+        FakeProcessProvider provider = new();
+        using SessionTracker tracker = new(provider, new FakeAccountStore(), new FakeAuthService(), new FakeLauncher());
+
+        Assert.False(tracker.RecoverSession(999, "NotResponding"));
+        Assert.Empty(provider.KilledPids);
+    }
+
+    [Fact]
+    public async Task PlainExit_WithAutoReconnectButNoPerAccountToggle_DoesNotRelaunch()
+    {
+        // A window the user closed must not come back just because Auto-Reconnect is on.
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        FakeLauncher launcher = new();
+        FakeSettingsService settings = new() { CurrentSettings = Core.Settings.AppSettings.Default with { EnableAutoReconnect = true } };
+        using SessionTracker tracker = new(provider, new FakeAccountStore(account), new FakeAuthService(), launcher, null, settings)
+        {
+            RecoveryCooldown = TimeSpan.Zero
+        };
+        tracker.RegisterSession(new RunningSession(account.Id, new LaunchRequest(account.Id, 1818), 710, DateTimeOffset.UtcNow));
+
+        await tracker.PollProcessesAsync();
+
+        Assert.Empty(launcher.Launches);
+    }
+
+    [Fact]
+    public async Task RealLogWatcher_DisconnectLineInPidLog_WithAutoReconnect_KillsAndRelaunches()
+    {
+        string logsDir = Path.Combine(Path.GetTempPath(), "rbx-m32-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(logsDir);
+        try
+        {
+            DateTimeOffset startedAt = DateTimeOffset.UtcNow - TimeSpan.FromSeconds(90);
+            string logPath = Path.Combine(logsDir, "0.650.0.6500643_20261025T104500Z_Player_7F3A2_last.log");
+            await File.WriteAllLinesAsync(logPath,
+            [
+                "2026-10-25T10:45:01.120Z,0.120000,1a2c,6 [FLog::Output] Connecting to UDMUX server 128.116.0.1:55423",
+                "2026-10-25T10:45:03.450Z,2.450000,1a2c,6 [FLog::Network] Replicator created",
+                "2026-10-25T10:59:42.881Z,881.881000,1a2c,6 [FLog::Network] Sending disconnect with reason: 277",
+                "2026-10-25T10:59:42.902Z,881.902000,1a2c,6 [FLog::Output] Lost connection with reason : Lost connection to the game server, please reconnect (Error Code: 277)",
+                "2026-10-25T10:59:42.903Z,881.903000,1a2c,6 [FLog::Output] Connection lost - Error 277",
+            ]);
+            File.SetCreationTimeUtc(logPath, startedAt.UtcDateTime);
+
+            using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+            Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+            FakeProcessProvider provider = new();
+            provider.Processes.Add(new ProcessSnapshot(720, startedAt, 1));
+            FakeLauncher launcher = new();
+            launcher.OnLaunch = _ => provider.Processes.Add(new ProcessSnapshot(721, DateTimeOffset.UtcNow, 1));
+            FakeSettingsService settings = new()
+            {
+                // NotifyOnly on purpose: Auto-Reconnect must escalate it to kill + relaunch.
+                CurrentSettings = Core.Settings.AppSettings.Default with
+                {
+                    EnableAutoReconnect = true,
+                    EnableSmartServerHopping = false,
+                    GhostDisconnectMode = GhostDisconnectMode.NotifyOnly
+                }
+            };
+            using RbxManager.Infrastructure.Processes.RobloxLogWatcher logWatcher = new(logsDir, settingsService: settings);
+            using SessionTracker tracker = new(provider, new FakeAccountStore(account), new FakeAuthService(), launcher, null, settings, logWatcher)
+            {
+                RecoveryCooldown = TimeSpan.Zero
+            };
+            string? keyword = null;
+            tracker.GhostDisconnectOccurred += (_, k) => keyword = k;
+
+            tracker.RegisterSession(new RunningSession(account.Id, new LaunchRequest(account.Id, 1818), 720, startedAt));
+            for (int waitedMs = 0; !provider.KilledPids.Contains(720) && waitedMs < 5000; waitedMs += 50)
+            {
+                await Task.Delay(50);
+            }
+
+            await tracker.PollProcessesAsync();
+
+            Assert.Equal("Connection lost", keyword);
+            Assert.Contains(720, provider.KilledPids);
+            Assert.Single(launcher.Launches);
+        }
+        finally
+        {
+            Directory.Delete(logsDir, recursive: true);
+        }
     }
 }

@@ -28,4 +28,13 @@ public interface ISessionTracker
         LaunchRequest request,
         Func<Task<Result>> launchAction,
         CancellationToken ct = default);
+
+    /// <summary>Registers a process that was launched and PID-matched outside <see cref="TrackLaunchAsync"/>.</summary>
+    RunningSession? AttachSession(AccountId accountId, LaunchRequest request, int pid);
+
+    /// <summary>
+    /// Kills a broken session (hang / disconnect) and relaunches it after the auto-reconnect cooldown,
+    /// independent of the per-account auto-rejoin toggle. Returns false if the PID is not tracked.
+    /// </summary>
+    bool RecoverSession(int pid, string reason);
 }

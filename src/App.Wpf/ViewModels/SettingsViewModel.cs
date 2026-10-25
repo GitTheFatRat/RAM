@@ -96,6 +96,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     private int _resolutionHeight;
 
     [ObservableProperty]
+    private bool _enableAutoTile;
+
+    [ObservableProperty]
+    private bool _enableAutoReconnect;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -150,6 +156,8 @@ public sealed partial class SettingsViewModel : ObservableObject
             EnableCustomResolution = settings.EnableCustomResolution;
             ResolutionWidth = settings.ResolutionWidth;
             ResolutionHeight = settings.ResolutionHeight;
+            EnableAutoTile = settings.EnableAutoTile;
+            EnableAutoReconnect = settings.EnableAutoReconnect;
 
             string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
             LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -213,6 +221,8 @@ public sealed partial class SettingsViewModel : ObservableObject
                 EnableCustomResolution: EnableCustomResolution,
                 ResolutionWidth: ResolutionWidth,
                 ResolutionHeight: ResolutionHeight,
+                EnableAutoTile: EnableAutoTile,
+                EnableAutoReconnect: EnableAutoReconnect,
                 Advanced: current.Advanced,
                 UiState: current.UiState);
 
@@ -407,6 +417,22 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableUatTelemetry = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { EnableUatTelemetry = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableAutoTileToggledAsync(bool enabled)
+    {
+        EnableAutoTile = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { EnableAutoTile = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableAutoReconnectToggledAsync(bool enabled)
+    {
+        EnableAutoReconnect = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { EnableAutoReconnect = enabled });
     }
 
     [RelayCommand]

@@ -73,6 +73,8 @@ public sealed class RamCleanerServiceTests
             LaunchRequest request,
             Func<Task<RbxManager.Core.Common.Result>> launchAction,
             CancellationToken ct = default) => Task.FromResult<RunningSession?>(null);
+        public RunningSession? AttachSession(AccountId accountId, LaunchRequest request, int pid) => null;
+        public bool RecoverSession(int pid, string reason) => false;
     }
 
     [Fact]

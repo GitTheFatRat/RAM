@@ -89,6 +89,20 @@ public sealed class SystemProcessProvider : IProcessProvider
         }
     }
 
+    public bool IsResponding(int pid)
+    {
+        try
+        {
+            using Process process = Process.GetProcessById(pid);
+            return process.HasExited || process.Responding;
+        }
+        catch
+        {
+            // Gone or inaccessible: exit handling belongs to the session poll, not the hang detector.
+            return true;
+        }
+    }
+
     public bool IsProcessRunning(string processName)
     {
         try

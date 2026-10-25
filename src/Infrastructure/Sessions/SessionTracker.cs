@@ -37,6 +37,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     private readonly ConcurrentDictionary<long, RejoinPolicy> _rejoinPolicies = new();
     private readonly ConcurrentDictionary<int, bool> _intentionalCloses = new();
     private readonly ConcurrentDictionary<long, bool> _gaveUpAccounts = new();
+    private readonly ConcurrentDictionary<int, string> _recoveryKills = new();
 
     private readonly Func<RejoinPolicy> _policyFactory;
 
@@ -46,6 +47,8 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     private readonly ConcurrentDictionary<int, DateTimeOffset> _lastGhostKillTimes = new();
 
     public IReadOnlyList<RunningSession> ActiveSessions => _activeSessions.Values.ToList();
+
+    internal TimeSpan RecoveryCooldown { get; init; } = TimeSpan.FromSeconds(Core.Settings.AppSettings.AutoReconnectCooldownSeconds);
 
     public SessionTracker(
         IProcessProvider processProvider,
@@ -153,6 +156,50 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         _logWatcher?.StartWatching(session.ProcessId, session.StartedAt);
     }
 
+    public RunningSession? AttachSession(AccountId accountId, LaunchRequest request, int pid)
+    {
+        if (_activeSessions.TryGetValue(pid, out RunningSession? existing))
+        {
+            return existing;
+        }
+
+        ProcessSnapshot? snapshot = _processProvider.GetRobloxProcesses().FirstOrDefault(p => p.Pid == pid);
+        if (snapshot == null)
+        {
+            return null;
+        }
+
+        RunningSession session = new(accountId, request, pid, snapshot.StartTime);
+        if (!_activeSessions.TryAdd(pid, session))
+        {
+            return _activeSessions.GetValueOrDefault(pid);
+        }
+
+        LogSessionBound(accountId.Value, pid);
+        _logWatcher?.StartWatching(pid, snapshot.StartTime);
+        SessionStarted?.Invoke(session);
+        return session;
+    }
+
+    public bool RecoverSession(int pid, string reason)
+    {
+        if (!_activeSessions.ContainsKey(pid) || !_recoveryKills.TryAdd(pid, reason))
+        {
+            return false;
+        }
+
+        LogRecoveryKill(pid, reason);
+        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Recovery kill of PID {pid} ({reason})"));
+        _logWatcher?.StopWatching(pid);
+        if (!_processProvider.Kill(pid, graceful: false))
+        {
+            _recoveryKills.TryRemove(pid, out _);
+            return false;
+        }
+
+        return true;
+    }
+
     public async Task<RunningSession?> TrackLaunchAsync(
         AccountId accountId,
         LaunchRequest request,
@@ -237,20 +284,21 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
                 _activeSessions.TryRemove(pid, out _);
                 _logWatcher?.StopWatching(pid);
                 bool intentional = _intentionalCloses.TryRemove(pid, out _);
+                bool recovery = _recoveryKills.TryRemove(pid, out _);
 
                 LogSessionEnded(session.AccountId.Value, pid, intentional);
-                _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Session {pid} ended (AccountId {session.AccountId.Value}, Intentional={intentional})"));
+                _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Session {pid} ended (AccountId {session.AccountId.Value}, Intentional={intentional}, Recovery={recovery})"));
                 SessionEnded?.Invoke(session, intentional);
 
-                if (!intentional && GetAutoRejoin(session.AccountId))
+                if (!intentional && (recovery || GetAutoRejoin(session.AccountId)))
                 {
-                    await HandleAutoRejoinAsync(session).ConfigureAwait(false);
+                    await HandleAutoRejoinAsync(session, recovery).ConfigureAwait(false);
                 }
             }
         }
     }
 
-    private async Task HandleAutoRejoinAsync(RunningSession session)
+    private async Task HandleAutoRejoinAsync(RunningSession session, bool isRecovery = false)
     {
         RejoinPolicy policy = _rejoinPolicies.GetOrAdd(session.AccountId.Value, _ => _policyFactory());
         RejoinDecision decision = policy.Evaluate(isIntentionalExit: false);
@@ -268,12 +316,16 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             return;
         }
 
-        LogRejoining(session.AccountId.Value, (int)decision.Delay.TotalSeconds);
-        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Auto-rejoin scheduled for AccountId {session.AccountId.Value} in {(int)decision.Delay.TotalSeconds}s"));
+        // Relaunching straight into a server the client just dropped from tends to fail again (Error 277 storms),
+        // so recovery relaunches wait at least the fixed cooldown even when the backoff delay is shorter.
+        TimeSpan delay = isRecovery && decision.Delay < RecoveryCooldown ? RecoveryCooldown : decision.Delay;
 
-        if (decision.Delay > TimeSpan.Zero)
+        LogRejoining(session.AccountId.Value, (int)delay.TotalSeconds);
+        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Auto-rejoin scheduled for AccountId {session.AccountId.Value} in {(int)delay.TotalSeconds}s"));
+
+        if (delay > TimeSpan.Zero)
         {
-            await Task.Delay(decision.Delay).ConfigureAwait(false);
+            await Task.Delay(delay).ConfigureAwait(false);
         }
 
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync().ConfigureAwait(false);
@@ -344,7 +396,10 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     private void OnGhostDisconnectDetected(int pid, string keyword)
     {
-        GhostDisconnectMode mode = _settingsService?.CurrentSettings.GhostDisconnectMode ?? GhostDisconnectMode.NotifyOnly;
+        bool autoReconnect = _settingsService?.CurrentSettings.EnableAutoReconnect ?? false;
+        GhostDisconnectMode mode = autoReconnect
+            ? GhostDisconnectMode.KillAndRejoin
+            : _settingsService?.CurrentSettings.GhostDisconnectMode ?? GhostDisconnectMode.NotifyOnly;
         if (mode == GhostDisconnectMode.Off)
         {
             return;
@@ -384,7 +439,14 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
             _lastGhostKillTimes[pid] = now;
             LogGhostDisconnectDetected(pid, keyword);
-            _processProvider.Kill(pid, graceful: false);
+            if (autoReconnect)
+            {
+                RecoverSession(pid, keyword);
+            }
+            else
+            {
+                _processProvider.Kill(pid, graceful: false);
+            }
         }
     }
 
@@ -435,4 +497,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     [LoggerMessage(EventId = 513, Level = LogLevel.Information, Message = "Ghost disconnect keyword '{Keyword}' detected for account {AccountId} (PID {Pid}). NotifyOnly mode: session not killed.")]
     private partial void LogGhostDisconnectNotified(long accountId, int pid, string keyword);
+
+    [LoggerMessage(EventId = 514, Level = LogLevel.Warning, Message = "Auto-reconnect: killing Roblox PID {Pid} for recovery ({Reason}).")]
+    private partial void LogRecoveryKill(int pid, string reason);
 }

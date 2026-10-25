@@ -318,6 +318,10 @@ public partial class App : Application
         Core.Settings.AppSettings settings = await settingsService.LoadSettingsAsync();
         ApplyTheme(settings.Theme);
 
+        // One place sizes/tiles every tracked Roblox window: manual launches, Servers-tab joins and auto-reconnect relaunches.
+        _host.Services.GetRequiredService<Core.Sessions.ISessionTracker>().SessionStarted += session =>
+            _ = Services.RobloxWindowSizer.ApplyIfEnabledAsync(settingsService, session.ProcessId, CancellationToken.None);
+
         bool isUiTest = Environment.GetEnvironmentVariable("RBXMANAGER_UITEST") == "1";
         if (!isUiTest || settings.MultiInstanceEnabled)
         {

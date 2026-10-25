@@ -284,10 +284,6 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                 {
                     successCount++;
                     account.ActiveProcessId = session.ProcessId;
-                    _ = RbxManager.App.Services.RobloxWindowSizer.ApplyIfEnabledAsync(
-                        _settingsService,
-                        session.ProcessId,
-                        CancellationToken.None);
                 }
 
                 if (currentIndex < queue.Count)

@@ -85,6 +85,8 @@ public sealed record AppSettings(
     bool EnableCustomResolution = false,
     int ResolutionWidth = AppSettings.DefaultResolutionWidth,
     int ResolutionHeight = AppSettings.DefaultResolutionHeight,
+    bool EnableAutoTile = false,
+    bool EnableAutoReconnect = false,
     [property: JsonPropertyName("EnableGhostDisconnectDetection")]
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     bool? LegacyEnableGhostDisconnectDetection = null,
@@ -110,6 +112,7 @@ public sealed record AppSettings(
     public const int DefaultResolutionHeight = 600;
     public const int MinimumResolutionDimension = 64;
     public const int MaximumResolutionDimension = 7680;
+    public const int AutoReconnectCooldownSeconds = 20;
 
     public static AppSettings Default => new();
 
