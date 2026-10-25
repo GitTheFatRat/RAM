@@ -155,7 +155,8 @@ public sealed class XamlSmokeTests
                 launcher,
                 sessionTracker,
                 contentDialogService,
-                snackbarService);
+                snackbarService,
+                Substitute.For<IPresenceService>());
 
             ServersPage page = new(viewModel);
             Assert.NotNull(page);
@@ -294,6 +295,7 @@ public sealed class XamlSmokeTests
             sessionTracker,
             contentDialogService,
             snackbarService,
+            Substitute.For<IPresenceService>(),
             settingsService: settingsService);
 
         Assert.Equal("2753915549", viewModel.PlaceIdText);

@@ -78,6 +78,13 @@ public static class Strings
     public static string JoinWithAccount => GetString(nameof(JoinWithAccount));
     public static string CopyServerId => GetString(nameof(CopyServerId));
     public static string ServerIdCopied => GetString(nameof(ServerIdCopied));
+    public static string FollowTargetLabel => GetString(nameof(FollowTargetLabel));
+    public static string FollowTargetHint => GetString(nameof(FollowTargetHint));
+    public static string FollowTargetJoin => GetString(nameof(FollowTargetJoin));
+    public static string FollowTargetRequired => GetString(nameof(FollowTargetRequired));
+    public static string FollowTargetResolving => GetString(nameof(FollowTargetResolving));
+    public static string FollowTargetUserNotFound => GetString(nameof(FollowTargetUserNotFound));
+    public static string FollowTargetServerHidden => GetString(nameof(FollowTargetServerHidden));
     public static string ColumnPlayers => GetString(nameof(ColumnPlayers));
     public static string ColumnFps => GetString(nameof(ColumnFps));
     public static string ColumnPing => GetString(nameof(ColumnPing));

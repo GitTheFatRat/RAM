@@ -19,6 +19,10 @@ using RbxManager.Infrastructure.Storage;
 [JsonSerializable(typeof(RobloxAuthService.AuthenticatedUserDto))]
 [JsonSerializable(typeof(ServerBrowserService.RobloxServerListResponse))]
 [JsonSerializable(typeof(ServerBrowserService.RobloxServerItem))]
+[JsonSerializable(typeof(PresenceService.UsernamesRequest))]
+[JsonSerializable(typeof(PresenceService.UsernamesResponse))]
+[JsonSerializable(typeof(PresenceService.PresenceRequest))]
+[JsonSerializable(typeof(PresenceService.PresenceResponse))]
 internal sealed partial class RbxManagerJsonContext : JsonSerializerContext
 {
     public static RbxManagerJsonContext Indented { get; } = new(new JsonSerializerOptions

@@ -13,7 +13,8 @@ public sealed class ArchitectureTests
         "src/Infrastructure/Storage/EncryptedFileVault.cs",
         "src/Infrastructure/Auth/RobloxAuthService.cs",
         "src/Infrastructure/Launch/RobloxLauncher.cs",
-        "src/Infrastructure/Backup/EncryptedBackupService.cs"
+        "src/Infrastructure/Backup/EncryptedBackupService.cs",
+        "src/Infrastructure/Servers/PresenceService.cs"
     };
 
     [Fact]

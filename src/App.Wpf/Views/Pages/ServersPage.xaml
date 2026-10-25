@@ -29,6 +29,10 @@
 
         <!-- Controls Toolbar -->
         <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -93,6 +97,26 @@
                        Icon="{ui:SymbolIcon ArrowDown24}"
                        Command="{Binding LoadMoreCommand}"
                        IsEnabled="{Binding HasNextPage}" />
+
+            <!-- Follow a player: joins the exact server a target username is in -->
+            <StackPanel Grid.Row="1"
+                        Grid.ColumnSpan="6"
+                        Orientation="Horizontal"
+                        Margin="0,8,0,0">
+                <ui:TextBox AutomationProperties.AutomationId="Servers_FollowTargetBox"
+                            Text="{Binding FollowTargetUsername, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="{x:Static res:Strings.FollowTargetLabel}"
+                            ToolTip="{x:Static res:Strings.FollowTargetHint}"
+                            Icon="{ui:SymbolIcon Person24}"
+                            Width="388"
+                            Margin="{StaticResource MarginTight}" />
+                <ui:Button AutomationProperties.AutomationId="Servers_FollowTargetButton"
+                           Content="{x:Static res:Strings.FollowTargetJoin}"
+                           Icon="{ui:SymbolIcon Play24}"
+                           Appearance="Success"
+                           Margin="{StaticResource MarginTight}"
+                           Command="{Binding FollowTargetCommand}" />
+            </StackPanel>
         </Grid>
 
         <!-- Data Grid Area: Elevated Container -->

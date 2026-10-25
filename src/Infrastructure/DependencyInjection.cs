@@ -93,6 +93,13 @@ public static class InfrastructureServiceExtensions
             return new ServerBrowserService(httpClient, logger);
         });
 
+        services.AddTransient<IPresenceService>(sp =>
+        {
+            IHttpClientFactory factory = sp.GetRequiredService<IHttpClientFactory>();
+            HttpClient httpClient = factory.CreateClient(RobloxHttpClientName);
+            return new PresenceService(httpClient, sp.GetService<ILogger<PresenceService>>());
+        });
+
         services.AddTransient<Core.Diagnostics.IDiagnosticsService>(sp =>
         {
             Core.Diagnostics.IRegistryProvider registryProvider = sp.GetRequiredService<Core.Diagnostics.IRegistryProvider>();

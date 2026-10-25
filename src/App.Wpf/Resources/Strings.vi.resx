@@ -781,4 +781,25 @@
   <data name="ResolutionHeightLabel" xml:space="preserve">
     <value>Chiều cao (px)</value>
   </data>
+  <data name="FollowTargetLabel" xml:space="preserve">
+    <value>Theo đuôi (Tên người chơi)</value>
+  </data>
+  <data name="FollowTargetHint" xml:space="preserve">
+    <value>Các tài khoản được chọn sẽ vào đúng máy chủ mà người chơi này đang ở. Người chơi cần cho phép các tài khoản đó tham gia.</value>
+  </data>
+  <data name="FollowTargetJoin" xml:space="preserve">
+    <value>Theo đuôi</value>
+  </data>
+  <data name="FollowTargetRequired" xml:space="preserve">
+    <value>Nhập tên người chơi cần theo đuôi.</value>
+  </data>
+  <data name="FollowTargetResolving" xml:space="preserve">
+    <value>Đang tìm máy chủ của {0}...</value>
+  </data>
+  <data name="FollowTargetUserNotFound" xml:space="preserve">
+    <value>Không tìm thấy người chơi '{0}'.</value>
+  </data>
+  <data name="FollowTargetServerHidden" xml:space="preserve">
+    <value>Không tìm thấy máy chủ. Mục tiêu đang offline hoặc tắt quyền Joins.</value>
+  </data>
 </root>

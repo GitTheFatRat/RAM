@@ -25,6 +25,7 @@ public partial class ServersViewModel : ObservableObject, IDisposable
 {
     private CancellationTokenSource? _joinCts;
     private readonly IServerBrowserService _serverBrowserService;
+    private readonly IPresenceService _presenceService;
     private readonly IAccountStore _accountStore;
     private readonly ILauncher _launcher;
     private readonly ISessionTracker _sessionTracker;
@@ -83,6 +84,9 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _joinStatusText = string.Empty;
 
+    [ObservableProperty]
+    private string _followTargetUsername = string.Empty;
+
     public ObservableCollection<ServerInfo> Servers { get; } = new();
 
     public ServersViewModel(
@@ -92,10 +96,12 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         ISessionTracker sessionTracker,
         IContentDialogService contentDialogService,
         ISnackbarService snackbarService,
+        IPresenceService presenceService,
         Core.Instance.IInstanceGate? instanceGate = null,
         Core.Settings.ISettingsService? settingsService = null)
     {
         _serverBrowserService = serverBrowserService;
+        _presenceService = presenceService;
         _accountStore = accountStore;
         _launcher = launcher;
         _sessionTracker = sessionTracker;
@@ -150,11 +156,73 @@ public partial class ServersViewModel : ObservableObject, IDisposable
             return;
         }
 
+        IReadOnlyList<Account> selectedAccounts = await PickAccountsAsync();
+        if (selectedAccounts.Count == 0)
+        {
+            return;
+        }
+
+        await RunJoinQueueAsync(
+            selectedAccounts,
+            (account, _) => Task.FromResult<LaunchRequest?>(new LaunchRequest(account.Id, placeId, server.Id)));
+    }
+
+    [RelayCommand]
+    public async Task FollowTargetAsync()
+    {
+        string targetUsername = FollowTargetUsername.Trim();
+        if (targetUsername.Length == 0)
+        {
+            _snackbarService.Show(Strings.ErrorTitle, Strings.FollowTargetRequired, ControlAppearance.Danger);
+            return;
+        }
+
+        IReadOnlyList<Account> selectedAccounts = await PickAccountsAsync();
+        if (selectedAccounts.Count == 0)
+        {
+            return;
+        }
+
+        await RunJoinQueueAsync(
+            selectedAccounts,
+            (account, ct) => ResolveFollowRequestAsync(account, targetUsername, ct));
+    }
+
+    // Re-resolved before every launch: the target may hop servers during the 20 s pacing gap,
+    // and presence visibility depends on the viewing account.
+    private async Task<LaunchRequest?> ResolveFollowRequestAsync(Account account, string targetUsername, CancellationToken ct)
+    {
+        JoinStatusText = string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            System.Text.CompositeFormat.Parse(Strings.FollowTargetResolving),
+            targetUsername);
+
+        Result<TargetServer> lookup = await _presenceService.FindUserServerAsync(targetUsername, account.Cookie, ct);
+        if (lookup.IsSuccess && lookup.Value != null)
+        {
+            return new LaunchRequest(account.Id, lookup.Value.PlaceId, lookup.Value.JobId);
+        }
+
+        string message = lookup.ErrorCode switch
+        {
+            PresenceErrorCodes.UserNotFound => string.Format(
+                System.Globalization.CultureInfo.CurrentCulture,
+                System.Text.CompositeFormat.Parse(Strings.FollowTargetUserNotFound),
+                targetUsername),
+            PresenceErrorCodes.ServerHidden => Strings.FollowTargetServerHidden,
+            _ => lookup.Error ?? Strings.ErrorTitle
+        };
+        _snackbarService.Show(Strings.ErrorTitle, message, ControlAppearance.Danger);
+        return null;
+    }
+
+    private async Task<IReadOnlyList<Account>> PickAccountsAsync()
+    {
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
         if (accounts.Count == 0)
         {
             _snackbarService.Show(Strings.ErrorTitle, Strings.EmptyAccountsList, ControlAppearance.Caution);
-            return;
+            return [];
         }
 
         AccountPickerControl pickerControl = new(accounts);
@@ -167,18 +235,14 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                 Content = pickerControl
             });
 
-        if (dialogResult != ContentDialogResult.Primary)
-        {
-            return;
-        }
+        return dialogResult == ContentDialogResult.Primary ? pickerControl.GetSelectedAccounts() : [];
+    }
 
-        IReadOnlyList<Account> selectedAccounts = pickerControl.GetSelectedAccounts();
-        if (selectedAccounts.Count == 0)
-        {
-            return;
-        }
-
-        List<Account> queue = selectedAccounts.ToList();
+    /// <param name="buildRequest">Returns null to abort the remaining queue (e.g. target went offline).</param>
+    private async Task RunJoinQueueAsync(
+        IReadOnlyList<Account> queue,
+        Func<Account, CancellationToken, Task<LaunchRequest?>> buildRequest)
+    {
         if (_instanceGate is { IsMultiInstanceEnabled: false })
         {
             _instanceGate.TryEnable();
@@ -190,6 +254,7 @@ public partial class ServersViewModel : ObservableObject, IDisposable
 
         int successCount = 0;
         int currentIndex = 0;
+        bool aborted = false;
         CancellationTokenSource joinCts = new();
         _joinCts = joinCts;
         CancellationToken ct = joinCts.Token;
@@ -200,10 +265,16 @@ public partial class ServersViewModel : ObservableObject, IDisposable
             {
                 currentIndex++;
                 ct.ThrowIfCancellationRequested();
+                LaunchRequest? request = await buildRequest(account, ct);
+                if (request == null)
+                {
+                    aborted = true;
+                    break;
+                }
+
                 JoinStatusText = string.Create(
                     System.Globalization.CultureInfo.InvariantCulture,
                     $"Launching {currentIndex} / {queue.Count}: {account.Alias}");
-                LaunchRequest request = new(account.Id, placeId, server.Id);
                 RunningSession? session = await _sessionTracker.TrackLaunchAsync(
                     account.Id,
                     request,
@@ -259,7 +330,7 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         {
             _snackbarService.Show(Strings.SuccessTitle, Strings.LaunchSuccess, ControlAppearance.Success);
         }
-        else
+        else if (!aborted)
         {
             _snackbarService.Show(Strings.ErrorTitle, Strings.ErrorTitle, ControlAppearance.Danger);
         }

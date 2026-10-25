@@ -781,4 +781,25 @@
   <data name="ResolutionHeightLabel" xml:space="preserve">
     <value>Height (px)</value>
   </data>
+  <data name="FollowTargetLabel" xml:space="preserve">
+    <value>Follow (player username)</value>
+  </data>
+  <data name="FollowTargetHint" xml:space="preserve">
+    <value>Selected accounts join the exact server this player is in. The player must allow joins from the selected accounts.</value>
+  </data>
+  <data name="FollowTargetJoin" xml:space="preserve">
+    <value>Follow</value>
+  </data>
+  <data name="FollowTargetRequired" xml:space="preserve">
+    <value>Enter the username of the player to follow.</value>
+  </data>
+  <data name="FollowTargetResolving" xml:space="preserve">
+    <value>Looking up server of {0}...</value>
+  </data>
+  <data name="FollowTargetUserNotFound" xml:space="preserve">
+    <value>Player '{0}' was not found.</value>
+  </data>
+  <data name="FollowTargetServerHidden" xml:space="preserve">
+    <value>Server not found. The target is offline or has Joins disabled.</value>
+  </data>
 </root>
