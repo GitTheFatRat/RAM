@@ -814,4 +814,58 @@
   <data name="EnableAutoReconnectDescription" xml:space="preserve">
     <value>Closes a frozen (not responding ~30 s) or disconnected (Error 277, Connection lost) Roblox window and relaunches the account into the same place after a 20-second cooldown.</value>
   </data>
+  <data name="EnableAutoCleanCache" xml:space="preserve">
+    <value>Auto-clean cache before launching</value>
+  </data>
+  <data name="EnableAutoCleanCacheDescription" xml:space="preserve">
+    <value>Deletes old Roblox logs, crash dumps and temp/HTTP caches before launching (at most every 10 minutes). Files of running instances and the asset cache are kept.</value>
+  </data>
+  <data name="RotationSectionTitle" xml:space="preserve">
+    <value>Rotation settings</value>
+  </data>
+  <data name="RotationGroupsLabel" xml:space="preserve">
+    <value>Groups to rotate (in this order)</value>
+  </data>
+  <data name="RotationNoGroups" xml:space="preserve">
+    <value>No groups yet. Assign accounts to groups in the Accounts tab.</value>
+  </data>
+  <data name="RotationDurationLabel" xml:space="preserve">
+    <value>Each group runs for</value>
+  </data>
+  <data name="RotationHoursSuffix" xml:space="preserve">
+    <value>hours</value>
+  </data>
+  <data name="RotationMinutesSuffix" xml:space="preserve">
+    <value>minutes</value>
+  </data>
+  <data name="RotationStart" xml:space="preserve">
+    <value>Start rotation</value>
+  </data>
+  <data name="RotationStop" xml:space="preserve">
+    <value>Stop rotation</value>
+  </data>
+  <data name="RotationHint" xml:space="preserve">
+    <value>When a group's time is up, ALL running Roblox sessions are closed, the cache is cleaned, and the next group is launched. After the last group it starts over.</value>
+  </data>
+  <data name="RotationSelectGroup" xml:space="preserve">
+    <value>Select at least one group.</value>
+  </data>
+  <data name="RotationDurationTooShort" xml:space="preserve">
+    <value>Each group must run for at least 1 minute.</value>
+  </data>
+  <data name="RotationStatusIdle" xml:space="preserve">
+    <value>Not running</value>
+  </data>
+  <data name="RotationStatusLaunching" xml:space="preserve">
+    <value>Launching group {0}...</value>
+  </data>
+  <data name="RotationStatusFarming" xml:space="preserve">
+    <value>Running group {0}, switching at {1}</value>
+  </data>
+  <data name="RotationStatusStopping" xml:space="preserve">
+    <value>Closing group {0}...</value>
+  </data>
+  <data name="RotationStatusCleaning" xml:space="preserve">
+    <value>Cleaning cache...</value>
+  </data>
 </root>

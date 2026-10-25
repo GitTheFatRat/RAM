@@ -102,6 +102,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _enableAutoReconnect;
 
     [ObservableProperty]
+    private bool _enableAutoCleanCache;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     private string _initialLanguage = "vi";
@@ -158,6 +161,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             ResolutionHeight = settings.ResolutionHeight;
             EnableAutoTile = settings.EnableAutoTile;
             EnableAutoReconnect = settings.EnableAutoReconnect;
+            EnableAutoCleanCache = settings.EnableAutoCleanCache;
 
             string? launchUriTpl = settings.Advanced?.LaunchUriTemplate;
             LaunchUriTemplateStatus = string.IsNullOrWhiteSpace(launchUriTpl)
@@ -223,6 +227,9 @@ public sealed partial class SettingsViewModel : ObservableObject
                 ResolutionHeight: ResolutionHeight,
                 EnableAutoTile: EnableAutoTile,
                 EnableAutoReconnect: EnableAutoReconnect,
+                EnableAutoCleanCache: EnableAutoCleanCache,
+                RotationGroups: current.RotationGroups,
+                RotationDurationMinutes: current.RotationDurationMinutes,
                 Advanced: current.Advanced,
                 UiState: current.UiState);
 
@@ -433,6 +440,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableAutoReconnect = enabled;
         AppSettings current = _settingsService.CurrentSettings;
         await _settingsService.SaveSettingsAsync(current with { EnableAutoReconnect = enabled });
+    }
+
+    [RelayCommand]
+    private async Task OnEnableAutoCleanCacheToggledAsync(bool enabled)
+    {
+        EnableAutoCleanCache = enabled;
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with { EnableAutoCleanCache = enabled });
     }
 
     [RelayCommand]

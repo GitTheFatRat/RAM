@@ -12,6 +12,7 @@ using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Instance;
 using RbxManager.Core.Launch;
+using RbxManager.Core.Maintenance;
 using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
 using RbxManager.Core.Settings;
@@ -29,6 +30,8 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
     private readonly TimeProvider _timeProvider;
     private readonly SemaphoreSlim _launchGate = new(1, 1);
     private DateTimeOffset? _lastLaunchStartTime;
+    private DateTimeOffset? _lastCacheCleanTime;
+    private readonly IRobloxCacheCleaner? _cacheCleaner;
     private bool _disposed;
 
     public RobloxLauncher(
@@ -39,7 +42,8 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         IInstanceGate instanceGate,
         ILogger<RobloxLauncher>? logger = null,
         ISettingsService? settingsService = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IRobloxCacheCleaner? cacheCleaner = null)
     {
         _accountStore = accountStore;
         _authService = authService;
@@ -49,6 +53,27 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         _logger = logger ?? NullLogger<RobloxLauncher>.Instance;
         _settingsService = settingsService;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _cacheCleaner = cacheCleaner;
+    }
+
+    // A bulk launch of 20 accounts would otherwise rescan the cache 20 times within minutes for nothing.
+    internal static readonly TimeSpan AutoCleanInterval = TimeSpan.FromMinutes(10);
+
+    private async Task CleanCacheIfDueAsync(CancellationToken ct)
+    {
+        if (_cacheCleaner == null || _settingsService?.CurrentSettings.EnableAutoCleanCache != true)
+        {
+            return;
+        }
+
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        if (_lastCacheCleanTime.HasValue && now - _lastCacheCleanTime.Value < AutoCleanInterval)
+        {
+            return;
+        }
+
+        _lastCacheCleanTime = now;
+        await _cacheCleaner.CleanAsync(ct).ConfigureAwait(false);
     }
 
     public async Task<Result> LaunchAsync(LaunchRequest request, CancellationToken ct = default)
@@ -80,6 +105,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
             }
 
             _lastLaunchStartTime = _timeProvider.GetUtcNow();
+            await CleanCacheIfDueAsync(ct).ConfigureAwait(false);
 
             if (!_instanceGate.IsMultiInstanceEnabled)
             {

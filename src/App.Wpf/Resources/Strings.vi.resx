@@ -814,4 +814,58 @@
   <data name="EnableAutoReconnectDescription" xml:space="preserve">
     <value>Đóng cửa sổ Roblox bị treo (không phản hồi ~30 giây) hoặc mất kết nối (Error 277, Connection lost) và mở lại tài khoản vào cùng place sau 20 giây chờ.</value>
   </data>
+  <data name="EnableAutoCleanCache" xml:space="preserve">
+    <value>Tự động dọn rác trước khi mở (Auto-clean cache)</value>
+  </data>
+  <data name="EnableAutoCleanCacheDescription" xml:space="preserve">
+    <value>Xóa log cũ, file crash dump và cache tạm/HTTP của Roblox trước khi mở (tối đa 10 phút một lần). Giữ lại file của các phiên đang chạy và cache tài nguyên.</value>
+  </data>
+  <data name="RotationSectionTitle" xml:space="preserve">
+    <value>Cấu hình xoay tua (Rotation)</value>
+  </data>
+  <data name="RotationGroupsLabel" xml:space="preserve">
+    <value>Các nhóm xoay tua (theo thứ tự này)</value>
+  </data>
+  <data name="RotationNoGroups" xml:space="preserve">
+    <value>Chưa có nhóm nào. Gán tài khoản vào nhóm ở tab Tài khoản.</value>
+  </data>
+  <data name="RotationDurationLabel" xml:space="preserve">
+    <value>Mỗi nhóm chạy trong</value>
+  </data>
+  <data name="RotationHoursSuffix" xml:space="preserve">
+    <value>giờ</value>
+  </data>
+  <data name="RotationMinutesSuffix" xml:space="preserve">
+    <value>phút</value>
+  </data>
+  <data name="RotationStart" xml:space="preserve">
+    <value>Bắt đầu xoay tua</value>
+  </data>
+  <data name="RotationStop" xml:space="preserve">
+    <value>Dừng xoay tua</value>
+  </data>
+  <data name="RotationHint" xml:space="preserve">
+    <value>Hết giờ của một nhóm, TẤT CẢ phiên Roblox đang chạy sẽ bị đóng, cache được dọn, rồi mở nhóm tiếp theo. Sau nhóm cuối sẽ quay lại nhóm đầu.</value>
+  </data>
+  <data name="RotationSelectGroup" xml:space="preserve">
+    <value>Hãy chọn ít nhất một nhóm.</value>
+  </data>
+  <data name="RotationDurationTooShort" xml:space="preserve">
+    <value>Mỗi nhóm phải chạy ít nhất 1 phút.</value>
+  </data>
+  <data name="RotationStatusIdle" xml:space="preserve">
+    <value>Chưa chạy</value>
+  </data>
+  <data name="RotationStatusLaunching" xml:space="preserve">
+    <value>Đang mở nhóm {0}...</value>
+  </data>
+  <data name="RotationStatusFarming" xml:space="preserve">
+    <value>Đang chạy nhóm {0}, chuyển nhóm lúc {1}</value>
+  </data>
+  <data name="RotationStatusStopping" xml:space="preserve">
+    <value>Đang đóng nhóm {0}...</value>
+  </data>
+  <data name="RotationStatusCleaning" xml:space="preserve">
+    <value>Đang dọn cache...</value>
+  </data>
 </root>

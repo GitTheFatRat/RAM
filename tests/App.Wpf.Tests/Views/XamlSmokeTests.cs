@@ -121,12 +121,17 @@ public sealed class XamlSmokeTests
             IContentDialogService contentDialogService = Substitute.For<IContentDialogService>();
             ISnackbarService snackbarService = Substitute.For<ISnackbarService>();
 
+            ISettingsService runningSettings = Substitute.For<ISettingsService>();
+            runningSettings.CurrentSettings.Returns(AppSettings.Default);
+
             RunningViewModel viewModel = new(
                 sessionTracker,
                 accountStore,
                 processProvider,
                 contentDialogService,
-                snackbarService);
+                snackbarService,
+                Substitute.For<Core.Rotation.IRotationManager>(),
+                runningSettings);
 
             RunningPage page = new(viewModel);
             Assert.NotNull(page);

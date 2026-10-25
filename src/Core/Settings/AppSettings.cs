@@ -87,6 +87,9 @@ public sealed record AppSettings(
     int ResolutionHeight = AppSettings.DefaultResolutionHeight,
     bool EnableAutoTile = false,
     bool EnableAutoReconnect = false,
+    bool EnableAutoCleanCache = false,
+    IReadOnlyList<string>? RotationGroups = null,
+    int RotationDurationMinutes = AppSettings.DefaultRotationDurationMinutes,
     [property: JsonPropertyName("EnableGhostDisconnectDetection")]
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     bool? LegacyEnableGhostDisconnectDetection = null,
@@ -113,6 +116,7 @@ public sealed record AppSettings(
     public const int MinimumResolutionDimension = 64;
     public const int MaximumResolutionDimension = 7680;
     public const int AutoReconnectCooldownSeconds = 20;
+    public const int DefaultRotationDurationMinutes = 120;
 
     public static AppSettings Default => new();
 
@@ -191,6 +195,7 @@ public sealed record AppSettings(
             RamCleanerIntervalMinutes = ramInterval,
             ResolutionWidth = resWidth,
             ResolutionHeight = resHeight,
+            RotationDurationMinutes = Math.Max(1, RotationDurationMinutes),
             GhostDisconnectMode = mode,
             LegacyEnableGhostDisconnectDetection = null,
             LegacyLaunchDelayMs = null,

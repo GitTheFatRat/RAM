@@ -60,6 +60,15 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<IWindowController, WindowController>();
         services.AddSingleton<IMemoryOptimizer, WindowsMemoryOptimizer>();
         services.AddSingleton<IInstanceGate, NamedMutexInstanceGate>();
+        services.AddSingleton<Core.Maintenance.IRobloxCacheCleaner>(sp => new Maintenance.RobloxCacheCleanerService(
+            sp.GetRequiredService<IProcessProvider>(),
+            logger: sp.GetService<ILogger<Maintenance.RobloxCacheCleanerService>>()));
+        services.AddSingleton<Core.Rotation.IRotationManager>(sp => new Rotation.RotationManager(
+            sp.GetRequiredService<IAccountStore>(),
+            sp.GetRequiredService<ILauncher>(),
+            sp.GetRequiredService<ISessionTracker>(),
+            sp.GetRequiredService<Core.Maintenance.IRobloxCacheCleaner>(),
+            logger: sp.GetService<ILogger<Rotation.RotationManager>>()));
         services.AddSingleton<ILauncher, RobloxLauncher>();
         services.AddTransient<IBackupService, EncryptedBackupService>();
         services.AddSingleton<IRobloxHttpClientFactory, RobloxHttpClientFactory>();

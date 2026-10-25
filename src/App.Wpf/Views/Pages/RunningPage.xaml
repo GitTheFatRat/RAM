@@ -34,7 +34,94 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
+            <!-- Group rotation: farm groups in turn, closing + cleaning between them -->
+            <Expander Grid.Column="0"
+                      AutomationProperties.AutomationId="Running_RotationExpander"
+                      Header="{x:Static res:Strings.RotationSectionTitle}"
+                      Margin="0,0,16,0">
+                <StackPanel Margin="4,8,4,4">
+                    <TextBlock Text="{x:Static res:Strings.RotationGroupsLabel}"
+                               FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding RotationGroups}"
+                                  AutomationProperties.AutomationId="Running_RotationGroups"
+                                  IsEnabled="{Binding IsRotationIdle}"
+                                  Margin="0,4,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Content="{Binding DisplayName}"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          Margin="0,0,16,4" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{x:Static res:Strings.RotationNoGroups}"
+                               Style="{StaticResource DescriptionTextStyle}"
+                               Visibility="{Binding HasNoRotationGroups, Converter={StaticResource BoolToVis}}" />
+
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,8,0,0"
+                                IsEnabled="{Binding IsRotationIdle}">
+                        <TextBlock Text="{x:Static res:Strings.RotationDurationLabel}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+                        <TextBox Width="64"
+                                 AutomationProperties.AutomationId="Running_RotationHours"
+                                 AutomationProperties.Name="{x:Static res:Strings.RotationHoursSuffix}"
+                                 Text="{Binding RotationHours, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center" />
+                        <TextBlock Text="{x:Static res:Strings.RotationHoursSuffix}"
+                                   VerticalAlignment="Center"
+                                   Margin="6,0,12,0" />
+                        <TextBox Width="64"
+                                 AutomationProperties.AutomationId="Running_RotationMinutes"
+                                 AutomationProperties.Name="{x:Static res:Strings.RotationMinutesSuffix}"
+                                 Text="{Binding RotationMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center" />
+                        <TextBlock Text="{x:Static res:Strings.RotationMinutesSuffix}"
+                                   VerticalAlignment="Center"
+                                   Margin="6,0,24,0" />
+                        <ui:TextBox Width="160"
+                                    AutomationProperties.AutomationId="Running_RotationPlaceId"
+                                    PlaceholderText="{x:Static res:Strings.PlaceIdLabel}"
+                                    Text="{Binding RotationPlaceIdText, UpdateSourceTrigger=PropertyChanged}"
+                                    VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <ui:Button AutomationProperties.AutomationId="Running_RotationStartButton"
+                                   Content="{x:Static res:Strings.RotationStart}"
+                                   Icon="{ui:SymbolIcon ArrowRepeatAll24}"
+                                   Appearance="Primary"
+                                   Command="{Binding StartRotationCommand}"
+                                   Visibility="{Binding IsRotationIdle, Converter={StaticResource BoolToVis}}" />
+                        <ui:Button AutomationProperties.AutomationId="Running_RotationStopButton"
+                                   Content="{x:Static res:Strings.RotationStop}"
+                                   Icon="{ui:SymbolIcon Stop24}"
+                                   Appearance="Danger"
+                                   Command="{Binding StopRotationCommand}"
+                                   Visibility="{Binding IsRotationRunning, Converter={StaticResource BoolToVis}}" />
+                        <TextBlock AutomationProperties.AutomationId="Running_RotationStatus"
+                                   Text="{Binding RotationStatusText}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="12,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="{x:Static res:Strings.RotationHint}"
+                               Style="{StaticResource DescriptionTextStyle}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0" />
+                </StackPanel>
+            </Expander>
+
             <ui:Button Grid.Column="1"
+                       VerticalAlignment="Top"
                        AutomationProperties.AutomationId="Running_CloseAllButton"
                        Content="{x:Static res:Strings.CloseAll}"
                        Icon="{ui:SymbolIcon Dismiss24}"

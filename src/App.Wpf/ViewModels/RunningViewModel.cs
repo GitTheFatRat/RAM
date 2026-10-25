@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,9 +14,12 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RbxManager.App.Resources;
+using RbxManager.Core.Common;
 using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
+using RbxManager.Core.Rotation;
 using RbxManager.Core.Sessions;
+using RbxManager.Core.Settings;
 using RbxManager.Core.Storage;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -28,6 +32,8 @@ public partial class RunningViewModel : ObservableObject, IDisposable
     private readonly IProcessProvider _processProvider;
     private readonly IContentDialogService _contentDialogService;
     private readonly ISnackbarService _snackbarService;
+    private readonly IRotationManager _rotationManager;
+    private readonly ISettingsService _settingsService;
     private readonly DispatcherTimer _timer;
     private bool _disposed;
 
@@ -39,21 +45,53 @@ public partial class RunningViewModel : ObservableObject, IDisposable
 
     public bool IsEmptyStateVisible => !HasSessions;
 
+    public ObservableCollection<RotationGroupOption> RotationGroups { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoRotationGroups))]
+    private bool _hasRotationGroups;
+
+    public bool HasNoRotationGroups => !HasRotationGroups;
+
+    [ObservableProperty]
+    private int _rotationHours;
+
+    [ObservableProperty]
+    private int _rotationMinutes;
+
+    [ObservableProperty]
+    private string _rotationPlaceIdText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRotationIdle))]
+    private bool _isRotationRunning;
+
+    public bool IsRotationIdle => !IsRotationRunning;
+
+    [ObservableProperty]
+    private string _rotationStatusText = string.Empty;
+
     public RunningViewModel(
         ISessionTracker sessionTracker,
         IAccountStore accountStore,
         IProcessProvider processProvider,
         IContentDialogService contentDialogService,
-        ISnackbarService snackbarService)
+        ISnackbarService snackbarService,
+        IRotationManager rotationManager,
+        ISettingsService settingsService)
     {
         _sessionTracker = sessionTracker;
         _accountStore = accountStore;
         _processProvider = processProvider;
         _contentDialogService = contentDialogService;
         _snackbarService = snackbarService;
+        _rotationManager = rotationManager;
+        _settingsService = settingsService;
 
         _sessionTracker.SessionStarted += OnSessionStarted;
         _sessionTracker.SessionEnded += OnSessionEnded;
+        _rotationManager.StatusChanged += OnRotationStatusChanged;
+        ApplyRotationStatus(_rotationManager.Status);
 
         _timer = new DispatcherTimer
         {
@@ -63,6 +101,7 @@ public partial class RunningViewModel : ObservableObject, IDisposable
         _timer.Start();
 
         _ = RefreshSessionsAsync();
+        _ = LoadRotationOptionsAsync();
     }
 
     private void OnSessionStarted(RunningSession session)
@@ -154,6 +193,91 @@ public partial class RunningViewModel : ObservableObject, IDisposable
         }
     }
 
+    [RelayCommand]
+    public async Task StartRotationAsync()
+    {
+        List<string> groups = RotationGroups.Where(g => g.IsSelected).Select(g => g.Name).ToList();
+        long.TryParse(RotationPlaceIdText.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out long placeId);
+        TimeSpan duration = TimeSpan.FromHours(Math.Max(0, RotationHours)) + TimeSpan.FromMinutes(Math.Max(0, RotationMinutes));
+
+        Result started = _rotationManager.Start(new RotationPlan(groups, duration, placeId));
+        if (!started.IsSuccess)
+        {
+            string message = started.ErrorCode switch
+            {
+                "NoGroups" => Strings.RotationSelectGroup,
+                "DurationTooShort" => Strings.RotationDurationTooShort,
+                "InvalidPlaceId" => Strings.PlaceIdRequired,
+                _ => started.Error ?? Strings.ErrorTitle
+            };
+            _snackbarService.Show(Strings.ErrorTitle, message, ControlAppearance.Danger);
+            return;
+        }
+
+        AppSettings current = _settingsService.CurrentSettings;
+        await _settingsService.SaveSettingsAsync(current with
+        {
+            RotationGroups = groups,
+            RotationDurationMinutes = (int)duration.TotalMinutes,
+            LastPlaceId = placeId.ToString(CultureInfo.InvariantCulture)
+        });
+    }
+
+    [RelayCommand]
+    public Task StopRotationAsync() => _rotationManager.StopAsync();
+
+    private async Task LoadRotationOptionsAsync()
+    {
+        AppSettings settings = _settingsService.CurrentSettings ?? AppSettings.Default;
+        HashSet<string> saved = new(settings.RotationGroups ?? [], StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<Account> accounts = await _accountStore.ListAsync() ?? [];
+
+        RotationGroups.Clear();
+        foreach (IGrouping<string, Account> group in accounts
+                     .Where(a => !string.IsNullOrWhiteSpace(a.Group))
+                     .GroupBy(a => a.Group!.Trim(), StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase))
+        {
+            RotationGroups.Add(new RotationGroupOption(group.Key, group.Count(), saved.Contains(group.Key)));
+        }
+
+        HasRotationGroups = RotationGroups.Count > 0;
+        RotationHours = settings.RotationDurationMinutes / 60;
+        RotationMinutes = settings.RotationDurationMinutes % 60;
+        RotationPlaceIdText = settings.LastPlaceId ?? string.Empty;
+    }
+
+    private void OnRotationStatusChanged(RotationStatus status)
+    {
+        Dispatcher? dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher != null && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(() => ApplyRotationStatus(status));
+            return;
+        }
+
+        ApplyRotationStatus(status);
+    }
+
+    private void ApplyRotationStatus(RotationStatus? status)
+    {
+        status ??= RotationStatus.Idle;
+        IsRotationRunning = status.IsRunning;
+        string format = status.Phase switch
+        {
+            RotationPhase.Launching => Strings.RotationStatusLaunching,
+            RotationPhase.Farming => Strings.RotationStatusFarming,
+            RotationPhase.Stopping => Strings.RotationStatusStopping,
+            RotationPhase.Cleaning => Strings.RotationStatusCleaning,
+            _ => Strings.RotationStatusIdle
+        };
+        RotationStatusText = string.Format(
+            CultureInfo.CurrentCulture,
+            CompositeFormat.Parse(format),
+            status.CurrentGroup,
+            status.NextSwitchAt?.ToLocalTime().ToString("t", CultureInfo.CurrentCulture));
+    }
+
     private async Task AddOrUpdateSessionItemAsync(RunningSession session)
     {
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
@@ -202,6 +326,7 @@ public partial class RunningViewModel : ObservableObject, IDisposable
         _timer.Stop();
         _sessionTracker.SessionStarted -= OnSessionStarted;
         _sessionTracker.SessionEnded -= OnSessionEnded;
+        _rotationManager.StatusChanged -= OnRotationStatusChanged;
         GC.SuppressFinalize(this);
     }
 }
@@ -274,4 +399,23 @@ public partial class RunningSessionItemViewModel : ObservableObject
             ? $"{(int)uptime.TotalHours:D2}:{uptime.Minutes:D2}:{uptime.Seconds:D2}"
             : $"{uptime.Minutes:D2}:{uptime.Seconds:D2}";
     }
+}
+
+public partial class RotationGroupOption : ObservableObject
+{
+    public RotationGroupOption(string name, int accountCount, bool isSelected)
+    {
+        Name = name;
+        AccountCount = accountCount;
+        _isSelected = isSelected;
+    }
+
+    public string Name { get; }
+
+    public int AccountCount { get; }
+
+    public string DisplayName => string.Create(CultureInfo.CurrentCulture, $"{Name} ({AccountCount})");
+
+    [ObservableProperty]
+    private bool _isSelected;
 }

@@ -383,6 +383,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -538,6 +539,22 @@
                                              CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
                                              VerticalAlignment="Center" />
                         </Grid>
+
+                        <!-- Row 7: Auto-clean Roblox cache before launching -->
+                        <StackPanel Grid.Row="10" Grid.Column="0" VerticalAlignment="Center" Margin="4,12,4,4">
+                            <TextBlock Text="{x:Static resources:Strings.EnableAutoCleanCache}"
+                                       Style="{StaticResource SettingLabelStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.EnableAutoCleanCacheDescription}"
+                                       Style="{StaticResource DescriptionTextStyle}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Row="10" Grid.Column="1"
+                                         AutomationProperties.AutomationId="Settings_AutoCleanCacheToggle"
+                                         AutomationProperties.Name="{x:Static resources:Strings.EnableAutoCleanCache}"
+                                         IsChecked="{Binding EnableAutoCleanCache, Mode=OneWay}"
+                                         Command="{Binding EnableAutoCleanCacheToggledCommand}"
+                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                         VerticalAlignment="Center" />
                     </Grid>
                 </Border>
 
