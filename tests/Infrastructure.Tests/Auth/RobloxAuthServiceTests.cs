@@ -444,4 +444,45 @@ public sealed class RobloxAuthServiceTests
         Assert.DoesNotContain("\r", result.Details.RobloxMessage);
         Assert.DoesNotContain("\n", result.Details.RobloxMessage);
     }
+
+    [Fact]
+    public async Task ValidateCookieAsync_CachesValidatedUserWithinTtl_AndEvictsOn401()
+    {
+        int validateCalls = 0;
+        string json = """{"id": 4242, "name": "CachedUser", "displayName": "Cached User"}""";
+
+        using HttpClient client = CreateClient(new DelegatingMockHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.Contains("authenticated", StringComparison.Ordinal))
+            {
+                validateCalls++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(json, Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+        }));
+
+        RobloxAuthService service = new(client);
+        using SecretValue cookie = SecretValue.FromString(FakeCookie);
+
+        Result<RobloxUser> r1 = await service.ValidateCookieAsync(cookie);
+        Result<RobloxUser> r2 = await service.ValidateCookieAsync(cookie);
+
+        Assert.True(r1.IsSuccess);
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(1, validateCalls);
+        Assert.Equal(4242, r2.Value!.Id);
+
+        // 401 on GetAuthTicketAsync evicts cached validation entry
+        Result<SecretValue> ticketResult = await service.GetAuthTicketAsync(cookie);
+        Assert.False(ticketResult.IsSuccess);
+        Assert.Equal(AuthErrorCodes.Expired, ticketResult.ErrorCode);
+
+        Result<RobloxUser> r3 = await service.ValidateCookieAsync(cookie);
+        Assert.True(r3.IsSuccess);
+        Assert.Equal(2, validateCalls);
+    }
 }

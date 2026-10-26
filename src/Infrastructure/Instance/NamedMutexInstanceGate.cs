@@ -109,19 +109,9 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
         }
 
         IReadOnlyList<ProcessSnapshot> running = _processProvider.GetRobloxProcesses();
-        if (running.Count > 0)
+        if (running.Count > 0 && !_isDefaultProductionGate)
         {
-            if (_isDefaultProductionGate)
-            {
-                RobloxHandleCloser.CloseSingletonHandlesInRobloxProcesses(
-                    _processProvider,
-                    LocalEventName,
-                    DefaultMutexName);
-            }
-            else
-            {
-                return Result.Failure("RobloxRunning", "RobloxRunning");
-            }
+            return Result.Failure("RobloxRunning", "RobloxRunning");
         }
 
         lock (_syncLock)
@@ -196,7 +186,6 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
         Mutex? eventMutex = null;
         Mutex? localEventMutex = null;
         Mutex? globalMutex = null;
-        FileStream? cookieLock = null;
 
         while (true)
         {
@@ -212,8 +201,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                         ref mutex,
                         ref eventMutex,
                         ref localEventMutex,
-                        ref globalMutex,
-                        ref cookieLock);
+                        ref globalMutex);
                 }
 
                 continue;
@@ -236,7 +224,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                     mutex = CreateLenientMutex(_mutexName!, initiallyOwned: true, out bool mutexCreatedNew);
                     if (!mutexCreatedNew && !_isDefaultProductionGate)
                     {
-                        CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex, ref cookieLock);
+                        CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
                         _isEnabled = false;
                         _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
                     }
@@ -248,7 +236,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
 
                         if (!eventCreatedNew && !_isDefaultProductionGate)
                         {
-                            CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex, ref cookieLock);
+                            CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
                             _isEnabled = false;
                             _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
                         }
@@ -256,11 +244,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                         {
                             if (_isDefaultProductionGate)
                             {
-                                TryAcquireAuxiliaryLocks(ref localEventMutex, ref globalMutex, ref cookieLock);
-                                RobloxHandleCloser.CloseSingletonHandlesInRobloxProcesses(
-                                    _processProvider,
-                                    LocalEventName,
-                                    DefaultMutexName);
+                                TryAcquireAuxiliaryLocks(ref localEventMutex, ref globalMutex);
                             }
 
                             _isEnabled = true;
@@ -270,7 +254,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                 }
                 catch (Exception)
                 {
-                    CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex, ref cookieLock);
+                    CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
                     _isEnabled = false;
                     _commandResult = Result.Failure("MutexError", "MutexError");
                 }
@@ -279,14 +263,14 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             }
             else if (cmd == GateCommand.Disable)
             {
-                CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex, ref cookieLock);
+                CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
                 _isEnabled = false;
                 _commandResult = Result.Success();
                 _commandDone.Set();
             }
             else if (cmd == GateCommand.Shutdown)
             {
-                CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex, ref cookieLock);
+                CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
                 _isEnabled = false;
                 _commandDone.Set();
                 break;
@@ -304,8 +288,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
         ref Mutex? mutex,
         ref Mutex? eventMutex,
         ref Mutex? localEventMutex,
-        ref Mutex? globalMutex,
-        ref FileStream? cookieLock)
+        ref Mutex? globalMutex)
     {
         try
         {
@@ -313,16 +296,10 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             GC.KeepAlive(eventMutex);
             GC.KeepAlive(localEventMutex);
             GC.KeepAlive(globalMutex);
-            GC.KeepAlive(cookieLock);
 
             if (_isDefaultProductionGate)
             {
-                RobloxHandleCloser.CloseSingletonHandlesInRobloxProcesses(
-                    _processProvider,
-                    LocalEventName,
-                    DefaultMutexName);
-
-                TryAcquireAuxiliaryLocks(ref localEventMutex, ref globalMutex, ref cookieLock);
+                TryAcquireAuxiliaryLocks(ref localEventMutex, ref globalMutex);
             }
         }
         catch
@@ -355,8 +332,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
 
     private void TryAcquireAuxiliaryLocks(
         ref Mutex? localEventMutex,
-        ref Mutex? globalMutex,
-        ref FileStream? cookieLock)
+        ref Mutex? globalMutex)
     {
         if (localEventMutex == null && !string.Equals(_eventName, LocalEventName, StringComparison.Ordinal))
         {
@@ -379,56 +355,18 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             {
             }
         }
-
-        // Replicate Multiple Roblox V2.2 Error 773 fix: lock RobloxCookies.dat with FileShare.None
-        if (cookieLock == null)
-        {
-            try
-            {
-                string robloxCookiePath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Roblox",
-                    "LocalStorage",
-                    "RobloxCookies.dat");
-                if (File.Exists(robloxCookiePath))
-                {
-                    cookieLock = new FileStream(
-                        robloxCookiePath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.None);
-                }
-            }
-            catch
-            {
-            }
-        }
     }
 
     private static void CleanupHandles(
         ref Mutex? mutex,
         ref Mutex? eventMutex,
         ref Mutex? localEventMutex,
-        ref Mutex? globalMutex,
-        ref FileStream? cookieLock)
+        ref Mutex? globalMutex)
     {
         ReleaseAndDisposeMutex(ref mutex);
         ReleaseAndDisposeMutex(ref eventMutex);
         ReleaseAndDisposeMutex(ref localEventMutex);
         ReleaseAndDisposeMutex(ref globalMutex);
-
-        if (cookieLock != null)
-        {
-            try
-            {
-                cookieLock.Dispose();
-            }
-            catch
-            {
-            }
-
-            cookieLock = null;
-        }
     }
 
     private static void ReleaseAndDisposeMutex(ref Mutex? mutex)

@@ -1,11 +1,13 @@
 namespace RbxManager.Infrastructure.Auth;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -22,21 +24,36 @@ using RbxManager.Infrastructure.Serialization;
 
 public sealed partial class RobloxAuthService : IRobloxAuthService
 {
+    public static readonly TimeSpan ValidationCacheTtl = TimeSpan.FromMinutes(5);
+
     private readonly HttpClient? _defaultHttpClient;
     private readonly IRobloxHttpClientFactory? _clientFactory;
     private readonly ILogger<RobloxAuthService> _logger;
+    private readonly TimeProvider _timeProvider;
+    private readonly ConcurrentDictionary<string, (RobloxUser User, DateTimeOffset ExpiresAt)> _validationCache = new(StringComparer.Ordinal);
 
-    public RobloxAuthService(IRobloxHttpClientFactory clientFactory, ILogger<RobloxAuthService>? logger = null)
+    public RobloxAuthService(
+        IRobloxHttpClientFactory clientFactory,
+        ILogger<RobloxAuthService>? logger = null,
+        TimeProvider? timeProvider = null)
     {
         _clientFactory = clientFactory;
         _logger = logger ?? NullLogger<RobloxAuthService>.Instance;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public RobloxAuthService(HttpClient httpClient, ILogger<RobloxAuthService>? logger = null)
+    public RobloxAuthService(
+        HttpClient httpClient,
+        ILogger<RobloxAuthService>? logger = null,
+        TimeProvider? timeProvider = null)
     {
         _defaultHttpClient = httpClient;
         _logger = logger ?? NullLogger<RobloxAuthService>.Instance;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
+
+    private static string ComputeCookieHash(string revealedCookie) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(revealedCookie)));
 
     private HttpClient ResolveClient(out bool shouldDispose)
     {
@@ -57,13 +74,21 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
 
     public async Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default)
     {
+        string revealedCookie = cookie.Reveal();
+        string cacheKey = ComputeCookieHash(revealedCookie);
+        if (_validationCache.TryGetValue(cacheKey, out (RobloxUser User, DateTimeOffset ExpiresAt) cached) &&
+            _timeProvider.GetUtcNow() < cached.ExpiresAt)
+        {
+            return Result.Success(cached.User);
+        }
+
         LogValidatingCookie();
 
         HttpClient client = ResolveClient(out bool shouldDispose);
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Get, "https://users.roblox.com/v1/users/authenticated");
-            request.Headers.Add("Cookie", $".ROBLOSECURITY={cookie.Reveal()}");
+            request.Headers.Add("Cookie", $".ROBLOSECURITY={revealedCookie}");
 
             using HttpResponseMessage response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
@@ -74,8 +99,10 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
 
                 if (userDto != null && userDto.Id > 0 && !string.IsNullOrWhiteSpace(userDto.Name))
                 {
+                    RobloxUser validatedUser = new(userDto.Id, userDto.Name, userDto.DisplayName ?? userDto.Name);
+                    _validationCache[cacheKey] = (validatedUser, _timeProvider.GetUtcNow() + ValidationCacheTtl);
                     LogValidateSuccess(userDto.Id);
-                    return Result.Success(new RobloxUser(userDto.Id, userDto.Name, userDto.DisplayName ?? userDto.Name));
+                    return Result.Success(validatedUser);
                 }
 
                 bool csrf = request.Options.TryGetValue(RobloxCsrfHandler.CsrfTokenObtainedKey, out bool c) && c;
@@ -107,6 +134,7 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
+                _validationCache.TryRemove(cacheKey, out _);
                 LogValidateFailed(AuthErrorCodes.Expired);
                 return Result.Failure<RobloxUser>("The account cookie has expired.", AuthErrorCodes.Expired, details);
             }
@@ -184,12 +212,14 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
     public async Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
     {
         LogRequestingTicket();
+        string revealedCookie = cookie.Reveal();
+        string cacheKey = ComputeCookieHash(revealedCookie);
 
         HttpClient client = ResolveClient(out bool shouldDispose);
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Post, "https://auth.roblox.com/v1/authentication-ticket");
-            request.Headers.Add("Cookie", $".ROBLOSECURITY={cookie.Reveal()}");
+            request.Headers.Add("Cookie", $".ROBLOSECURITY={revealedCookie}");
             request.Headers.Add("Referer", "https://www.roblox.com/");
             request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
 
@@ -237,14 +267,15 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
+                _validationCache.TryRemove(cacheKey, out _);
                 LogTicketFailed(AuthErrorCodes.Expired);
                 return Result.Failure<SecretValue>("Account cookie has expired.", AuthErrorCodes.Expired, details);
             }
 
-            if ((int)response.StatusCode == 429)
+            if ((int)response.StatusCode == 429 || response.StatusCode == HttpStatusCode.Forbidden)
             {
                 LogTicketFailed(AuthErrorCodes.RateLimited);
-                return Result.Failure<SecretValue>("Rate limited requesting authentication ticket.", AuthErrorCodes.RateLimited, details);
+                return Result.Failure<SecretValue>("Rate limited or challenged requesting authentication ticket.", AuthErrorCodes.RateLimited, details);
             }
 
             if ((int)response.StatusCode >= 500)

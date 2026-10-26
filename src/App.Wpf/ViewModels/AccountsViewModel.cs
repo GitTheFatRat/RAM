@@ -161,6 +161,36 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         {
             _lastPlaceId = _settingsService.CurrentSettings.LastPlaceId;
         }
+
+        if (_sessionTracker != null)
+        {
+            _sessionTracker.SessionStarted += OnTrackedSessionStarted;
+            _sessionTracker.SessionEnded += OnTrackedSessionEnded;
+        }
+    }
+
+    private void OnTrackedSessionStarted(Core.Sessions.RunningSession session)
+    {
+        RunOnUiThread(() =>
+        {
+            AccountItemViewModel? item = _allAccounts.FirstOrDefault(a => a.Id == session.AccountId);
+            if (item != null && item.ActiveProcessId != session.ProcessId)
+            {
+                item.ActiveProcessId = session.ProcessId;
+            }
+        });
+    }
+
+    private void OnTrackedSessionEnded(Core.Sessions.RunningSession session, bool intentional)
+    {
+        RunOnUiThread(() =>
+        {
+            AccountItemViewModel? item = _allAccounts.FirstOrDefault(a => a.Id == session.AccountId && a.ActiveProcessId == session.ProcessId);
+            if (item != null)
+            {
+                item.ActiveProcessId = null;
+            }
+        });
     }
 
     partial void OnSelectedGroupChanged(string? value) => ApplyFilter();
@@ -200,6 +230,14 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             Dictionary<AccountId, int> activePids = _allAccounts
                 .Where(a => a.ActiveProcessId.HasValue)
                 .ToDictionary(a => a.Id, a => a.ActiveProcessId!.Value);
+
+            if (_sessionTracker?.ActiveSessions is { Count: > 0 } trackedSessions)
+            {
+                foreach (Core.Sessions.RunningSession session in trackedSessions)
+                {
+                    activePids[session.AccountId] = session.ProcessId;
+                }
+            }
 
             IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
             foreach (AccountItemViewModel staleItem in _allAccounts)
@@ -300,38 +338,6 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             DataContext = editorViewModel
         };
 
-        ContentDialog dialog = new()
-        {
-            Title = Strings.AddAccountDialogTitle,
-            PrimaryButtonText = Strings.Save,
-            CloseButtonText = Strings.Cancel,
-            Content = editorControl
-        };
-
-        dialog.Closing += (sender, args) =>
-        {
-            if (args.Result == ContentDialogResult.Primary)
-            {
-                string rawCookie = editorControl.ReadPassword();
-                using SecretValue testCookie = SecretValue.FromString(rawCookie);
-
-                Account testAccount = new(
-                    Id: new AccountId(0),
-                    Alias: editorViewModel.Alias,
-                    Group: editorViewModel.Group,
-                    Note: editorViewModel.Note,
-                    Cookie: testCookie,
-                    CreatedAt: DateTimeOffset.UtcNow);
-
-                Result validation = AccountValidator.Validate(testAccount, _allAccounts.Select(a => a.Account));
-                if (!validation.IsSuccess)
-                {
-                    args.Cancel = true;
-                    editorViewModel.ErrorMessage = validation.Error ?? string.Empty;
-                }
-            }
-        };
-
         ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(
             new SimpleContentDialogCreateOptions
             {
@@ -359,6 +365,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             Result validation = AccountValidator.Validate(newAccount, _allAccounts.Select(a => a.Account));
             if (!validation.IsSuccess)
             {
+                _snackbarService.Show(Strings.ErrorTitle, validation.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
                 return;
             }
 
@@ -560,7 +567,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 }
 
                 AccountItemViewModel item = list[i];
-                await ValidateAndUpdateAccountAsync(item.Account, ct);
+                string? errorCode = await ValidateAndUpdateAccountAsync(item.Account, ct);
                 completed++;
                 if (System.Windows.Application.Current?.Dispatcher != null)
                 {
@@ -572,6 +579,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 else
                 {
                     CheckAllProgressText = $"{completed} / {total}";
+                }
+
+                if (string.Equals(errorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
                 }
 
                 if (i < list.Count - 1 && !ct.IsCancellationRequested)
@@ -703,7 +715,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task ValidateAndUpdateAccountAsync(Account account, CancellationToken ct = default)
+    private async Task<string?> ValidateAndUpdateAccountAsync(Account account, CancellationToken ct = default)
     {
         Result<RobloxUser> validation = await _authService.ValidateCookieAsync(account.Cookie, ct);
 
@@ -751,6 +763,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             LastCheckedAt: DateTimeOffset.UtcNow);
 
         await _accountStore.UpdateAsync(updated, CancellationToken.None);
+        return validation.ErrorCode;
     }
 
     private void ApplyFilter()
@@ -1107,6 +1120,10 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 {
                     failCount++;
                     ShowSnackbar(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
+                    if (string.Equals(launchResult.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
                 }
 
                 bool isLastAccount = currentIndex >= queue.Count;
@@ -1196,7 +1213,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 try
                 {
                     int pid = proc.Id;
-                    if (_allAccounts.Any(a => a.ActiveProcessId == pid))
+                    if (_allAccounts.Any(a => a.ActiveProcessId == pid) ||
+                        _sessionTracker?.ActiveSessions?.Any(s => s.ProcessId == pid) == true)
                     {
                         continue;
                     }
@@ -1273,7 +1291,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             HashSet<int> currentPids = SnapshotRobloxProcessIds();
             int? newPid = currentPids.FirstOrDefault(pid =>
                 !beforePids.Contains(pid) &&
-                !_allAccounts.Any(a => a.ActiveProcessId == pid));
+                !_allAccounts.Any(a => a.ActiveProcessId == pid) &&
+                _sessionTracker?.ActiveSessions?.Any(s => s.ProcessId == pid) != true);
 
             if (newPid is > 0)
             {
@@ -1459,6 +1478,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         }
 
         _disposed = true;
+        if (_sessionTracker != null)
+        {
+            _sessionTracker.SessionStarted -= OnTrackedSessionStarted;
+            _sessionTracker.SessionEnded -= OnTrackedSessionEnded;
+        }
         if (_checkAllCts != null)
         {
             _checkAllCts.Cancel();

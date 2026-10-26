@@ -180,9 +180,10 @@ public static class User32
             return;
         }
 
-        int windowedStyle = ComputeWindowedStyle(style);
-        if (windowedStyle != style)
+        const int forbiddenMask = WS_POPUP | WS_MAXIMIZE | WS_MINIMIZE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
+        if ((style & forbiddenMask) != 0)
         {
+            int windowedStyle = ComputeWindowedStyle(style);
             _ = SetWindowLongOverride?.Invoke(hWnd, GWL_STYLE, windowedStyle)
                 ?? SetWindowLong(hWnd, GWL_STYLE, windowedStyle);
         }

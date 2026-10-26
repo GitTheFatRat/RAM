@@ -28,9 +28,12 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
     private readonly ISettingsService? _settingsService;
     private readonly ILogger<RobloxLauncher> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly Func<TimeSpan> _jitterProvider;
     private readonly SemaphoreSlim _launchGate = new(1, 1);
     private DateTimeOffset? _lastLaunchStartTime;
     private DateTimeOffset? _lastCacheCleanTime;
+    private DateTimeOffset? _cooldownUntil;
+    private int _consecutiveThrottleCount;
     private readonly IRobloxCacheCleaner? _cacheCleaner;
     private bool _disposed;
 
@@ -43,7 +46,8 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         ILogger<RobloxLauncher>? logger = null,
         ISettingsService? settingsService = null,
         TimeProvider? timeProvider = null,
-        IRobloxCacheCleaner? cacheCleaner = null)
+        IRobloxCacheCleaner? cacheCleaner = null,
+        Func<TimeSpan>? jitterProvider = null)
     {
         _accountStore = accountStore;
         _authService = authService;
@@ -54,6 +58,9 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         _settingsService = settingsService;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _cacheCleaner = cacheCleaner;
+        _jitterProvider = jitterProvider ?? (timeProvider == null
+            ? static () => TimeSpan.FromMilliseconds(Random.Shared.Next(1500, 6000))
+            : static () => TimeSpan.Zero);
     }
 
     // A bulk launch of 20 accounts would otherwise rescan the cache 20 times within minutes for nothing.
@@ -87,8 +94,17 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         await _launchGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            if (_cooldownUntil.HasValue)
+            {
+                DateTimeOffset cooldownNow = _timeProvider.GetUtcNow();
+                if (cooldownNow < _cooldownUntil.Value)
+                {
+                    await Task.Delay(_cooldownUntil.Value - cooldownNow, _timeProvider, ct).ConfigureAwait(false);
+                }
+            }
+
             int delaySeconds = _settingsService?.CurrentSettings.LaunchDelaySeconds ?? AppSettings.DefaultLaunchDelaySeconds;
-            TimeSpan minInterval = TimeSpan.FromSeconds(delaySeconds);
+            TimeSpan minInterval = TimeSpan.FromSeconds(delaySeconds) + _jitterProvider();
 
             if (_lastLaunchStartTime.HasValue)
             {
@@ -131,9 +147,20 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
                 Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, ct).ConfigureAwait(false);
                 if (!ticketResult.IsSuccess)
                 {
+                    if (string.Equals(ticketResult.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase) ||
+                        ticketResult.Details?.HttpStatus is 429 or 403)
+                    {
+                        _consecutiveThrottleCount = Math.Min(_consecutiveThrottleCount + 1, 5);
+                        int backoffSeconds = Math.Min(300, 30 * (1 << (_consecutiveThrottleCount - 1)));
+                        _cooldownUntil = _timeProvider.GetUtcNow() + TimeSpan.FromSeconds(backoffSeconds);
+                    }
+
                     LogLaunchFailed(ticketResult.ErrorCode ?? "TicketFailed");
                     return Result.Failure(ticketResult.Error ?? "Failed to acquire authentication ticket.", ticketResult.ErrorCode);
                 }
+
+                _consecutiveThrottleCount = 0;
+                _cooldownUntil = null;
 
                 using SecretValue ticketSecret = ticketResult.Value!;
                 string ticket = ticketSecret.Reveal();

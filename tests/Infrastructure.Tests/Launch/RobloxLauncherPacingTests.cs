@@ -288,4 +288,66 @@ public sealed class RobloxLauncherPacingTests
 
         Assert.Equal(5, starter.StartedUris.Count);
     }
+
+    private sealed class ThrottlingAuthService : IRobloxAuthService
+    {
+        public int RemainingRateLimits { get; set; }
+
+        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default) =>
+            Task.FromResult(Result.Success(new RobloxUser(1001, "TestPlayer", "TestPlayer")));
+
+        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
+        {
+            if (RemainingRateLimits > 0)
+            {
+                RemainingRateLimits--;
+                return Task.FromResult(Result.Failure<SecretValue>("Rate limited", AuthErrorCodes.RateLimited));
+            }
+
+            return Task.FromResult(Result.Success(SecretValue.FromString("ticket-1001")));
+        }
+    }
+
+    [Fact]
+    public async Task LaunchAsync_OnRateLimitOrChallenge_EnforcesExponentialBackoffAndJitter()
+    {
+        FakeTimeProvider timeProvider = new();
+        using SecretValue cookie = SecretValue.FromString(FakeCookie);
+        Account account = new(new AccountId(1), "Acc1", null, null, cookie, DateTimeOffset.UtcNow);
+
+        FakeAccountStore store = new(account);
+        ThrottlingAuthService auth = new() { RemainingRateLimits = 1 };
+        FakeProcessStarter starter = new();
+        FakeProcessProvider processProvider = new();
+        FakeInstanceGate gate = new();
+        FakeSettingsService settings = new()
+        {
+            CurrentSettings = new AppSettings(LaunchDelaySeconds: 20)
+        };
+
+        using RobloxLauncher launcher = new(
+            store,
+            auth,
+            starter,
+            processProvider,
+            gate,
+            settingsService: settings,
+            timeProvider: timeProvider,
+            jitterProvider: () => TimeSpan.FromSeconds(3));
+
+        // 1st launch hits 429/403 rate limit -> schedules 30s backoff
+        Result r1 = await launcher.LaunchAsync(new LaunchRequest(account.Id, 1818, null));
+        Assert.False(r1.IsSuccess);
+        Assert.Equal(AuthErrorCodes.RateLimited, r1.ErrorCode);
+
+        // 2nd launch must wait out the 30s backoff (greater than the 20s + 3s jitter interval)
+        Task<Result> secondLaunch = launcher.LaunchAsync(new LaunchRequest(account.Id, 1818, null));
+        timeProvider.Advance(TimeSpan.FromSeconds(25));
+        Assert.False(secondLaunch.IsCompleted);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(5));
+        Result r2 = await secondLaunch;
+        Assert.True(r2.IsSuccess);
+        Assert.Single(starter.StartedUris);
+    }
 }
