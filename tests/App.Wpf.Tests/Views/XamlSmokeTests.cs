@@ -311,4 +311,45 @@ public sealed class XamlSmokeTests
         settingsService.Received(1).SaveSettingsAsync(
             Arg.Is<AppSettings>(s => s.LastPlaceId == "1537690962"));
     }
+
+    [Fact]
+    public void M36_MainWindow_And_AccountsDataGrid_EnforceMinimumSizeConstraints()
+    {
+        ExecuteWithTraceListener(() =>
+        {
+            TestAppResources.Initialize("Dark");
+
+            ISettingsService settingsService = Substitute.For<ISettingsService>();
+            settingsService.CurrentSettings.Returns(AppSettings.Default);
+            IContentDialogService contentDialogService = Substitute.For<IContentDialogService>();
+            ISnackbarService snackbarService = Substitute.For<ISnackbarService>();
+            IServiceProvider serviceProvider = Substitute.For<IServiceProvider>();
+
+            MainWindow window = new(
+                new MainViewModel(),
+                serviceProvider,
+                contentDialogService,
+                snackbarService,
+                settingsService);
+
+            Assert.True(window.MinWidth >= 900, $"Expected MainWindow.MinWidth >= 900, actual: {window.MinWidth}");
+            Assert.True(window.MinHeight >= 600, $"Expected MainWindow.MinHeight >= 600, actual: {window.MinHeight}");
+
+            AccountsViewModel accountsVm = new(
+                Substitute.For<IAccountStore>(),
+                contentDialogService,
+                snackbarService,
+                Substitute.For<IRobloxAuthService>(),
+                Substitute.For<ILauncher>(),
+                settingsService,
+                Substitute.For<IBackupService>());
+
+            AccountsPage accountsPage = new(accountsVm);
+            Assert.NotEmpty(accountsPage.AccountsDataGrid.Columns);
+            foreach (System.Windows.Controls.DataGridColumn column in accountsPage.AccountsDataGrid.Columns)
+            {
+                Assert.True(column.MinWidth >= 44, $"AccountsDataGrid column '{column.Header}' has MinWidth={column.MinWidth} (expected explicit MinWidth >= 44)");
+            }
+        });
+    }
 }

@@ -30,6 +30,13 @@ public static class User32
     public const int SW_RESTORE = 9;
     private const uint SPI_GETWORKAREA = 0x0030;
 
+    internal static Func<IntPtr, int, int>? GetWindowLongOverride;
+    internal static Func<IntPtr, int, int, int>? SetWindowLongOverride;
+    internal static Func<IntPtr, IntPtr, int, int, int, int, uint, bool>? SetWindowPosOverride;
+    internal static Func<IntPtr, bool>? IsIconicOverride;
+    internal static Func<IntPtr, bool>? IsZoomedOverride;
+    internal static Func<IntPtr, int, bool>? ShowWindowOverride;
+
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeRect
     {
@@ -145,6 +152,10 @@ public static class User32
             ? new ScreenArea(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)
             : default;
 
+    internal static int ComputeWindowedStyle(int style) =>
+        (style & ~(WS_POPUP | WS_MAXIMIZE | WS_MINIMIZE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX))
+        | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_VISIBLE;
+
     /// <summary>
     /// Restores minimized/maximized state and strips fullscreen/minimize/maximize styles so clicking
     /// another window does not trigger Windows' fullscreen focus-loss auto-minimization.
@@ -156,23 +167,24 @@ public static class User32
             return;
         }
 
-        if (IsIconic(hWnd) || IsZoomed(hWnd))
+        bool isIconic = IsIconicOverride?.Invoke(hWnd) ?? IsIconic(hWnd);
+        bool isZoomed = IsZoomedOverride?.Invoke(hWnd) ?? IsZoomed(hWnd);
+        if (isIconic || isZoomed)
         {
-            _ = ShowWindow(hWnd, SW_RESTORE);
+            _ = ShowWindowOverride?.Invoke(hWnd, SW_RESTORE) ?? ShowWindow(hWnd, SW_RESTORE);
         }
 
-        int style = GetWindowLong(hWnd, GWL_STYLE);
+        int style = GetWindowLongOverride?.Invoke(hWnd, GWL_STYLE) ?? GetWindowLong(hWnd, GWL_STYLE);
         if (style == 0)
         {
             return;
         }
 
-        int windowedStyle = (style & ~(WS_POPUP | WS_MAXIMIZE | WS_MINIMIZE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX))
-            | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_VISIBLE;
-
+        int windowedStyle = ComputeWindowedStyle(style);
         if (windowedStyle != style)
         {
-            _ = SetWindowLong(hWnd, GWL_STYLE, windowedStyle);
+            _ = SetWindowLongOverride?.Invoke(hWnd, GWL_STYLE, windowedStyle)
+                ?? SetWindowLong(hWnd, GWL_STYLE, windowedStyle);
         }
     }
 
@@ -183,27 +195,17 @@ public static class User32
     public static bool ResizeWindow(IntPtr hWnd, int width, int height)
     {
         ForceWindowedMode(hWnd);
-        return SetWindowPos(
-            hWnd,
-            IntPtr.Zero,
-            0,
-            0,
-            width,
-            height,
-            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING);
+        const uint flags = SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING;
+        return SetWindowPosOverride?.Invoke(hWnd, IntPtr.Zero, 0, 0, width, height, flags)
+            ?? SetWindowPos(hWnd, IntPtr.Zero, 0, 0, width, height, flags);
     }
 
     /// <summary>Position and size in one call, for initial tile placement: <see cref="ResizeWindow"/> without SWP_NOMOVE.</summary>
     public static bool MoveResizeWindow(IntPtr hWnd, int x, int y, int width, int height)
     {
         ForceWindowedMode(hWnd);
-        return SetWindowPos(
-            hWnd,
-            IntPtr.Zero,
-            x,
-            y,
-            width,
-            height,
-            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING);
+        const uint flags = SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING;
+        return SetWindowPosOverride?.Invoke(hWnd, IntPtr.Zero, x, y, width, height, flags)
+            ?? SetWindowPos(hWnd, IntPtr.Zero, x, y, width, height, flags);
     }
 }

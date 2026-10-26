@@ -233,4 +233,34 @@ public sealed partial class XamlScanTests
         Assert.True(violations.Count == 0,
             $"Found illegal Binding on ConverterParameter:\n{string.Join("\n", violations)}");
     }
+
+    [Fact]
+    public void M36_MainWindowAndAccountsColumns_HaveExplicitMinWidthAndMinHeightInXaml()
+    {
+        string root = FindRepoRoot();
+        string mainWindowPath = Path.Combine(root, "src", "App.Wpf", "MainWindow.xaml");
+        XDocument mainDoc = XDocument.Load(mainWindowPath);
+        XElement mainRoot = mainDoc.Root!;
+
+        double minWidth = double.Parse(mainRoot.Attribute("MinWidth")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture);
+        double minHeight = double.Parse(mainRoot.Attribute("MinHeight")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(minWidth >= 900, $"Expected MainWindow MinWidth >= 900, got {minWidth}");
+        Assert.True(minHeight >= 600, $"Expected MainWindow MinHeight >= 600, got {minHeight}");
+
+        string accountsPath = Path.Combine(root, "src", "App.Wpf", "Views", "Pages", "AccountsPage.xaml");
+        XDocument accountsDoc = XDocument.Load(accountsPath);
+        List<XElement> columns = accountsDoc.Descendants()
+            .Where(e => e.Name.LocalName is "DataGridTextColumn" or "DataGridTemplateColumn")
+            .ToList();
+
+        Assert.NotEmpty(columns);
+        foreach (XElement col in columns)
+        {
+            string? colMinWidthRaw = col.Attribute("MinWidth")?.Value;
+            Assert.False(string.IsNullOrWhiteSpace(colMinWidthRaw), $"Column in AccountsPage.xaml is missing explicit MinWidth: {col}");
+            Assert.True(
+                double.TryParse(colMinWidthRaw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double colMinWidth) && colMinWidth > 0,
+                $"Column in AccountsPage.xaml has invalid MinWidth='{colMinWidthRaw}'");
+        }
+    }
 }

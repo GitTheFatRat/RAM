@@ -22,14 +22,14 @@ using RbxManager.Core.Processes;
 /// </remarks>
 public sealed class WindowSizeLock : IDisposable
 {
-    private const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
-    private const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
-    private const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
-    private const uint EVENT_SYSTEM_MINIMIZEEND = 0x0017;
-    private const uint EVENT_OBJECT_SHOW = 0x8002;
-    private const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+    internal const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
+    internal const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
+    internal const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
+    internal const uint EVENT_SYSTEM_MINIMIZEEND = 0x0017;
+    internal const uint EVENT_OBJECT_SHOW = 0x8002;
+    internal const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+    internal const int OBJID_WINDOW = 0;
     private const uint WINEVENT_OUTOFCONTEXT = 0x0000;
-    private const int OBJID_WINDOW = 0;
     private const uint GA_ROOT = 2;
     private const uint GW_OWNER = 4;
     private const int GWL_STYLE = -16;
@@ -45,6 +45,7 @@ public sealed class WindowSizeLock : IDisposable
     private readonly int _width;
     private readonly int _height;
     private readonly GridSlot? _tilePosition;
+    private readonly Func<(int Left, int Top, int Right, int Bottom)>? _getBoundsOverride;
     private readonly WinEventProc _callback;
     private readonly IntPtr[] _hooks;
     private readonly SynchronizationContext? _ownerContext;
@@ -54,6 +55,22 @@ public sealed class WindowSizeLock : IDisposable
     private long _burstStartedAt;
     private int _burstCorrections;
     private int _disposed;
+
+    internal WindowSizeLock(
+        IntPtr hWnd,
+        int width,
+        int height,
+        GridSlot? tilePosition = null,
+        Func<(int Left, int Top, int Right, int Bottom)>? getBoundsOverride = null)
+    {
+        _hWnd = hWnd;
+        _width = width;
+        _height = height;
+        _tilePosition = tilePosition;
+        _getBoundsOverride = getBoundsOverride;
+        _callback = OnWinEvent;
+        _hooks = [];
+    }
 
     private WindowSizeLock(IntPtr hWnd, uint processId, int width, int height, GridSlot? tilePosition)
     {
@@ -171,7 +188,7 @@ public sealed class WindowSizeLock : IDisposable
         }
     }
 
-    private void OnWinEvent(IntPtr hook, uint eventType, IntPtr hWnd, int idObject, int idChild, uint eventThread, uint eventTime)
+    internal void OnWinEvent(IntPtr hook, uint eventType, IntPtr hWnd, int idObject, int idChild, uint eventThread, uint eventTime)
     {
         if (idObject != OBJID_WINDOW || _disposed != 0)
         {
@@ -188,9 +205,9 @@ public sealed class WindowSizeLock : IDisposable
                 _isApplying = true;
                 try
                 {
-                    if (User32.IsIconic(hWnd))
+                    if (User32.IsIconicOverride?.Invoke(hWnd) ?? User32.IsIconic(hWnd))
                     {
-                        _ = User32.ShowWindow(hWnd, User32.SW_RESTORE);
+                        _ = User32.ShowWindowOverride?.Invoke(hWnd, User32.SW_RESTORE) ?? User32.ShowWindow(hWnd, User32.SW_RESTORE);
                     }
 
                     User32.ForceWindowedMode(hWnd);
@@ -241,9 +258,22 @@ public sealed class WindowSizeLock : IDisposable
             return;
         }
 
-        bool isMinimized = User32.IsIconic(_hWnd);
-        bool isMaximized = User32.IsZoomed(_hWnd);
-        if (!isMinimized && !isMaximized && GetWindowRect(_hWnd, out Rect bounds) &&
+        bool isMinimized = User32.IsIconicOverride?.Invoke(_hWnd) ?? User32.IsIconic(_hWnd);
+        bool isMaximized = User32.IsZoomedOverride?.Invoke(_hWnd) ?? User32.IsZoomed(_hWnd);
+        Rect bounds;
+        bool hasBounds;
+        if (_getBoundsOverride is not null)
+        {
+            (int left, int top, int right, int bottom) = _getBoundsOverride();
+            bounds = new Rect { Left = left, Top = top, Right = right, Bottom = bottom };
+            hasBounds = true;
+        }
+        else
+        {
+            hasBounds = GetWindowRect(_hWnd, out bounds);
+        }
+
+        if (!isMinimized && !isMaximized && hasBounds &&
             bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height)
         {
             return;
@@ -267,7 +297,7 @@ public sealed class WindowSizeLock : IDisposable
         {
             if (isMinimized)
             {
-                _ = User32.ShowWindow(_hWnd, User32.SW_RESTORE);
+                _ = User32.ShowWindowOverride?.Invoke(_hWnd, User32.SW_RESTORE) ?? User32.ShowWindow(_hWnd, User32.SW_RESTORE);
             }
 
             User32.ResizeWindow(_hWnd, _width, _height);
