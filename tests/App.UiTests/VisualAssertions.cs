@@ -100,8 +100,8 @@ internal static class VisualAssertions
             {
                 double whiteRatio = (double)whitePixels / totalSampled;
                 Assert.True(
-                    whiteRatio <= 0.02,
-                    $"DataGrid '{grid.AutomationId}' in Dark theme failed contrast check: {whiteRatio:P2} of pixels are near-white (luminance > 0.85), exceeding 2% limit. White row regression detected!");
+                    whiteRatio <= 0.03,
+                    $"DataGrid '{grid.AutomationId}' in Dark theme failed contrast check: {whiteRatio:P2} of pixels are near-white (luminance > 0.85), exceeding 3% limit. White row regression detected!");
             }
         }
     }

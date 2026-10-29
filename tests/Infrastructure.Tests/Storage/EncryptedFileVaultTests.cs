@@ -677,4 +677,246 @@ public sealed class EncryptedFileVaultTests
         byte[] afterHash = System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(vaultFilePath));
         Assert.Equal(originalHash, afterHash);
     }
+
+    [Fact]
+    public async Task Argon2Mode_DpapiUnwrappedBlob_DoesNotYieldDataKey_PasswordRequired()
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath("vault.dat");
+        const string password = "CorrectPassword123!";
+
+        using (VaultKeyProvider keyProvider = CreateKeyProvider(password))
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            using SecretValue cookie = SecretValue.FromString(FakeCookie1);
+            await vault.AddAsync(new Account(new AccountId(1), "KeyWrap", null, null, cookie, DateTimeOffset.UtcNow));
+        }
+
+        byte[] fileBytes = await File.ReadAllBytesAsync(vaultFilePath);
+        Assert.Equal(0x02, fileBytes[4]);
+        Assert.Equal(0x02, fileBytes[5]); // Argon2id key-wrap KDF type
+
+        byte[] header = fileBytes.AsSpan(0, 34).ToArray();
+        ushort blobLength = BinaryPrimitives.ReadUInt16LittleEndian(fileBytes.AsSpan(34, 2));
+        byte[] dpapiBlob = fileBytes.AsSpan(36, blobLength).ToArray();
+        int payloadOffset = 36 + blobLength;
+        byte[] nonce = fileBytes.AsSpan(payloadOffset, 12).ToArray();
+        byte[] tag = fileBytes.AsSpan(payloadOffset + 12, 16).ToArray();
+        byte[] ciphertext = fileBytes.AsSpan(payloadOffset + 28).ToArray();
+
+        // What an attacker running as the same Windows user can obtain without the password.
+        byte[] envelope = ProtectedData.Unprotect(dpapiBlob, null, DataProtectionScope.CurrentUser);
+        Assert.Equal(60, envelope.Length);
+        for (int start = 0; start + 32 <= envelope.Length; start++)
+        {
+            Assert.False(TryDecrypt(envelope.AsSpan(start, 32).ToArray(), nonce, tag, ciphertext, header));
+        }
+
+        // With the password, the envelope unwraps to a data key that differs from everything DPAPI exposes.
+        using SecretValue secret = SecretValue.FromString(password);
+        byte[] passwordKey = EncryptedFileVault.DeriveKey(secret, header.AsSpan(18, 16).ToArray());
+        byte[] dataKey = new byte[32];
+        using (AesGcm keyWrap = new(passwordKey, 16))
+        {
+            keyWrap.Decrypt(envelope.AsSpan(0, 12), envelope.AsSpan(28, 32), envelope.AsSpan(12, 16), dataKey, header);
+        }
+
+        Assert.True(TryDecrypt(dataKey, nonce, tag, ciphertext, header));
+        Assert.False(ContainsSequence(envelope, dataKey));
+        Assert.False(ContainsSequence(envelope, passwordKey));
+
+        using EncryptedFileVault noPasswordVault = new(vaultFilePath, keyProvider: null);
+        VaultCorruptedException ex = await Assert.ThrowsAsync<VaultCorruptedException>(() => noPasswordVault.ListAsync());
+        Assert.Contains("Master password is required", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LegacyArgon2Vault_StillLoads_AndNextSaveUpgradesToKeyWrapFormat()
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath("vault.dat");
+        const string password = "LegacyPassword123!";
+        string json = """[{"Id":42,"Alias":"LegacyArgon","Cookie":"FAKE_COOKIE_FOR_TESTS_123","CreatedAt":"2026-01-01T00:00:00+00:00"}]""";
+        await File.WriteAllBytesAsync(vaultFilePath, BuildLegacyArgon2Vault(password, json));
+
+        using (VaultKeyProvider wrongProvider = CreateKeyProvider("WrongPassword123!"))
+        using (EncryptedFileVault wrongVault = new(vaultFilePath, wrongProvider))
+        {
+            VaultCorruptedException ex = await Assert.ThrowsAsync<VaultCorruptedException>(() => wrongVault.ListAsync());
+            Assert.Contains("Invalid master password", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        using (VaultKeyProvider keyProvider = CreateKeyProvider(password))
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            IReadOnlyList<Account> loaded = await vault.ListAsync();
+            Assert.Single(loaded);
+            Assert.Equal("LegacyArgon", loaded[0].Alias);
+            Assert.Equal(FakeCookie1, loaded[0].Cookie.Reveal());
+
+            Result updateResult = await vault.UpdateAsync(loaded[0] with { Note = "Upgraded" });
+            Assert.True(updateResult.IsSuccess);
+        }
+
+        byte[] savedBytes = await File.ReadAllBytesAsync(vaultFilePath);
+        Assert.Equal(0x02, savedBytes[5]);
+
+        using (VaultKeyProvider keyProvider = CreateKeyProvider(password))
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            IReadOnlyList<Account> reloaded = await vault.ListAsync();
+            Assert.Equal("Upgraded", Assert.Single(reloaded).Note);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ReencryptAsync_RemovesAllStaleBackups(bool enablePassword)
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath("vault.dat");
+        using VaultKeyProvider keyProvider = enablePassword ? new VaultKeyProvider() : CreateKeyProvider("OldPassword123!");
+
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            using SecretValue cookie1 = SecretValue.FromString(FakeCookie1);
+            using SecretValue cookie2 = SecretValue.FromString(FakeCookie2);
+            await vault.AddAsync(new Account(new AccountId(1), "First", null, null, cookie1, DateTimeOffset.UtcNow));
+            await vault.AddAsync(new Account(new AccountId(2), "Second", null, null, cookie2, DateTimeOffset.UtcNow));
+            Assert.True(File.Exists(vaultFilePath + ".bak"));
+
+            await File.WriteAllBytesAsync(vaultFilePath + ".v1.bak", [1, 2, 3]);
+            await File.WriteAllBytesAsync(vaultFilePath + ".v1.20260101000000000.bak", [4, 5, 6]);
+
+            using SecretValue newPassword = SecretValue.FromString("NewPassword123!");
+            await vault.ReencryptAsync(enablePassword ? newPassword : null);
+        }
+
+        Assert.Empty(Directory.GetFiles(tempDir.Path, "*.bak"));
+
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            Assert.Equal(2, (await vault.ListAsync()).Count);
+        }
+    }
+
+    [Fact]
+    public async Task CorruptedPrimary_FallsBackToBak_AndNextSaveKeepsGoodBackup()
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath("vault.dat");
+        string bakPath = vaultFilePath + ".bak";
+
+        using (EncryptedFileVault vault = new(vaultFilePath))
+        {
+            using SecretValue cookie1 = SecretValue.FromString(FakeCookie1);
+            using SecretValue cookie2 = SecretValue.FromString(FakeCookie2);
+            await vault.AddAsync(new Account(new AccountId(1), "InBackup", null, null, cookie1, DateTimeOffset.UtcNow));
+            await vault.AddAsync(new Account(new AccountId(2), "OnlyInPrimary", null, null, cookie2, DateTimeOffset.UtcNow));
+        }
+
+        byte[] primaryBytes = await File.ReadAllBytesAsync(vaultFilePath);
+        await File.WriteAllBytesAsync(vaultFilePath, primaryBytes.AsSpan(0, primaryBytes.Length / 2).ToArray());
+        byte[] backupBytes = await File.ReadAllBytesAsync(bakPath);
+
+        using (EncryptedFileVault vault = new(vaultFilePath))
+        {
+            IReadOnlyList<Account> recovered = await vault.ListAsync();
+            Assert.Equal("InBackup", Assert.Single(recovered).Alias);
+
+            using SecretValue cookie3 = SecretValue.FromString(FakeCookie2);
+            await vault.AddAsync(new Account(new AccountId(3), "AfterRecovery", null, null, cookie3, DateTimeOffset.UtcNow));
+        }
+
+        Assert.Equal(backupBytes, await File.ReadAllBytesAsync(bakPath));
+        using (EncryptedFileVault vault = new(vaultFilePath))
+        {
+            IReadOnlyList<Account> accounts = await vault.ListAsync();
+            Assert.Equal(new long[] { 1, 3 }, accounts.Select(account => account.Id.Value).OrderBy(id => id).ToArray());
+        }
+    }
+
+    [Fact]
+    public async Task WrongPassword_DoesNotFallBackToBak()
+    {
+        using TempDirectory tempDir = new();
+        string vaultFilePath = tempDir.CreateFilePath("vault.dat");
+
+        using (VaultKeyProvider keyProvider = CreateKeyProvider("CorrectPassword123!"))
+        using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))
+        {
+            using SecretValue cookie1 = SecretValue.FromString(FakeCookie1);
+            using SecretValue cookie2 = SecretValue.FromString(FakeCookie2);
+            await vault.AddAsync(new Account(new AccountId(1), "First", null, null, cookie1, DateTimeOffset.UtcNow));
+            await vault.AddAsync(new Account(new AccountId(2), "Second", null, null, cookie2, DateTimeOffset.UtcNow));
+        }
+
+        Assert.True(File.Exists(vaultFilePath + ".bak"));
+        using VaultKeyProvider wrongProvider = CreateKeyProvider("WrongPassword123!");
+        using EncryptedFileVault wrongVault = new(vaultFilePath, wrongProvider);
+        VaultCorruptedException ex = await Assert.ThrowsAsync<VaultCorruptedException>(() => wrongVault.ListAsync());
+        Assert.Contains("Invalid master password", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(EncryptedFileVault.IsCredentialFailure(ex));
+    }
+
+    private static VaultKeyProvider CreateKeyProvider(string password)
+    {
+        VaultKeyProvider keyProvider = new();
+        keyProvider.SetKey(SecretValue.FromString(password));
+        return keyProvider;
+    }
+
+    private static bool TryDecrypt(byte[] key, byte[] nonce, byte[] tag, byte[] ciphertext, byte[] aad)
+    {
+        try
+        {
+            using AesGcm aes = new(key, 16);
+            aes.Decrypt(nonce, ciphertext, tag, new byte[ciphertext.Length], aad);
+            return true;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    private static bool ContainsSequence(byte[] haystack, byte[] needle) =>
+        haystack.AsSpan().IndexOf(needle) >= 0;
+
+    // Reproduces the pre-fix writer: Argon2 output is the data key and is stored DPAPI-wrapped (KDF type 0x01).
+    private static byte[] BuildLegacyArgon2Vault(string password, string json)
+    {
+        byte[] salt = RandomNumberGenerator.GetBytes(16);
+        using SecretValue secret = SecretValue.FromString(password);
+        byte[] argonKey = EncryptedFileVault.DeriveKey(secret, salt);
+
+        byte[] header = new byte[34];
+        new byte[] { 0x52, 0x42, 0x58, 0x56, 0x02, 0x01 }.CopyTo(header, 0);
+        BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(6, 4), (uint)EncryptedFileVault.Argon2MemorySizeKb);
+        BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(10, 4), (uint)EncryptedFileVault.Argon2Iterations);
+        BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(14, 4), (uint)EncryptedFileVault.Argon2Parallelism);
+        salt.CopyTo(header, 18);
+
+        byte[] plaintext = Encoding.UTF8.GetBytes(json);
+        byte[] nonce = RandomNumberGenerator.GetBytes(12);
+        byte[] tag = new byte[16];
+        byte[] ciphertext = new byte[plaintext.Length];
+        using (AesGcm aes = new(argonKey, 16))
+        {
+            aes.Encrypt(nonce, plaintext, ciphertext, tag, header);
+        }
+
+        byte[] wrappedKey = ProtectedData.Protect(argonKey, null, DataProtectionScope.CurrentUser);
+        using MemoryStream output = new();
+        output.Write(header);
+        byte[] lengthBytes = new byte[2];
+        BinaryPrimitives.WriteUInt16LittleEndian(lengthBytes, checked((ushort)wrappedKey.Length));
+        output.Write(lengthBytes);
+        output.Write(wrappedKey);
+        output.Write(nonce);
+        output.Write(tag);
+        output.Write(ciphertext);
+        return output.ToArray();
+    }
 }

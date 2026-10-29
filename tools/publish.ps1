@@ -25,7 +25,8 @@ $publishArgs = @(
     "-c", "Release",
     "-r", "win-x64",
     "-o", $publishDir,
-    "/p:PublishSingleFile=true"
+    "/p:PublishSingleFile=true",
+    "/p:IncludeNativeLibrariesForSelfExtract=true"
 )
 
 if ($SelfContained) {

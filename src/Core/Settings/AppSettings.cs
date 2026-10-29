@@ -90,6 +90,7 @@ public sealed record AppSettings(
     bool EnableAutoCleanCache = false,
     IReadOnlyList<string>? RotationGroups = null,
     int RotationDurationMinutes = AppSettings.DefaultRotationDurationMinutes,
+    string? PotassiumExecutablePath = null,
     [property: JsonPropertyName("EnableGhostDisconnectDetection")]
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     bool? LegacyEnableGhostDisconnectDetection = null,

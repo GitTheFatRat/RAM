@@ -28,6 +28,18 @@ public partial class MainWindow : FluentWindow
 
         ViewModel = viewModel;
         _settingsService = settingsService;
+        ViewModel.IsMultiInstanceEnabled = _settingsService.CurrentSettings.MultiInstanceEnabled;
+        _settingsService.SettingsChanged += s =>
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                ViewModel.IsMultiInstanceEnabled = s.MultiInstanceEnabled;
+            }
+            else
+            {
+                _ = Dispatcher.BeginInvoke(() => ViewModel.IsMultiInstanceEnabled = s.MultiInstanceEnabled);
+            }
+        };
         DataContext = this;
 
         InitializeComponent();
@@ -35,6 +47,7 @@ public partial class MainWindow : FluentWindow
         contentDialogService.SetDialogHost(RootContentDialogHost);
         snackbarService.SetSnackbarPresenter(RootSnackbarPresenter);
         RootNavigation.SetServiceProvider(serviceProvider);
+        RootNavigation.Navigated += (_, _) => _ = RootSnackbarPresenter.HideCurrent();
 
         RestoreWindowState();
 

@@ -9,5 +9,13 @@ public partial class RunningPage : Page
     {
         DataContext = viewModel;
         InitializeComponent();
+        Loaded += (_, _) =>
+        {
+            _ = viewModel.RefreshSessionsAsync();
+            if (viewModel.IsRotationIdle)
+            {
+                _ = viewModel.LoadRotationOptionsAsync();
+            }
+        };
     }
 }

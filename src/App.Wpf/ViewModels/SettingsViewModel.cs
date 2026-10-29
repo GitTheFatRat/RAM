@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -29,6 +30,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IAccountStore? _accountStore;
     private readonly Core.Backup.IBackupService? _backupService;
     private readonly IVaultKeyProvider? _vaultKeyProvider;
+    private static readonly TimeSpan ResolutionSaveDebounce = TimeSpan.FromMilliseconds(500);
+
+    private CancellationTokenSource? _resolutionSaveDebounceCts;
+    private Task _resolutionSaveTask = Task.CompletedTask;
 
     [ObservableProperty]
     private string _selectedLanguage = "vi";
@@ -203,37 +208,31 @@ public sealed partial class SettingsViewModel : ObservableObject
                 _instanceGate.Disable();
             }
 
-            AppSettings current = _settingsService.CurrentSettings;
-            AppSettings updated = new(
-                Language: SelectedLanguage,
-                Theme: SelectedTheme,
-                LaunchDelaySeconds: LaunchDelaySeconds,
-                RejoinDelaySeconds: RejoinDelaySeconds,
-                RejoinMaxAttempts: RejoinMaxAttempts,
-                MultiInstanceEnabled: MultiInstanceEnabled,
-                MultiInstanceAcknowledged: current.MultiInstanceAcknowledged || MultiInstanceEnabled,
-                IsMasterPasswordEnabled: IsMasterPasswordEnabled,
-                ThrottleBackgroundRoblox: ThrottleBackgroundRoblox,
-                ThrottleBackgroundAcknowledged: current.ThrottleBackgroundAcknowledged,
-                EnableRamCleaner: EnableRamCleaner,
-                RamCleanerAcknowledged: current.RamCleanerAcknowledged,
-                RamCleanerIntervalMinutes: RamCleanerIntervalMinutes,
-                EnableSmartServerHopping: EnableSmartServerHopping,
-                GhostDisconnectMode: SelectedGhostDisconnectMode,
-                EnableUatTelemetry: EnableUatTelemetry,
-                LastPlaceId: current.LastPlaceId,
-                EnableCustomResolution: EnableCustomResolution,
-                ResolutionWidth: ResolutionWidth,
-                ResolutionHeight: ResolutionHeight,
-                EnableAutoTile: EnableAutoTile,
-                EnableAutoReconnect: EnableAutoReconnect,
-                EnableAutoCleanCache: EnableAutoCleanCache,
-                RotationGroups: current.RotationGroups,
-                RotationDurationMinutes: current.RotationDurationMinutes,
-                Advanced: current.Advanced,
-                UiState: current.UiState);
-
-            await _settingsService.SaveSettingsAsync(updated);
+            // This full save already includes the resolution fields, so a pending debounced write would be redundant.
+            CancelPendingResolutionSave();
+            await _settingsService.UpdateSettingsAsync(current => current with
+            {
+                Language = SelectedLanguage,
+                Theme = SelectedTheme,
+                LaunchDelaySeconds = LaunchDelaySeconds,
+                RejoinDelaySeconds = RejoinDelaySeconds,
+                RejoinMaxAttempts = RejoinMaxAttempts,
+                MultiInstanceEnabled = MultiInstanceEnabled,
+                MultiInstanceAcknowledged = current.MultiInstanceAcknowledged || MultiInstanceEnabled,
+                IsMasterPasswordEnabled = IsMasterPasswordEnabled,
+                ThrottleBackgroundRoblox = ThrottleBackgroundRoblox,
+                EnableRamCleaner = EnableRamCleaner,
+                RamCleanerIntervalMinutes = RamCleanerIntervalMinutes,
+                EnableSmartServerHopping = EnableSmartServerHopping,
+                GhostDisconnectMode = SelectedGhostDisconnectMode,
+                EnableUatTelemetry = EnableUatTelemetry,
+                EnableCustomResolution = EnableCustomResolution,
+                ResolutionWidth = ResolutionWidth,
+                ResolutionHeight = ResolutionHeight,
+                EnableAutoTile = EnableAutoTile,
+                EnableAutoReconnect = EnableAutoReconnect,
+                EnableAutoCleanCache = EnableAutoCleanCache
+            });
             Services.RobloxWindowSizer.ApplyToRunningProcesses(_settingsService);
 
             // Apply theme live
@@ -278,17 +277,18 @@ public sealed partial class SettingsViewModel : ObservableObject
                 if (result != ContentDialogResult.Primary)
                 {
                     MultiInstanceEnabled = false;
+                    OnPropertyChanged(nameof(MultiInstanceEnabled));
                     return;
                 }
 
-                current = current with { MultiInstanceAcknowledged = true };
-                await _settingsService.SaveSettingsAsync(current);
+                await _settingsService.UpdateSettingsAsync(s => s with { MultiInstanceAcknowledged = true });
             }
 
             Result enableResult = _instanceGate.TryEnable();
             if (!enableResult.IsSuccess)
             {
                 MultiInstanceEnabled = false;
+                OnPropertyChanged(nameof(MultiInstanceEnabled));
                 string errorMessage = enableResult.ErrorCode switch
                 {
                     "MultiInstanceNotAvailable" => Strings.MultiInstanceNotAvailable,
@@ -304,20 +304,18 @@ public sealed partial class SettingsViewModel : ObservableObject
             else
             {
                 MultiInstanceEnabled = true;
-                AppSettings updated = _settingsService.CurrentSettings with
+                await _settingsService.UpdateSettingsAsync(s => s with
                 {
                     MultiInstanceEnabled = true,
                     MultiInstanceAcknowledged = true
-                };
-                await _settingsService.SaveSettingsAsync(updated);
+                });
             }
         }
         else
         {
             _instanceGate.Disable();
             MultiInstanceEnabled = false;
-            AppSettings updated = _settingsService.CurrentSettings with { MultiInstanceEnabled = false };
-            await _settingsService.SaveSettingsAsync(updated);
+            await _settingsService.UpdateSettingsAsync(s => s with { MultiInstanceEnabled = false });
         }
     }
 
@@ -326,8 +324,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         if (enabled)
         {
-            AppSettings current = _settingsService.CurrentSettings;
-            if (!current.ThrottleBackgroundAcknowledged)
+            if (!_settingsService.CurrentSettings.ThrottleBackgroundAcknowledged)
             {
                 ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
                 {
@@ -340,20 +337,21 @@ public sealed partial class SettingsViewModel : ObservableObject
                 if (result != ContentDialogResult.Primary)
                 {
                     ThrottleBackgroundRoblox = false;
+                    OnPropertyChanged(nameof(ThrottleBackgroundRoblox));
                     return;
                 }
-
-                current = current with { ThrottleBackgroundAcknowledged = true };
             }
 
             ThrottleBackgroundRoblox = true;
-            await _settingsService.SaveSettingsAsync(current with { ThrottleBackgroundRoblox = true });
+            OnPropertyChanged(nameof(ThrottleBackgroundRoblox));
+            // Reaching here means the risk was acknowledged now or earlier, so persisting the flag is idempotent.
+            await _settingsService.UpdateSettingsAsync(s => s with { ThrottleBackgroundRoblox = true, ThrottleBackgroundAcknowledged = true });
         }
         else
         {
             ThrottleBackgroundRoblox = false;
-            AppSettings current = _settingsService.CurrentSettings;
-            await _settingsService.SaveSettingsAsync(current with { ThrottleBackgroundRoblox = false });
+            OnPropertyChanged(nameof(ThrottleBackgroundRoblox));
+            await _settingsService.UpdateSettingsAsync(s => s with { ThrottleBackgroundRoblox = false });
         }
     }
 
@@ -362,8 +360,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         if (enabled)
         {
-            AppSettings current = _settingsService.CurrentSettings;
-            if (!current.RamCleanerAcknowledged)
+            if (!_settingsService.CurrentSettings.RamCleanerAcknowledged)
             {
                 ContentDialogResult result = await _contentDialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
                 {
@@ -376,20 +373,20 @@ public sealed partial class SettingsViewModel : ObservableObject
                 if (result != ContentDialogResult.Primary)
                 {
                     EnableRamCleaner = false;
+                    OnPropertyChanged(nameof(EnableRamCleaner));
                     return;
                 }
-
-                current = current with { RamCleanerAcknowledged = true };
             }
 
             EnableRamCleaner = true;
-            await _settingsService.SaveSettingsAsync(current with { EnableRamCleaner = true });
+            OnPropertyChanged(nameof(EnableRamCleaner));
+            await _settingsService.UpdateSettingsAsync(s => s with { EnableRamCleaner = true, RamCleanerAcknowledged = true });
         }
         else
         {
             EnableRamCleaner = false;
-            AppSettings current = _settingsService.CurrentSettings;
-            await _settingsService.SaveSettingsAsync(current with { EnableRamCleaner = false });
+            OnPropertyChanged(nameof(EnableRamCleaner));
+            await _settingsService.UpdateSettingsAsync(s => s with { EnableRamCleaner = false });
         }
     }
 
@@ -398,8 +395,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         SelectedGhostDisconnectMode = mode;
         EnableGhostDisconnectDetection = mode != Core.Processes.GhostDisconnectMode.Off;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { GhostDisconnectMode = mode });
+        await _settingsService.UpdateSettingsAsync(s => s with { GhostDisconnectMode = mode });
     }
 
     async partial void OnSelectedGhostDisconnectModeChanged(Core.Processes.GhostDisconnectMode value)
@@ -409,10 +405,9 @@ public sealed partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        AppSettings current = _settingsService.CurrentSettings;
-        if (current.GhostDisconnectMode != value)
+        if (_settingsService.CurrentSettings.GhostDisconnectMode != value)
         {
-            await _settingsService.SaveSettingsAsync(current with { GhostDisconnectMode = value });
+            await _settingsService.UpdateSettingsAsync(s => s with { GhostDisconnectMode = value });
         }
     }
 
@@ -420,24 +415,21 @@ public sealed partial class SettingsViewModel : ObservableObject
     private async Task OnEnableSmartServerHoppingToggledAsync(bool enabled)
     {
         EnableSmartServerHopping = enabled;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { EnableSmartServerHopping = enabled });
+        await _settingsService.UpdateSettingsAsync(s => s with { EnableSmartServerHopping = enabled });
     }
 
     [RelayCommand]
     private async Task OnEnableUatTelemetryToggledAsync(bool enabled)
     {
         EnableUatTelemetry = enabled;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { EnableUatTelemetry = enabled });
+        await _settingsService.UpdateSettingsAsync(s => s with { EnableUatTelemetry = enabled });
     }
 
     [RelayCommand]
     private async Task OnEnableAutoTileToggledAsync(bool enabled)
     {
         EnableAutoTile = enabled;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { EnableAutoTile = enabled });
+        await _settingsService.UpdateSettingsAsync(s => s with { EnableAutoTile = enabled });
         Services.RobloxWindowSizer.ApplyToRunningProcesses(_settingsService);
     }
 
@@ -445,22 +437,29 @@ public sealed partial class SettingsViewModel : ObservableObject
     private async Task OnEnableAutoReconnectToggledAsync(bool enabled)
     {
         EnableAutoReconnect = enabled;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { EnableAutoReconnect = enabled });
+        await _settingsService.UpdateSettingsAsync(s => s with { EnableAutoReconnect = enabled });
     }
 
     [RelayCommand]
     private async Task OnEnableAutoCleanCacheToggledAsync(bool enabled)
     {
         EnableAutoCleanCache = enabled;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { EnableAutoCleanCache = enabled });
+        await _settingsService.UpdateSettingsAsync(s => s with { EnableAutoCleanCache = enabled });
     }
 
     [RelayCommand]
     private async Task OnEnableCustomResolutionToggledAsync(bool enabled)
     {
-        EnableCustomResolution = enabled;
+        _isLoadingSettings = true;
+        try
+        {
+            EnableCustomResolution = enabled;
+        }
+        finally
+        {
+            _isLoadingSettings = false;
+        }
+
         await PersistCustomResolutionAsync();
     }
 
@@ -476,17 +475,63 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     async partial void OnResolutionWidthChanged(int value)
     {
-        if (_isLoadingSettings || value <= 0)
+        if (_isLoadingSettings || !IsValidResolutionDimension(value))
         {
             return;
         }
 
-        await PersistCustomResolutionAsync();
+        await DebouncePersistCustomResolutionAsync();
     }
 
     async partial void OnResolutionHeightChanged(int value)
     {
-        if (_isLoadingSettings || value <= 0)
+        if (_isLoadingSettings || !IsValidResolutionDimension(value))
+        {
+            return;
+        }
+
+        await DebouncePersistCustomResolutionAsync();
+    }
+
+    /// <summary>
+    /// Persists a resolution edit still waiting in the debounce window. Call before shutdown so the last typed value is not lost.
+    /// </summary>
+    public async Task FlushPendingAsync()
+    {
+        if (CancelPendingResolutionSave())
+        {
+            await SaveCustomResolutionAsync();
+        }
+
+        await _resolutionSaveTask;
+    }
+
+    private static bool IsValidResolutionDimension(int value) =>
+        value >= AppSettings.MinimumResolutionDimension && value <= AppSettings.MaximumResolutionDimension;
+
+    private async Task PersistCustomResolutionAsync()
+    {
+        CancelPendingResolutionSave();
+        await SaveCustomResolutionAsync();
+        Services.RobloxWindowSizer.ApplyToRunningProcesses(_settingsService);
+    }
+
+    // Typing "1920" fires four change notifications; only the value left after the quiet period is written and applied.
+    private async Task DebouncePersistCustomResolutionAsync()
+    {
+        CancellationTokenSource debounceCts = new();
+        CancelPendingResolutionSave(replacement: debounceCts);
+        try
+        {
+            await Task.Delay(ResolutionSaveDebounce, debounceCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        // A flush or newer edit may have claimed this save between the delay completing and this continuation running.
+        if (debounceCts.IsCancellationRequested)
         {
             return;
         }
@@ -494,16 +539,33 @@ public sealed partial class SettingsViewModel : ObservableObject
         await PersistCustomResolutionAsync();
     }
 
-    private async Task PersistCustomResolutionAsync()
+    private bool CancelPendingResolutionSave(CancellationTokenSource? replacement = null)
     {
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with
+        CancellationTokenSource? previousCts = Interlocked.Exchange(ref _resolutionSaveDebounceCts, replacement);
+        if (previousCts is null)
         {
-            EnableCustomResolution = EnableCustomResolution,
-            ResolutionWidth = ResolutionWidth,
-            ResolutionHeight = ResolutionHeight
+            return false;
+        }
+
+        previousCts.Cancel();
+        previousCts.Dispose();
+        return true;
+    }
+
+    private Task SaveCustomResolutionAsync()
+    {
+        bool enableCustomResolution = EnableCustomResolution;
+        int width = ResolutionWidth;
+        int height = ResolutionHeight;
+
+        // A half-typed dimension (e.g. "19" on the way to "1920") must never reach disk; keep the last persisted value instead.
+        _resolutionSaveTask = _settingsService.UpdateSettingsAsync(s => s with
+        {
+            EnableCustomResolution = enableCustomResolution,
+            ResolutionWidth = IsValidResolutionDimension(width) ? width : s.ResolutionWidth,
+            ResolutionHeight = IsValidResolutionDimension(height) ? height : s.ResolutionHeight
         });
-        Services.RobloxWindowSizer.ApplyToRunningProcesses(_settingsService);
+        return _resolutionSaveTask;
     }
 
     [RelayCommand]
@@ -512,8 +574,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableGhostDisconnectDetection = enabled;
         Core.Processes.GhostDisconnectMode mode = enabled ? Core.Processes.GhostDisconnectMode.NotifyOnly : Core.Processes.GhostDisconnectMode.Off;
         SelectedGhostDisconnectMode = mode;
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with { GhostDisconnectMode = mode });
+        await _settingsService.UpdateSettingsAsync(s => s with { GhostDisconnectMode = mode });
     }
 
     [RelayCommand]
@@ -533,6 +594,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (result != ContentDialogResult.Primary)
             {
                 IsMasterPasswordEnabled = false;
+                OnPropertyChanged(nameof(IsMasterPasswordEnabled));
                 setupControl.ClearPasswords();
                 return;
             }
@@ -540,6 +602,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (!setupControl.IsAcknowledged)
             {
                 IsMasterPasswordEnabled = false;
+                OnPropertyChanged(nameof(IsMasterPasswordEnabled));
                 setupControl.ClearPasswords();
                 _snackbarService.Show(Strings.ErrorTitle, Strings.MasterPasswordAcknowledgeRequired, ControlAppearance.Danger);
                 return;
@@ -552,6 +615,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (password != confirm)
             {
                 IsMasterPasswordEnabled = false;
+                OnPropertyChanged(nameof(IsMasterPasswordEnabled));
                 _snackbarService.Show(Strings.ErrorTitle, Strings.MasterPasswordMismatch, ControlAppearance.Danger);
                 return;
             }
@@ -560,28 +624,42 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (!policyResult.IsSuccess)
             {
                 IsMasterPasswordEnabled = false;
+                OnPropertyChanged(nameof(IsMasterPasswordEnabled));
                 _snackbarService.Show(Strings.ErrorTitle, policyResult.Error ?? Strings.MasterPasswordTooShort, ControlAppearance.Danger);
                 return;
             }
 
-            if (_vaultKeyProvider != null)
+            using SecretValue keySecret = SecretValue.FromString(password);
+            if (_accountStore is Infrastructure.Storage.EncryptedFileVault encryptedVault)
             {
-                using SecretValue keySecret = SecretValue.FromString(password);
-                _vaultKeyProvider.SetKey(keySecret.Clone());
+                await encryptedVault.ReencryptAsync(keySecret);
             }
-
-            if (_accountStore != null)
+            else
             {
-                IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
-                if (accounts.Count > 0)
+                IReadOnlyList<Account>? accounts = _accountStore != null ? await _accountStore.ListAsync() : null;
+                try
                 {
-                    await _accountStore.UpdateAsync(accounts[0]);
+                    _vaultKeyProvider?.SetKey(keySecret.Clone());
+                    if (_accountStore != null && accounts != null && accounts.Count > 0)
+                    {
+                        await _accountStore.UpdateAsync(accounts[0]);
+                    }
+                }
+                finally
+                {
+                    if (accounts != null)
+                    {
+                        foreach (Account acc in accounts)
+                        {
+                            acc.Cookie.Dispose();
+                        }
+                    }
                 }
             }
 
-            AppSettings current = _settingsService.CurrentSettings;
-            await _settingsService.SaveSettingsAsync(current with { IsMasterPasswordEnabled = true });
+            await _settingsService.UpdateSettingsAsync(s => s with { IsMasterPasswordEnabled = true });
             IsMasterPasswordEnabled = true;
+            OnPropertyChanged(nameof(IsMasterPasswordEnabled));
             _snackbarService.Show(Strings.SuccessTitle, Strings.MasterPasswordEnabledSuccess, ControlAppearance.Success);
         }
         else
@@ -597,23 +675,40 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (confirmResult != ContentDialogResult.Primary)
             {
                 IsMasterPasswordEnabled = true;
+                OnPropertyChanged(nameof(IsMasterPasswordEnabled));
                 return;
             }
 
-            _vaultKeyProvider?.Clear();
-
-            if (_accountStore != null)
+            if (_accountStore is Infrastructure.Storage.EncryptedFileVault encryptedVault)
             {
-                IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
-                if (accounts.Count > 0)
+                await encryptedVault.ReencryptAsync(null);
+            }
+            else
+            {
+                IReadOnlyList<Account>? accounts = _accountStore != null ? await _accountStore.ListAsync() : null;
+                try
                 {
-                    await _accountStore.UpdateAsync(accounts[0]);
+                    _vaultKeyProvider?.Clear();
+                    if (_accountStore != null && accounts != null && accounts.Count > 0)
+                    {
+                        await _accountStore.UpdateAsync(accounts[0]);
+                    }
+                }
+                finally
+                {
+                    if (accounts != null)
+                    {
+                        foreach (Account acc in accounts)
+                        {
+                            acc.Cookie.Dispose();
+                        }
+                    }
                 }
             }
 
-            AppSettings current = _settingsService.CurrentSettings;
-            await _settingsService.SaveSettingsAsync(current with { IsMasterPasswordEnabled = false });
+            await _settingsService.UpdateSettingsAsync(s => s with { IsMasterPasswordEnabled = false });
             IsMasterPasswordEnabled = false;
+            OnPropertyChanged(nameof(IsMasterPasswordEnabled));
             _snackbarService.Show(Strings.SuccessTitle, Strings.MasterPasswordDisabledSuccess, ControlAppearance.Success);
         }
     }
@@ -646,7 +741,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
 
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
-        if (accounts.Count == 0)
+        int accountCount = accounts.Count;
+        foreach (Account acc in accounts)
+        {
+            acc.Cookie.Dispose();
+        }
+
+        if (accountCount == 0)
         {
             _snackbarService.Show(Strings.ErrorTitle, Strings.EmptyVaultCannotBackup, ControlAppearance.Caution);
             return;

@@ -54,6 +54,7 @@ public sealed class WindowSizeLock : IDisposable
     private bool _isApplying;
     private long _burstStartedAt;
     private int _burstCorrections;
+    private int _trailingScheduled;
     private int _disposed;
 
     internal WindowSizeLock(
@@ -195,7 +196,10 @@ public sealed class WindowSizeLock : IDisposable
             return;
         }
 
-        if (eventType == EVENT_OBJECT_SHOW && hWnd != _hWnd && IsMainWindowCandidate(hWnd))
+        if (hWnd != _hWnd &&
+            (eventType == EVENT_OBJECT_SHOW ||
+             ((eventType is EVENT_OBJECT_LOCATIONCHANGE or EVENT_SYSTEM_MOVESIZEEND) && !IsWindowVisible(_hWnd))) &&
+            IsMainWindowCandidate(hWnd))
         {
             _hWnd = hWnd;
             _isUserDragging = false;
@@ -289,6 +293,7 @@ public sealed class WindowSizeLock : IDisposable
 
         if (++_burstCorrections > MaxCorrectionsPerBurst)
         {
+            ScheduleTrailingEnforcement();
             return;
         }
 
@@ -306,6 +311,46 @@ public sealed class WindowSizeLock : IDisposable
         {
             _isApplying = false;
         }
+    }
+
+    private void ScheduleTrailingEnforcement()
+    {
+        if (Interlocked.CompareExchange(ref _trailingScheduled, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(CorrectionBurstWindowMs + 50).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _trailingScheduled, 0);
+            }
+
+            if (_disposed != 0)
+            {
+                return;
+            }
+
+            if (_ownerContext is not null)
+            {
+                _ownerContext.Post(_ =>
+                {
+                    if (_disposed == 0 && !_isUserDragging)
+                    {
+                        EnforceSize();
+                    }
+                }, null);
+            }
+            else if (!_isUserDragging)
+            {
+                EnforceSize();
+            }
+        });
     }
 
     [StructLayout(LayoutKind.Sequential)]

@@ -218,4 +218,90 @@ public static class AutomationHelper
 
         return false;
     }
+
+    /// <summary>
+    /// WPF ContextMenus and Popups are separate top-level HWNDs, so they are never descendants of the
+    /// main window element. This searches every top-level window owned by the process.
+    /// </summary>
+    public static AutomationElement? FindInProcessWindows(int processId, string automationId, int timeoutMs = 3000)
+    {
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        PropertyCondition ownedByProcess = new(AutomationElement.ProcessIdProperty, processId);
+        PropertyCondition byId = new(AutomationElement.AutomationIdProperty, automationId);
+
+        while (DateTime.UtcNow <= deadline)
+        {
+            try
+            {
+                foreach (AutomationElement window in AutomationElement.RootElement.FindAll(TreeScope.Children, ownedByProcess))
+                {
+                    AutomationElement? match = window.FindFirst(TreeScope.Descendants, byId);
+                    if (match != null)
+                    {
+                        return match;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            System.Threading.Thread.Sleep(50);
+        }
+
+        return null;
+    }
+
+    public static int CountDataItems(AutomationElement container) =>
+        container.FindAll(
+            TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.DataItem)).Count;
+
+    public static string? TryGetValue(AutomationElement element)
+    {
+        try
+        {
+            return element.TryGetCurrentPattern(ValuePattern.Pattern, out object? pattern) && pattern is ValuePattern val
+                ? val.Current.Value
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Fails the scenario instead of silently skipping when an expected element is missing.</summary>
+    public static AutomationElement Require(AutomationElement? element, string expectation) =>
+        element ?? throw new InvalidOperationException($"UI assertion failed: {expectation}");
+
+    public static void RequireThat(bool condition, string expectation)
+    {
+        if (!condition)
+        {
+            throw new InvalidOperationException($"UI assertion failed: {expectation}");
+        }
+    }
+
+    public static bool WaitUntil(Func<bool> predicate, int timeoutMs = 3000)
+    {
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow <= deadline)
+        {
+            try
+            {
+                if (predicate())
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+
+            System.Threading.Thread.Sleep(100);
+        }
+
+        return false;
+    }
 }

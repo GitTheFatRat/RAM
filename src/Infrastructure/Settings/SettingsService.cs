@@ -61,45 +61,71 @@ public sealed partial class SettingsService : ISettingsService, IDisposable
         }
         finally
         {
-            _semaphore.Release();
+            try
+            {
+                _semaphore.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 
-    public async Task SaveSettingsAsync(AppSettings settings, CancellationToken ct = default)
+    public Task SaveSettingsAsync(AppSettings settings, CancellationToken ct = default)
     {
-        AppSettings clamped = settings.Clamp();
+        ArgumentNullException.ThrowIfNull(settings);
+        return UpdateSettingsAsync(_ => settings, ct);
+    }
 
+    public async Task<AppSettings> UpdateSettingsAsync(Func<AppSettings, AppSettings> mutate, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(mutate);
+
+        AppSettings clamped;
         await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            string? dir = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            string tempPath = _filePath + ".tmp";
-            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(clamped, RbxManagerJsonContext.Indented.AppSettings);
-
-            await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
-
-            if (File.Exists(_filePath))
-            {
-                File.Replace(tempPath, _filePath, null);
-            }
-            else
-            {
-                File.Move(tempPath, _filePath);
-            }
-
+            // Mutating the latest snapshot inside the lock is what prevents overlapping saves from undoing each other.
+            clamped = mutate(_currentSettings).Clamp();
+            await WriteToDiskAsync(clamped, ct).ConfigureAwait(false);
             _currentSettings = clamped;
         }
         finally
         {
-            _semaphore.Release();
+            try
+            {
+                _semaphore.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         SettingsChanged?.Invoke(clamped);
+        return clamped;
+    }
+
+    private async Task WriteToDiskAsync(AppSettings settings, CancellationToken ct)
+    {
+        string? dir = Path.GetDirectoryName(_filePath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        string tempPath = _filePath + ".tmp";
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(settings, RbxManagerJsonContext.Indented.AppSettings);
+
+        await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
+
+        if (File.Exists(_filePath))
+        {
+            File.Replace(tempPath, _filePath, null);
+        }
+        else
+        {
+            File.Move(tempPath, _filePath);
+        }
     }
 
     public void Dispose()

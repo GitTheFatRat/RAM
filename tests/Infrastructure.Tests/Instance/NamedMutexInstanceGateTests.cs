@@ -159,6 +159,65 @@ public sealed class NamedMutexInstanceGateTests
     }
 
     [Fact]
+    public void TryEnable_ProductionSemantics_ForeignOwnerHoldsMutex_ReturnsRobloxRunning()
+    {
+        FakeProcessProvider provider = new();
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
+
+        // Mutex ownership is per-thread, so a separate thread stands in for a running Roblox client.
+        using ManualResetEventSlim ownerReady = new(false);
+        using ManualResetEventSlim releaseOwner = new(false);
+        Thread owner = new(() =>
+        {
+            using Mutex robloxMutex = new(initiallyOwned: true, mutexName, out _);
+            ownerReady.Set();
+            releaseOwner.Wait();
+            robloxMutex.ReleaseMutex();
+        });
+        owner.Start();
+        ownerReady.Wait();
+
+        try
+        {
+            using NamedMutexInstanceGate gate = new(provider, mutexName, eventName, useProductionSemantics: true);
+            Result result = gate.TryEnable();
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal("RobloxRunning", result.ErrorCode);
+            Assert.False(gate.IsMultiInstanceEnabled);
+
+            using Mutex probeEvent = new(initiallyOwned: false, eventName, out bool eventCreatedNew);
+            Assert.True(eventCreatedNew);
+        }
+        finally
+        {
+            releaseOwner.Set();
+            owner.Join();
+        }
+    }
+
+    [Fact]
+    public void TryEnable_ProductionSemantics_EventNameAlreadyAnEvent_ReturnsRobloxRunning()
+    {
+        FakeProcessProvider provider = new();
+        string mutexName = CreateUniqueMutexName();
+        string eventName = CreateUniqueEventName();
+
+        using EventWaitHandle robloxEvent = new(false, EventResetMode.ManualReset, eventName);
+
+        using NamedMutexInstanceGate gate = new(provider, mutexName, eventName, useProductionSemantics: true);
+        Result result = gate.TryEnable();
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("RobloxRunning", result.ErrorCode);
+        Assert.False(gate.IsMultiInstanceEnabled);
+
+        using Mutex probeMutex = new(initiallyOwned: false, mutexName, out bool mutexCreatedNew);
+        Assert.True(mutexCreatedNew);
+    }
+
+    [Fact]
     public void GateWithoutMutexOrEventName_ReturnsNotAvailable()
     {
         FakeProcessProvider provider = new();

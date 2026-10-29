@@ -32,6 +32,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 {
     public const int MinSequentialLaunchDelaySeconds = 60;
     public const int MaxSequentialLaunchDelaySeconds = 120;
+    public const string RecoveryWaitingStatusText = "Đang chờ xử lý lỗi...";
 
     private static string _lastPlaceId = string.Empty;
 
@@ -45,6 +46,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     private readonly Core.Network.IDpiToolService? _dpiToolService;
     private readonly Core.Instance.IInstanceGate? _instanceGate;
     private readonly Core.Sessions.ISessionTracker? _sessionTracker;
+    private readonly Core.Bridge.ILocalExtensionBridge? _extensionBridge;
     private readonly TimeProvider _timeProvider;
     private readonly Func<int, int, int> _randomDelayGenerator;
     private readonly List<AccountItemViewModel> _allAccounts = new();
@@ -133,7 +135,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         Core.Network.IDpiToolService? dpiToolService = null,
         Func<int, int, int>? randomDelayGenerator = null,
         Core.Instance.IInstanceGate? instanceGate = null,
-        Core.Sessions.ISessionTracker? sessionTracker = null)
+        Core.Sessions.ISessionTracker? sessionTracker = null,
+        Core.Bridge.ILocalExtensionBridge? extensionBridge = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _contentDialogService = contentDialogService ?? throw new ArgumentNullException(nameof(contentDialogService));
@@ -147,6 +150,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _randomDelayGenerator = randomDelayGenerator ?? Random.Shared.Next;
         _instanceGate = instanceGate;
         _sessionTracker = sessionTracker;
+        _extensionBridge = extensionBridge;
 
         _searchDebouncer = new DebounceDispatcher(TimeSpan.FromMilliseconds(200));
         _selectedGroup = Strings.GroupFilterAll;
@@ -167,6 +171,16 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _sessionTracker.SessionStarted += OnTrackedSessionStarted;
             _sessionTracker.SessionEnded += OnTrackedSessionEnded;
         }
+
+        if (_extensionBridge != null)
+        {
+            _extensionBridge.AccountImported += OnExtensionBridgeAccountImported;
+        }
+    }
+
+    private void OnExtensionBridgeAccountImported(Core.Bridge.ExtensionImportedAccount imported)
+    {
+        RunOnUiThread(() => _ = LoadAccountsAsync());
     }
 
     private void OnTrackedSessionStarted(Core.Sessions.RunningSession session)
@@ -249,7 +263,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _allAccounts.Clear();
             foreach (Account account in accounts)
             {
-                AccountItemViewModel item = new(account)
+                AccountItemViewModel item = new(account, _sessionTracker)
                 {
                     IsSelected = checkedIds.Contains(account.Id),
                     ActiveProcessId = activePids.TryGetValue(account.Id, out int pid) ? pid : null
@@ -312,7 +326,12 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public async Task AddViaLoginAsync()
     {
-        AddAccountViewModel addViewModel = new(_accountStore, _authService, _snackbarService, dpiToolService: _dpiToolService);
+        AddAccountViewModel addViewModel = new(
+            _accountStore,
+            _authService,
+            _snackbarService,
+            dpiToolService: _dpiToolService,
+            extensionBridge: _extensionBridge);
         AddAccountWindow addWindow = new(addViewModel)
         {
             Owner = Application.Current?.MainWindow
@@ -567,6 +586,24 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 }
 
                 AccountItemViewModel item = list[i];
+                if (item.IsRunning)
+                {
+                    completed++;
+                    if (System.Windows.Application.Current?.Dispatcher != null)
+                    {
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            CheckAllProgressText = $"{completed} / {total}";
+                        });
+                    }
+                    else
+                    {
+                        CheckAllProgressText = $"{completed} / {total}";
+                    }
+
+                    continue;
+                }
+
                 string? errorCode = await ValidateAndUpdateAccountAsync(item.Account, ct);
                 completed++;
                 if (System.Windows.Application.Current?.Dispatcher != null)
@@ -583,6 +620,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
                 if (string.Equals(errorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
                 {
+                    ShowSnackbar(Strings.AppTitle, AuthErrorCodes.RateLimited, ControlAppearance.Caution);
                     break;
                 }
 
@@ -691,7 +729,12 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
             HashSet<int> beforePids = SnapshotRobloxProcessIds();
             LaunchRequest launchRequest = new(targetAccount.Id, placeId, jobId);
-            Result launchResult = await _launcher.LaunchAsync(launchRequest);
+            Result launchResult = await LaunchWithModerationRecoveryAsync(
+                targetAccount,
+                launchRequest,
+                beforePids,
+                updateBulkQueueStatus: false,
+                CancellationToken.None);
 
             if (launchResult.IsSuccess)
             {
@@ -708,11 +751,38 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 {
                     "RobloxNotInstalled" => Strings.RobloxNotInstalled,
                     AuthErrorCodes.Expired => Strings.ExpiredHint,
+                    AuthErrorCodes.Moderated => Strings.ModeratedHint,
                     _ => launchResult.Error ?? Strings.ErrorTitle
                 };
                 _snackbarService.Show(Strings.ErrorTitle, message, ControlAppearance.Danger);
+                await UpdateAccountStatusOnLaunchFailureAsync(targetAccount, launchResult.ErrorCode);
             }
         }
+    }
+
+    private async Task UpdateAccountStatusOnLaunchFailureAsync(AccountItemViewModel item, string? errorCode)
+    {
+        AccountStatus? targetStatus = errorCode switch
+        {
+            AuthErrorCodes.Expired => AccountStatus.Expired,
+            AuthErrorCodes.Moderated => AccountStatus.Error,
+            _ => null
+        };
+
+        if (targetStatus == null)
+        {
+            return;
+        }
+
+        Account updated = item.Account with
+        {
+            Cookie = item.Account.Cookie.Clone(),
+            Status = targetStatus.Value,
+            LastCheckedAt = DateTimeOffset.UtcNow
+        };
+
+        await _accountStore.UpdateAsync(updated, CancellationToken.None);
+        RunOnUiThread(() => item.UpdateAccount(updated));
     }
 
     private async Task<string?> ValidateAndUpdateAccountAsync(Account account, CancellationToken ct = default)
@@ -744,6 +814,21 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 _snackbarService.Show(account.Alias, Strings.ExpiredHint, ControlAppearance.Caution);
             }
         }
+        else if (string.Equals(validation.ErrorCode, AuthErrorCodes.Moderated, StringComparison.OrdinalIgnoreCase))
+        {
+            newStatus = AccountStatus.Error;
+            if (System.Windows.Application.Current?.Dispatcher != null)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    _snackbarService.Show(account.Alias, Strings.ModeratedHint, ControlAppearance.Danger);
+                });
+            }
+            else
+            {
+                _snackbarService.Show(account.Alias, Strings.ModeratedHint, ControlAppearance.Danger);
+            }
+        }
         else
         {
             newStatus = AccountStatus.Error;
@@ -768,6 +853,9 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
     private void ApplyFilter()
     {
+        // Clearing the collection makes the TwoWay-bound DataGrid push SelectedItem = null, so remember the
+        // selection by Id first; reloads create new item instances, so match by Id rather than by reference.
+        AccountId? previouslySelectedId = SelectedAccount?.Id;
         FilteredAccounts.Clear();
         IEnumerable<AccountItemViewModel> query = _allAccounts;
 
@@ -793,6 +881,9 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             FilteredAccounts.Add(item);
         }
 
+        SelectedAccount = previouslySelectedId is AccountId selectedId
+            ? FilteredAccounts.FirstOrDefault(a => a.Id == selectedId)
+            : null;
         HasAccounts = FilteredAccounts.Count > 0;
         OnPropertyChanged(nameof(IsNoAccounts));
         OnPropertyChanged(nameof(IsNoSearchResults));
@@ -1088,6 +1179,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         try
         {
             int currentIndex = 0;
+            int consecutiveRateLimits = 0;
 
             foreach (AccountItemViewModel account in queue)
             {
@@ -1106,36 +1198,65 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
 
                 HashSet<int> beforePids = SnapshotRobloxProcessIds();
                 LaunchRequest req = new(account.Id, placeId, jobId);
-                Result launchResult = await _launcher.LaunchAsync(req, ct);
+                bool rateLimited = false;
 
-                if (launchResult.IsSuccess)
+                // Per-account isolation: a vault write or recovery failure for one account must never abort
+                // the remaining queue. Only cancellation is allowed to escape the loop.
+                try
                 {
-                    successCount++;
-                    if (ReferenceEquals(_timeProvider, TimeProvider.System))
+                    Result launchResult = await LaunchWithModerationRecoveryAsync(
+                        account,
+                        req,
+                        beforePids,
+                        updateBulkQueueStatus: true,
+                        ct);
+
+                    if (launchResult.IsSuccess)
                     {
-                        _ = TrackSpawnedRobloxProcessAsync(account, req, beforePids, CancellationToken.None);
+                        successCount++;
+                        consecutiveRateLimits = 0;
+                        if (ReferenceEquals(_timeProvider, TimeProvider.System))
+                        {
+                            _ = TrackSpawnedRobloxProcessAsync(account, req, beforePids, CancellationToken.None);
+                        }
+                    }
+                    else
+                    {
+                        failCount++;
+                        string failMessage = launchResult.ErrorCode switch
+                        {
+                            AuthErrorCodes.Expired => Strings.ExpiredHint,
+                            AuthErrorCodes.Moderated => Strings.ModeratedHint,
+                            _ => launchResult.Error ?? Strings.ErrorTitle
+                        };
+                        ShowSnackbar(account.Alias, failMessage, ControlAppearance.Danger);
+                        if (string.Equals(launchResult.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
+                        {
+                            rateLimited = true;
+                            consecutiveRateLimits = LaunchBackoffPolicy.NextStrikeCount(consecutiveRateLimits);
+                        }
+
+                        await UpdateAccountStatusOnLaunchFailureAsync(account, launchResult.ErrorCode);
                     }
                 }
-                else
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     failCount++;
-                    ShowSnackbar(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
-                    if (string.Equals(launchResult.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
-                    {
-                        break;
-                    }
+                    Serilog.Log.Warning(
+                        "Launch queue item {AccountId} failed with {ExceptionType}; continuing with the next account.",
+                        account.Id.Value,
+                        ex.GetType().Name);
+                    ShowSnackbar(account.Alias, Strings.ErrorTitle, ControlAppearance.Danger);
                 }
 
                 bool isLastAccount = currentIndex >= queue.Count;
                 if (!isLastAccount)
                 {
                     ct.ThrowIfCancellationRequested();
-                    int randomSeconds = _randomDelayGenerator(
-                        MinSequentialLaunchDelaySeconds,
-                        MaxSequentialLaunchDelaySeconds + 1);
+                    int waitSeconds = ComputeNextLaunchWaitSeconds(rateLimited, consecutiveRateLimits);
 
                     CompositeFormat nextAccountFormat = CompositeFormat.Parse(Strings.NextAccountCountdown);
-                    for (int remainingSeconds = randomSeconds; remainingSeconds >= 1; remainingSeconds--)
+                    for (int remainingSeconds = waitSeconds; remainingSeconds >= 1; remainingSeconds--)
                     {
                         ct.ThrowIfCancellationRequested();
                         string countdownText = string.Format(CultureInfo.CurrentCulture, nextAccountFormat, remainingSeconds);
@@ -1201,7 +1322,25 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     public void KillInstance(AccountItemViewModel? item = null)
     {
         AccountItemViewModel? target = item ?? SelectedAccount;
+        if (target?.ActiveProcessId is int pid && _sessionTracker != null)
+        {
+            _ = _sessionTracker.CloseSessionAsync(pid, graceful: false);
+        }
+
         target?.KillInstance();
+    }
+
+    // A rate-limit backoff only ever stretches the gap: the normal 60–120s anti-ban pacing is the floor,
+    // otherwise a single 429 would make the next launch happen sooner than a successful one.
+    private int ComputeNextLaunchWaitSeconds(bool rateLimited, int consecutiveRateLimits)
+    {
+        int configuredDelay = _settingsService?.CurrentSettings.LaunchDelaySeconds ?? 0;
+        int minDelay = Math.Max(MinSequentialLaunchDelaySeconds, configuredDelay);
+        int maxDelay = Math.Max(MaxSequentialLaunchDelaySeconds, minDelay);
+        int pacingSeconds = _randomDelayGenerator(minDelay, maxDelay + 1);
+        return rateLimited
+            ? Math.Max(pacingSeconds, LaunchBackoffPolicy.ComputeBackoffSeconds(consecutiveRateLimits))
+            : pacingSeconds;
     }
 
     private void KillHeadlessRobloxProcesses()
@@ -1220,7 +1359,8 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                     }
 
                     proc.Refresh();
-                    if (proc.MainWindowHandle == IntPtr.Zero)
+                    if (proc.MainWindowHandle == IntPtr.Zero &&
+                        (DateTime.Now - proc.StartTime).TotalSeconds > 75)
                     {
                         proc.Kill();
                     }
@@ -1276,7 +1416,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         HashSet<int> beforePids,
         CancellationToken ct)
     {
-        const int maxPolls = 120; // 120 * 250ms = 30 seconds
+        const int maxPolls = 240; // 240 * 250ms = 60 seconds
         for (int attempt = 0; attempt < maxPolls && !ct.IsCancellationRequested && !_disposed; attempt++)
         {
             try
@@ -1309,7 +1449,183 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
     protected virtual Task OnRobloxProcessCapturedAsync(int processId, LaunchRequest request, CancellationToken ct) =>
         _sessionTracker?.AttachSession(request.AccountId, request, processId) != null
             ? Task.CompletedTask
-            : RbxManager.App.Services.RobloxWindowSizer.ApplyIfEnabledAsync(_settingsService, processId, ct);
+            : RbxManager.App.Services.RobloxWindowSizer.ApplyIfEnabledAsync(_settingsService, processId, ct, request.AccountId);
+
+    private async Task<Result> LaunchWithModerationRecoveryAsync(
+        AccountItemViewModel account,
+        LaunchRequest req,
+        HashSet<int> beforePids,
+        bool updateBulkQueueStatus,
+        CancellationToken ct)
+    {
+        Result launchResult = await _launcher.LaunchAsync(req, ct);
+        if (launchResult.IsSuccess ||
+            !string.Equals(launchResult.ErrorCode, AuthErrorCodes.Moderated, StringComparison.OrdinalIgnoreCase))
+        {
+            return launchResult;
+        }
+
+        await UpdateAccountStatusOnLaunchFailureAsync(account, launchResult.ErrorCode);
+        RunOnUiThread(() =>
+        {
+            account.StatusTextOverride = RecoveryWaitingStatusText;
+            if (updateBulkQueueStatus)
+            {
+                BulkLaunchQueueText = RecoveryWaitingStatusText;
+            }
+        });
+
+        Services.RobloxWindowSizer.SetSessionOverride(
+            account.Id,
+            Services.RobloxWindowSizer.RecoveryWidth,
+            Services.RobloxWindowSizer.RecoveryHeight);
+        return await PerformModeratedRecoveryLaunchAsync(account, req, beforePids, ct);
+    }
+
+    public async Task<Result> RecoverModeratedAccountForRotationAsync(
+        Account account,
+        LaunchRequest request,
+        CancellationToken ct)
+    {
+        AccountItemViewModel? item = _allAccounts.FirstOrDefault(a => a.Id == account.Id);
+        if (item != null)
+        {
+            RunOnUiThread(() => item.StatusTextOverride = RecoveryWaitingStatusText);
+        }
+
+        Services.RobloxWindowSizer.SetSessionOverride(
+            account.Id,
+            Services.RobloxWindowSizer.RecoveryWidth,
+            Services.RobloxWindowSizer.RecoveryHeight);
+
+        string? recoveredCookie = await Services.IncognitoBrowserLauncher
+            .LaunchRecoveryAsync(account.Cookie, ct);
+        if (!string.IsNullOrWhiteSpace(recoveredCookie))
+        {
+            Account reactivated = account with
+            {
+                Cookie = SecretValue.FromString(recoveredCookie.Trim()),
+                Status = AccountStatus.Valid,
+                LastCheckedAt = DateTimeOffset.UtcNow
+            };
+            await _accountStore.UpdateAsync(reactivated, CancellationToken.None);
+            if (item != null)
+            {
+                RunOnUiThread(() =>
+                {
+                    item.UpdateAccount(reactivated);
+                    item.StatusTextOverride = null;
+                });
+            }
+            else
+            {
+                reactivated.Cookie.Dispose();
+            }
+        }
+
+        Result? retryResult = null;
+        if (_sessionTracker != null)
+        {
+            await _sessionTracker.TrackLaunchAsync(
+                account.Id,
+                request,
+                async () =>
+                {
+                    retryResult = await _launcher.LaunchAsync(request, ct);
+                    return retryResult;
+                },
+                ct);
+        }
+        else
+        {
+            retryResult = await _launcher.LaunchAsync(request, ct);
+        }
+
+        Result finalResult = retryResult ?? Result.Failure(Strings.ModeratedHint, AuthErrorCodes.Moderated);
+        if (!finalResult.IsSuccess)
+        {
+            Services.RobloxWindowSizer.CancelSessionOverride(account.Id);
+        }
+
+        return finalResult;
+    }
+
+    private async Task<Result> PerformModeratedRecoveryLaunchAsync(
+        AccountItemViewModel account,
+        LaunchRequest req,
+        HashSet<int> beforePids,
+        CancellationToken ct)
+    {
+        if (ReferenceEquals(_timeProvider, TimeProvider.System))
+        {
+            string? recoveredCookie = await Services.IncognitoBrowserLauncher
+                .LaunchRecoveryAsync(account.Account.Cookie, ct);
+
+            if (!string.IsNullOrWhiteSpace(recoveredCookie))
+            {
+                Account reactivated = account.Account with
+                {
+                    Cookie = SecretValue.FromString(recoveredCookie.Trim()),
+                    Status = AccountStatus.Valid,
+                    LastCheckedAt = DateTimeOffset.UtcNow
+                };
+                await _accountStore.UpdateAsync(reactivated, CancellationToken.None);
+                RunOnUiThread(() =>
+                {
+                    account.UpdateAccount(reactivated);
+                    account.StatusTextOverride = null;
+                });
+
+                Result retryResult = await _launcher.LaunchAsync(req, ct);
+                if (!retryResult.IsSuccess)
+                {
+                    Services.RobloxWindowSizer.CancelSessionOverride(account.Id);
+                }
+
+                return retryResult;
+            }
+
+            Result inPlaceRetryResult = await _launcher.LaunchAsync(req, ct);
+            if (inPlaceRetryResult.IsSuccess)
+            {
+                Account reactivated = account.Account with
+                {
+                    Cookie = account.Account.Cookie.Clone(),
+                    Status = AccountStatus.Valid,
+                    LastCheckedAt = DateTimeOffset.UtcNow
+                };
+                await _accountStore.UpdateAsync(reactivated, CancellationToken.None);
+                RunOnUiThread(() =>
+                {
+                    account.UpdateAccount(reactivated);
+                    account.StatusTextOverride = null;
+                });
+                return inPlaceRetryResult;
+            }
+
+            Services.RobloxWindowSizer.CancelSessionOverride(account.Id);
+            return Result.Failure(Strings.ModeratedHint, AuthErrorCodes.Moderated);
+        }
+
+        Result fallbackResult = await _launcher.LaunchAsync(req, ct);
+        if (fallbackResult.IsSuccess)
+        {
+            Account reactivated = account.Account with
+            {
+                Cookie = account.Account.Cookie.Clone(),
+                Status = AccountStatus.Valid,
+                LastCheckedAt = DateTimeOffset.UtcNow
+            };
+            await _accountStore.UpdateAsync(reactivated, CancellationToken.None);
+            RunOnUiThread(() => account.UpdateAccount(reactivated));
+        }
+        else
+        {
+            Services.RobloxWindowSizer.CancelSessionOverride(account.Id);
+        }
+
+        return fallbackResult;
+    }
 
     private void ShowSnackbar(string title, string message, ControlAppearance appearance) =>
         RunOnUiThread(() => _snackbarService.Show(title, message, appearance));
@@ -1482,6 +1798,11 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         {
             _sessionTracker.SessionStarted -= OnTrackedSessionStarted;
             _sessionTracker.SessionEnded -= OnTrackedSessionEnded;
+        }
+
+        if (_extensionBridge != null)
+        {
+            _extensionBridge.AccountImported -= OnExtensionBridgeAccountImported;
         }
         if (_checkAllCts != null)
         {

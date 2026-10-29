@@ -7,4 +7,7 @@ public partial class MainViewModel : ObservableObject
 {
     [ObservableProperty]
     private string _applicationTitle = Strings.AppTitle;
+
+    [ObservableProperty]
+    private bool _isMultiInstanceEnabled = true;
 }

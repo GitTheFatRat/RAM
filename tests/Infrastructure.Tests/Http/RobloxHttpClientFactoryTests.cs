@@ -25,5 +25,7 @@ public sealed class RobloxHttpClientFactoryTests
         Assert.NotNull(client);
         Assert.Equal(TimeSpan.FromSeconds(30), client.Timeout);
         Assert.True(client.DefaultRequestHeaders.Contains("User-Agent"));
+        Assert.Equal(RobloxHttpClientFactory.DefaultBrowserUserAgent, client.DefaultRequestHeaders.UserAgent.ToString());
+        Assert.DoesNotContain("RbxManager", client.DefaultRequestHeaders.UserAgent.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 }

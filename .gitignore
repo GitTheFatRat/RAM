@@ -489,3 +489,6 @@ secrets.*
 logs/
 artifacts/
 review.zip
+console_error/
+multi_roblox_example/
+roblox_account_manager_example/

@@ -86,6 +86,14 @@ public sealed class RobloxLauncherPacingTests
             SettingsChanged?.Invoke(settings);
             return Task.CompletedTask;
         }
+
+        public Task<AppSettings> UpdateSettingsAsync(Func<AppSettings, AppSettings> mutate, CancellationToken ct = default)
+        {
+            AppSettings updated = mutate(CurrentSettings);
+            CurrentSettings = updated;
+            SettingsChanged?.Invoke(updated);
+            return Task.FromResult(updated);
+        }
     }
 
     [Fact]
@@ -349,5 +357,125 @@ public sealed class RobloxLauncherPacingTests
         Result r2 = await secondLaunch;
         Assert.True(r2.IsSuccess);
         Assert.Single(starter.StartedUris);
+    }
+
+    private sealed class ModeratedThenHealthyAuthService : IRobloxAuthService
+    {
+        private int _calls;
+
+        public Task<Result<RobloxUser>> ValidateCookieAsync(SecretValue cookie, CancellationToken ct = default) =>
+            Task.FromResult(Result.Success(new RobloxUser(1001, "TestPlayer", "TestPlayer")));
+
+        public Task<Result<SecretValue>> GetAuthTicketAsync(SecretValue cookie, CancellationToken ct = default)
+        {
+            if (++_calls == 1)
+            {
+                AuthFailureDetails details = new("Ticket", 403, [0], "User is moderated", true, [], false);
+                return Task.FromResult(Result.Failure<SecretValue>("Account moderated", AuthErrorCodes.Moderated, details));
+            }
+
+            return Task.FromResult(Result.Success(SecretValue.FromString("ticket-1002")));
+        }
+    }
+
+    [Fact]
+    public async Task LaunchAsync_OnModerated403_DoesNotTriggerGlobalRateLimitCooldown()
+    {
+        FakeTimeProvider timeProvider = new();
+        using SecretValue cookie1 = SecretValue.FromString(FakeCookie);
+        using SecretValue cookie2 = SecretValue.FromString(FakeCookie);
+        Account account1 = new(new AccountId(1), "ModAcc", null, null, cookie1, DateTimeOffset.UtcNow);
+        Account account2 = new(new AccountId(2), "GoodAcc", null, null, cookie2, DateTimeOffset.UtcNow);
+
+        FakeAccountStore store = new(account1, account2);
+        ModeratedThenHealthyAuthService auth = new();
+        FakeProcessStarter starter = new();
+        FakeProcessProvider processProvider = new();
+        FakeInstanceGate gate = new();
+        FakeSettingsService settings = new()
+        {
+            CurrentSettings = new AppSettings(LaunchDelaySeconds: 20)
+        };
+
+        using RobloxLauncher launcher = new(
+            store,
+            auth,
+            starter,
+            processProvider,
+            gate,
+            settingsService: settings,
+            timeProvider: timeProvider,
+            jitterProvider: () => TimeSpan.Zero);
+
+        Result r1 = await launcher.LaunchAsync(new LaunchRequest(account1.Id, 1818, null));
+        Assert.False(r1.IsSuccess);
+        Assert.Equal(AuthErrorCodes.Moderated, r1.ErrorCode);
+
+        // Next healthy account waits only the normal 20s pacing interval, NOT a 30s rate-limit backoff
+        Task<Result> secondLaunch = launcher.LaunchAsync(new LaunchRequest(account2.Id, 1818, null));
+        timeProvider.Advance(TimeSpan.FromSeconds(20));
+        Result r2 = await secondLaunch;
+        Assert.True(r2.IsSuccess);
+        Assert.Single(starter.StartedUris);
+    }
+
+    private sealed class FakeCacheCleaner : Core.Maintenance.IRobloxCacheCleaner
+    {
+        public int ClearCookiesCalls { get; private set; }
+
+        public Task<Core.Maintenance.CacheCleanResult> CleanAsync(CancellationToken ct = default) =>
+            Task.FromResult(new Core.Maintenance.CacheCleanResult(0, 0, 0));
+
+        public bool ClearSharedCookiesFile()
+        {
+            ClearCookiesCalls++;
+            return true;
+        }
+    }
+
+    [Fact]
+    public async Task LaunchAsync_UsesDeterministicPerAccountTrackerId_AndClearsSharedCookiesFile()
+    {
+        FakeTimeProvider timeProvider = new();
+        using SecretValue cookie1 = SecretValue.FromString(FakeCookie);
+        using SecretValue cookie2 = SecretValue.FromString(FakeCookie);
+        Account account1 = new(new AccountId(101), "Acc1", null, null, cookie1, DateTimeOffset.UtcNow);
+        Account account2 = new(new AccountId(202), "Acc2", null, null, cookie2, DateTimeOffset.UtcNow);
+
+        FakeAccountStore store = new(account1, account2);
+        FakeAuthService auth = new();
+        FakeProcessStarter starter = new();
+        FakeProcessProvider processProvider = new();
+        FakeInstanceGate gate = new();
+        FakeSettingsService settings = new() { CurrentSettings = new AppSettings(LaunchDelaySeconds: 1) };
+        FakeCacheCleaner cleaner = new();
+
+        using RobloxLauncher launcher = new(
+            store,
+            auth,
+            starter,
+            processProvider,
+            gate,
+            settingsService: settings,
+            timeProvider: timeProvider,
+            cacheCleaner: cleaner,
+            jitterProvider: () => TimeSpan.Zero);
+
+        string expectedTracker1 = RobloxLauncher.ComputeDeterministicTrackerId(account1.Id);
+        string expectedTracker2 = RobloxLauncher.ComputeDeterministicTrackerId(account2.Id);
+        Assert.NotEqual(expectedTracker1, expectedTracker2);
+        Assert.Equal(expectedTracker1, RobloxLauncher.ComputeDeterministicTrackerId(account1.Id));
+
+        await launcher.LaunchAsync(new LaunchRequest(account1.Id, 1818, null));
+        timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await launcher.LaunchAsync(new LaunchRequest(account1.Id, 1818, null));
+        timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await launcher.LaunchAsync(new LaunchRequest(account2.Id, 1818, null));
+
+        Assert.Equal(3, starter.StartedUris.Count);
+        Assert.Contains($"browsertrackerid:{expectedTracker1}", starter.StartedUris[0], StringComparison.Ordinal);
+        Assert.Contains($"browsertrackerid:{expectedTracker1}", starter.StartedUris[1], StringComparison.Ordinal);
+        Assert.Contains($"browsertrackerid:{expectedTracker2}", starter.StartedUris[2], StringComparison.Ordinal);
+        Assert.Equal(3, cleaner.ClearCookiesCalls);
     }
 }

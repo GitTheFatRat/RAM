@@ -20,6 +20,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
     public const string GlobalMutexName = @"Global\ROBLOX_singletonMutex";
 
     private static readonly TimeSpan HandleScanInterval = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(5);
 
     private readonly IProcessProvider _processProvider;
     private readonly string? _mutexName;
@@ -27,8 +28,10 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
     private readonly bool _isDefaultProductionGate;
 
     private readonly object _syncLock = new();
+    private readonly object _completionLock = new();
     private readonly ManualResetEventSlim _commandReady = new(false);
-    private readonly ManualResetEventSlim _commandDone = new(false);
+    // Set while the worker is idle; reset for the lifetime of a submitted command.
+    private readonly ManualResetEventSlim _commandDone = new(true);
     private readonly Thread _workerThread;
 
     private enum GateCommand
@@ -41,6 +44,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
 
     private GateCommand _pendingCommand = GateCommand.None;
     private Result _commandResult = Result.Success();
+    private bool _rollbackPendingEnable;
 
     private volatile bool _isEnabled;
     private bool _disposed;
@@ -58,14 +62,24 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
         IProcessProvider processProvider,
         string? mutexName,
         string? eventName = DefaultEventName)
+        : this(processProvider, mutexName, eventName, IsProductionNames(mutexName, eventName))
+    {
+    }
+
+    /// <param name="useProductionSemantics">
+    /// Forces the Roblox takeover rules (ownership pre-check, auxiliary locks) regardless of names, so tests can
+    /// exercise them with unique object names.
+    /// </param>
+    internal NamedMutexInstanceGate(
+        IProcessProvider processProvider,
+        string? mutexName,
+        string? eventName,
+        bool useProductionSemantics)
     {
         _processProvider = processProvider ?? throw new ArgumentNullException(nameof(processProvider));
         _mutexName = mutexName;
         _eventName = eventName;
-        _isDefaultProductionGate =
-            string.Equals(_mutexName, DefaultMutexName, StringComparison.Ordinal) &&
-            (string.Equals(_eventName, DefaultEventName, StringComparison.Ordinal) ||
-             string.Equals(_eventName, LocalEventName, StringComparison.Ordinal));
+        _isDefaultProductionGate = useProductionSemantics;
 
         _workerThread = new Thread(WorkerLoop)
         {
@@ -75,7 +89,12 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
         _workerThread.Start();
     }
 
-    public static Mutex? CreateLenientMutex(string name, bool initiallyOwned, out bool createdNew)
+    private static bool IsProductionNames(string? mutexName, string? eventName) =>
+        string.Equals(mutexName, DefaultMutexName, StringComparison.Ordinal) &&
+        (string.Equals(eventName, DefaultEventName, StringComparison.Ordinal) ||
+         string.Equals(eventName, LocalEventName, StringComparison.Ordinal));
+
+    public static Mutex CreateLenientMutex(string name, bool initiallyOwned, out bool createdNew)
     {
         Mutex mutex = new(initiallyOwned, name, out createdNew);
         ApplyWorldFullControlSecurity(mutex);
@@ -126,15 +145,23 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                 return Result.Success();
             }
 
-            _pendingCommand = GateCommand.Enable;
-            _commandDone.Reset();
-            _commandReady.Set();
-            if (!_commandDone.Wait(TimeSpan.FromSeconds(5)))
+            if (SubmitCommand(GateCommand.Enable))
             {
-                return Result.Failure("Timeout", "Timeout");
+                return _commandResult;
             }
 
-            return _commandResult;
+            lock (_completionLock)
+            {
+                if (_commandDone.IsSet)
+                {
+                    return _commandResult;
+                }
+
+                // The caller is told "Timeout", so an Enable that finishes later must not leave the gate silently enabled.
+                _rollbackPendingEnable = true;
+            }
+
+            return Result.Failure("Timeout", "Timeout");
         }
     }
 
@@ -147,10 +174,7 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                 return;
             }
 
-            _pendingCommand = GateCommand.Disable;
-            _commandDone.Reset();
-            _commandReady.Set();
-            _commandDone.Wait(TimeSpan.FromSeconds(5));
+            SubmitCommand(GateCommand.Disable);
         }
     }
 
@@ -164,20 +188,53 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
             }
 
             _disposed = true;
-            _pendingCommand = GateCommand.Shutdown;
-            _commandDone.Reset();
-            _commandReady.Set();
-            _commandDone.Wait(TimeSpan.FromSeconds(5));
+            SubmitCommand(GateCommand.Shutdown);
         }
 
         if (_workerThread.IsAlive)
         {
-            _workerThread.Join(TimeSpan.FromSeconds(5));
+            _workerThread.Join(CommandTimeout);
         }
 
         _commandReady.Dispose();
         _commandDone.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    // Caller must hold _syncLock.
+    private bool SubmitCommand(GateCommand command)
+    {
+        // Never overlap commands: a previously timed-out command must drain first, otherwise its completion
+        // would be mistaken for this one's.
+        if (!_commandDone.Wait(CommandTimeout) && command != GateCommand.Shutdown)
+        {
+            return false;
+        }
+
+        _pendingCommand = command;
+        _commandDone.Reset();
+        _commandReady.Set();
+        return _commandDone.Wait(CommandTimeout);
+    }
+
+    private void CompleteCommand(
+        ref Mutex? mutex,
+        ref Mutex? eventMutex,
+        ref Mutex? localEventMutex,
+        ref Mutex? globalMutex)
+    {
+        lock (_completionLock)
+        {
+            if (_rollbackPendingEnable && _isEnabled)
+            {
+                CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
+                _isEnabled = false;
+                _commandResult = Result.Failure("Timeout", "Timeout");
+            }
+
+            _rollbackPendingEnable = false;
+            _commandDone.Set();
+        }
     }
 
     private void WorkerLoop()
@@ -214,59 +271,16 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
 
             if (cmd == GateCommand.Enable)
             {
-                try
-                {
-                    if (_isDefaultProductionGate)
-                    {
-                        TryCloseExistingSingletonHandles();
-                    }
-
-                    mutex = CreateLenientMutex(_mutexName!, initiallyOwned: true, out bool mutexCreatedNew);
-                    if (!mutexCreatedNew && !_isDefaultProductionGate)
-                    {
-                        CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
-                        _isEnabled = false;
-                        _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
-                    }
-                    else
-                    {
-                        // Lock Global\ROBLOX_singletonEvent as a Mutex with WorldSid FullControl so
-                        // RobloxPlayerBeta.exe across User/Admin sessions cannot create/signal the singleton Event.
-                        eventMutex = CreateLenientMutex(_eventName!, initiallyOwned: true, out bool eventCreatedNew);
-
-                        if (!eventCreatedNew && !_isDefaultProductionGate)
-                        {
-                            CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
-                            _isEnabled = false;
-                            _commandResult = Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
-                        }
-                        else
-                        {
-                            if (_isDefaultProductionGate)
-                            {
-                                TryAcquireAuxiliaryLocks(ref localEventMutex, ref globalMutex);
-                            }
-
-                            _isEnabled = true;
-                            _commandResult = Result.Success();
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
-                    _isEnabled = false;
-                    _commandResult = Result.Failure("MutexError", "MutexError");
-                }
-
-                _commandDone.Set();
+                _commandResult = AcquireSingletonObjects(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
+                _isEnabled = _commandResult.IsSuccess;
+                CompleteCommand(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
             }
             else if (cmd == GateCommand.Disable)
             {
                 CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
                 _isEnabled = false;
                 _commandResult = Result.Success();
-                _commandDone.Set();
+                CompleteCommand(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
             }
             else if (cmd == GateCommand.Shutdown)
             {
@@ -275,6 +289,73 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
                 _commandDone.Set();
                 break;
             }
+        }
+    }
+
+    private Result AcquireSingletonObjects(
+        ref Mutex? mutex,
+        ref Mutex? eventMutex,
+        ref Mutex? localEventMutex,
+        ref Mutex? globalMutex)
+    {
+        try
+        {
+            mutex = CreateLenientMutex(_mutexName!, initiallyOwned: true, out bool mutexCreatedNew);
+            Result claim = mutexCreatedNew ? Result.Success() : ClaimExistingMutex(mutex);
+
+            if (claim.IsSuccess)
+            {
+                // Lock Global\ROBLOX_singletonEvent as a Mutex with WorldSid FullControl so
+                // RobloxPlayerBeta.exe across User/Admin sessions cannot create/signal the singleton Event.
+                eventMutex = CreateLenientMutex(_eventName!, initiallyOwned: true, out bool eventCreatedNew);
+                claim = eventCreatedNew ? Result.Success() : ClaimExistingMutex(eventMutex);
+            }
+
+            if (!claim.IsSuccess)
+            {
+                CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
+                return claim;
+            }
+
+            if (_isDefaultProductionGate)
+            {
+                TryAcquireAuxiliaryLocks(ref localEventMutex, ref globalMutex);
+            }
+
+            return Result.Success();
+        }
+        catch (WaitHandleCannotBeOpenedException) when (_isDefaultProductionGate)
+        {
+            // A running Roblox already created the singleton name as an Event, so it cannot be claimed as a Mutex.
+            CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
+            return Result.Failure("RobloxRunning", "RobloxRunning");
+        }
+        catch (Exception)
+        {
+            CleanupHandles(ref mutex, ref eventMutex, ref localEventMutex, ref globalMutex);
+            return Result.Failure("MutexError", "MutexError");
+        }
+    }
+
+    private Result ClaimExistingMutex(Mutex existing)
+    {
+        if (!_isDefaultProductionGate)
+        {
+            return Result.Failure("CouldNotTakeOver", "CouldNotTakeOver");
+        }
+
+        // initiallyOwned is ignored when the mutex already exists, so ownership has to be taken explicitly.
+        // If someone else (a running Roblox) holds it, the bypass would be ineffective and must not report success.
+        try
+        {
+            return existing.WaitOne(0)
+                ? Result.Success()
+                : Result.Failure("RobloxRunning", "RobloxRunning");
+        }
+        catch (AbandonedMutexException)
+        {
+            // The previous owner exited without releasing; ownership has been transferred to this thread.
+            return Result.Success();
         }
     }
 
@@ -305,28 +386,6 @@ public sealed class NamedMutexInstanceGate : IInstanceGate, IDisposable
         catch
         {
             // Keep background maintenance loop resilient
-        }
-    }
-
-    private static void TryCloseExistingSingletonHandles()
-    {
-        // Replicate Multiple Roblox V2.2 startup cleanup:
-        // try { Mutex.OpenExisting("ROBLOX_singletonMutex").Close(); Mutex.OpenExisting("ROBLOX_singletonEvent").Close(); } catch { }
-        TryOpenAndCloseMutex(DefaultMutexName);
-        TryOpenAndCloseMutex(LocalEventName);
-        TryOpenAndCloseMutex(DefaultEventName);
-        TryOpenAndCloseMutex(GlobalMutexName);
-    }
-
-    private static void TryOpenAndCloseMutex(string name)
-    {
-        try
-        {
-            using Mutex existing = Mutex.OpenExisting(name);
-            existing.Close();
-        }
-        catch
-        {
         }
     }
 

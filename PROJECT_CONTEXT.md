@@ -29,6 +29,10 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 - **M21**: GoodbyeDPI Automation Orchestrator (`DpiToolService`, `AddAccountWindow` dynamic status & one-click installer/launcher with UAC `runas` elevation). (Completed)
 - **M21.2**: Hotfix pinning exact GoodbyeDPI v0.2.2 release URL (`goodbyedpi-0.2.2.zip`) for stable downloads. (Completed)
 - **M21.3**: Hotfix switching GoodbyeDPI execution target from `1_russia_blacklist.cmd` to `2_any_country.cmd` (with `2_any_country_dnsredir.cmd` fallback) to bypass global SNI blocks. (Completed)
+- **M38**: Architecture stabilization: Persistent CDP browser profiles (no DOM/CSP spoofing), native residential IP signup/login flow, non-blocking auto-rejoin loop, robust `WindowSizeLock` trailing enforcement, pooled HTTP sockets. (Completed)
+- **M39**: Sequential Launch Queue resilience: Exponential backoff (30s -> 300s) on Rate Limit (429/403) instead of queue abort. (Completed)
+- **M40**: Settings UI stabilization: 500ms debounce for custom resolution inputs to prevent premature window resizing. (Completed)
+- **M41**: Recovery Launch (Manual Fix): Isolated 800x600 resolution override for Warned/Moderated accounts, allowing manual ToS agreement via client/browser without breaking global app settings. (Completed)
 
 ## Target & Stack
 - **Runtime / Language**: C# 14 / .NET 10 (LTS).
@@ -54,6 +58,7 @@ A Windows desktop application designed to manage multiple Roblox accounts with a
 1. `.ROBLOSECURITY` cookies grant full account control and must never be logged, printed, stored in plaintext, committed to Git, or sent to non-Roblox hosts.
 2. No telemetry, cloud sync, or remote executable downloaders.
 3. Anti-cheat bypass, executors, process injection, and bulk account creation are strictly out of scope.
+4. **Anti-Bot Compliance**: Prioritize native platform behavior (Residential IP routing, unmodified CDP interaction, rate-limit adherence via exponential backoff) over header spoofing or intrusive client hooking.
 
 ### Code Quality
 1. **KISS & YAGNI**: No speculative abstractions, dead code, or placeholder/TODO comments.

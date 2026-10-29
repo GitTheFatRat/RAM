@@ -129,6 +129,7 @@
                         TextWrapping="Wrap"
                         VerticalScrollBarVisibility="Auto"
                         VerticalContentAlignment="Top"
+                        FontSize="11.5"
                         FontFamily="{StaticResource FontFamilyMonospace}"
                         Margin="{StaticResource MarginBottomMedium}" />
 

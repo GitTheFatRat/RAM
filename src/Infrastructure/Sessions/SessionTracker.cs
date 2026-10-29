@@ -38,6 +38,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     private readonly ConcurrentDictionary<int, bool> _intentionalCloses = new();
     private readonly ConcurrentDictionary<long, bool> _gaveUpAccounts = new();
     private readonly ConcurrentDictionary<int, string> _recoveryKills = new();
+    private readonly ConcurrentDictionary<long, CancellationTokenSource> _pendingRejoins = new();
 
     private readonly Func<RejoinPolicy> _policyFactory;
 
@@ -123,9 +124,11 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     public void SetAutoRejoin(AccountId accountId, bool enabled)
     {
         _autoRejoinEnabled[accountId.Value] = enabled;
+        _gaveUpAccounts.TryRemove(accountId.Value, out _);
+        _rejoinPolicies.TryRemove(accountId.Value, out _);
         if (!enabled)
         {
-            _gaveUpAccounts.TryRemove(accountId.Value, out _);
+            CancelPendingRejoin(accountId.Value);
         }
     }
 
@@ -137,6 +140,10 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
     public async Task<bool> CloseSessionAsync(int pid, bool graceful = true)
     {
         _intentionalCloses[pid] = true;
+        if (_activeSessions.TryGetValue(pid, out RunningSession? session))
+        {
+            CancelPendingRejoin(session.AccountId.Value);
+        }
         _logWatcher?.StopWatching(pid);
         bool killed = await Task.Run(() => _processProvider.Kill(pid, graceful)).ConfigureAwait(false);
         return killed;
@@ -144,9 +151,29 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
     public async Task CloseAllSessionsAsync(bool graceful = true)
     {
+        foreach (long accountId in _pendingRejoins.Keys.ToList())
+        {
+            CancelPendingRejoin(accountId);
+        }
+
         foreach (int pid in _activeSessions.Keys.ToList())
         {
             await CloseSessionAsync(pid, graceful).ConfigureAwait(false);
+        }
+    }
+
+    private void CancelPendingRejoin(long accountId)
+    {
+        if (_pendingRejoins.TryRemove(accountId, out CancellationTokenSource? cts))
+        {
+            try
+            {
+                cts.Cancel();
+            }
+            catch
+            {
+            }
+            cts.Dispose();
         }
     }
 
@@ -206,6 +233,10 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         Func<Task<Result>> launchAction,
         CancellationToken ct = default)
     {
+        List<RunningSession> duplicateSessions = _activeSessions.Values
+            .Where(s => s.AccountId == accountId)
+            .ToList();
+
         IReadOnlyList<ProcessSnapshot> baseline = _processProvider.GetRobloxProcesses();
         HashSet<int> baselinePids = baseline.Select(p => p.Pid).ToHashSet();
 
@@ -215,11 +246,22 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             return null;
         }
 
+        foreach (RunningSession duplicateSession in duplicateSessions)
+        {
+            _intentionalCloses[duplicateSession.ProcessId] = true;
+            _activeSessions.TryRemove(duplicateSession.ProcessId, out _);
+            _logWatcher?.StopWatching(duplicateSession.ProcessId);
+            _processProvider.Kill(duplicateSession.ProcessId, graceful: false);
+            SessionEnded?.Invoke(duplicateSession, true);
+        }
+
         DateTimeOffset timeout = DateTimeOffset.UtcNow.AddSeconds(60);
         while (!ct.IsCancellationRequested && DateTimeOffset.UtcNow < timeout)
         {
             IReadOnlyList<ProcessSnapshot> current = _processProvider.GetRobloxProcesses();
-            List<ProcessSnapshot> newProcesses = current.Where(p => !baselinePids.Contains(p.Pid)).ToList();
+            List<ProcessSnapshot> newProcesses = current
+                .Where(p => !baselinePids.Contains(p.Pid) && !_activeSessions.ContainsKey(p.Pid))
+                .ToList();
 
             if (newProcesses.Count == 1)
             {
@@ -256,7 +298,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             try
             {
                 await Task.Delay(2000, stoppingToken).ConfigureAwait(false);
-                await PollProcessesAsync().ConfigureAwait(false);
+                await PollProcessesAsync(waitForRejoins: false, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -269,10 +311,11 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         }
     }
 
-    internal async Task PollProcessesAsync()
+    internal async Task PollProcessesAsync(bool waitForRejoins = true, CancellationToken ct = default)
     {
         IReadOnlyList<ProcessSnapshot> currentProcesses = _processProvider.GetRobloxProcesses();
         HashSet<int> activePids = currentProcesses.Select(p => p.Pid).ToHashSet();
+        List<Task> rejoinTasks = [];
 
         foreach (KeyValuePair<int, RunningSession> kvp in _activeSessions.ToList())
         {
@@ -282,6 +325,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             if (!activePids.Contains(pid))
             {
                 _activeSessions.TryRemove(pid, out _);
+                _lastGhostKillTimes.TryRemove(pid, out _);
                 _logWatcher?.StopWatching(pid);
                 bool intentional = _intentionalCloses.TryRemove(pid, out _);
                 bool recovery = _recoveryKills.TryRemove(pid, out _);
@@ -292,13 +336,37 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
                 if (!intentional && (recovery || GetAutoRejoin(session.AccountId)))
                 {
-                    await HandleAutoRejoinAsync(session, recovery).ConfigureAwait(false);
+                    Task rejoinTask = RunRejoinSafelyAsync(session, recovery, ct);
+                    if (waitForRejoins)
+                    {
+                        rejoinTasks.Add(rejoinTask);
+                    }
                 }
             }
         }
+
+        if (rejoinTasks.Count > 0)
+        {
+            await Task.WhenAll(rejoinTasks).ConfigureAwait(false);
+        }
     }
 
-    private async Task HandleAutoRejoinAsync(RunningSession session, bool isRecovery = false)
+    private async Task RunRejoinSafelyAsync(RunningSession session, bool isRecovery, CancellationToken ct)
+    {
+        try
+        {
+            await HandleAutoRejoinAsync(session, isRecovery, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            LogPollError(ex.GetType().Name);
+        }
+    }
+
+    private async Task HandleAutoRejoinAsync(RunningSession session, bool isRecovery = false, CancellationToken ct = default)
     {
         RejoinPolicy policy = _rejoinPolicies.GetOrAdd(session.AccountId.Value, _ => _policyFactory());
         RejoinDecision decision = policy.Evaluate(isIntentionalExit: false);
@@ -316,61 +384,97 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
             return;
         }
 
-        // Relaunching straight into a server the client just dropped from tends to fail again (Error 277 storms),
-        // so recovery relaunches wait at least the fixed cooldown even when the backoff delay is shorter.
-        TimeSpan delay = isRecovery && decision.Delay < RecoveryCooldown ? RecoveryCooldown : decision.Delay;
+        CancelPendingRejoin(session.AccountId.Value);
+        CancellationTokenSource rejoinCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _pendingRejoins[session.AccountId.Value] = rejoinCts;
+        CancellationToken rejoinToken = rejoinCts.Token;
 
-        LogRejoining(session.AccountId.Value, (int)delay.TotalSeconds);
-        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Auto-rejoin scheduled for AccountId {session.AccountId.Value} in {(int)delay.TotalSeconds}s"));
-
-        if (delay > TimeSpan.Zero)
+        try
         {
-            await Task.Delay(delay).ConfigureAwait(false);
-        }
+            // Relaunching straight into a server the client just dropped from tends to fail again (Error 277 storms),
+            // so recovery relaunches wait at least the fixed cooldown even when the backoff delay is shorter.
+            TimeSpan delay = isRecovery && decision.Delay < RecoveryCooldown ? RecoveryCooldown : decision.Delay;
 
-        IReadOnlyList<Account> accounts = await _accountStore.ListAsync().ConfigureAwait(false);
-        Account? account = accounts.FirstOrDefault(a => a.Id == session.AccountId);
-        if (account == null)
-        {
-            return;
-        }
+            LogRejoining(session.AccountId.Value, (int)delay.TotalSeconds);
+            _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Auto-rejoin scheduled for AccountId {session.AccountId.Value} in {(int)delay.TotalSeconds}s"));
 
-        Result<RobloxUser> validation = await _authService.ValidateCookieAsync(account.Cookie).ConfigureAwait(false);
-        if (!validation.IsSuccess)
-        {
-            if (string.Equals(validation.ErrorCode, AuthErrorCodes.Expired, StringComparison.OrdinalIgnoreCase))
+            if (delay > TimeSpan.Zero)
             {
-                Account updated = account with
-                {
-                    Status = AccountStatus.Expired,
-                    LastCheckedAt = DateTimeOffset.UtcNow
-                };
-                await _accountStore.UpdateAsync(updated).ConfigureAwait(false);
-                LogRejoinStoppedExpired(account.Id.Value);
+                await Task.Delay(delay, rejoinToken).ConfigureAwait(false);
             }
-            return;
-        }
 
-        LaunchRequest launchRequest = session.Request;
-        bool smartHopping = _settingsService?.CurrentSettings.EnableSmartServerHopping ?? true;
-        if (smartHopping && _serverBrowserService != null)
-        {
+            if (rejoinToken.IsCancellationRequested || (!isRecovery && !GetAutoRejoin(session.AccountId)))
+            {
+                return;
+            }
+
+            IReadOnlyList<Account> accounts = await _accountStore.ListAsync(rejoinToken).ConfigureAwait(false);
             try
             {
-                Result<ServerPage> serverResult = await _serverBrowserService
-                    .GetServersAsync(session.Request.PlaceId, ServerSort.Ascending, null, CancellationToken.None)
-                    .ConfigureAwait(false);
-
-                if (serverResult.IsSuccess && serverResult.Value != null)
+                Account? account = accounts.FirstOrDefault(a => a.Id == session.AccountId);
+                if (account == null)
                 {
-                    ServerInfo? candidate = serverResult.Value.Servers
-                        .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.Id) && s.Playing < s.MaxPlayers);
+                    return;
+                }
 
-                    if (candidate != null)
+                Result<RobloxUser> validation = await _authService.ValidateCookieAsync(account.Cookie, rejoinToken).ConfigureAwait(false);
+                if (!validation.IsSuccess)
+                {
+                    if (string.Equals(validation.ErrorCode, AuthErrorCodes.Expired, StringComparison.OrdinalIgnoreCase))
                     {
-                        launchRequest = session.Request with { JobId = candidate.Id };
-                        LogServerHopped(session.AccountId.Value, candidate.Id);
-                        _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Smart server hop selected JobId {candidate.Id} for AccountId {session.AccountId.Value}"));
+                        Account updated = account with
+                        {
+                            Cookie = account.Cookie.Clone(),
+                            Status = AccountStatus.Expired,
+                            LastCheckedAt = DateTimeOffset.UtcNow
+                        };
+                        try
+                        {
+                            await _accountStore.UpdateAsync(updated, rejoinToken).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            updated.Cookie.Dispose();
+                        }
+                        LogRejoinStoppedExpired(account.Id.Value);
+                    }
+                    return;
+                }
+            }
+            finally
+            {
+                foreach (Account acc in accounts)
+                {
+                    acc.Cookie.Dispose();
+                }
+            }
+
+            LaunchRequest launchRequest = session.Request;
+            bool smartHopping = _settingsService?.CurrentSettings.EnableSmartServerHopping ?? true;
+            if (smartHopping && _serverBrowserService != null)
+            {
+                try
+                {
+                    Result<ServerPage> serverResult = await _serverBrowserService
+                        .GetServersAsync(session.Request.PlaceId, ServerSort.Ascending, null, rejoinToken)
+                        .ConfigureAwait(false);
+
+                    if (serverResult.IsSuccess && serverResult.Value != null)
+                    {
+                        ServerInfo? candidate = serverResult.Value.Servers
+                            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.Id) && s.Playing < s.MaxPlayers);
+
+                        if (candidate != null)
+                        {
+                            launchRequest = session.Request with { JobId = candidate.Id };
+                            LogServerHopped(session.AccountId.Value, candidate.Id);
+                            _uatLogger?.LogTrace(string.Create(CultureInfo.InvariantCulture, $"SessionTracker: Smart server hop selected JobId {candidate.Id} for AccountId {session.AccountId.Value}"));
+                        }
+                        else
+                        {
+                            launchRequest = session.Request;
+                            LogServerHopFallback(session.AccountId.Value);
+                        }
                     }
                     else
                     {
@@ -378,20 +482,30 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
                         LogServerHopFallback(session.AccountId.Value);
                     }
                 }
-                else
+                catch (OperationCanceledException) when (rejoinToken.IsCancellationRequested)
                 {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    LogServerHopError(session.AccountId.Value, ex.Message);
                     launchRequest = session.Request;
-                    LogServerHopFallback(session.AccountId.Value);
                 }
             }
-            catch (Exception ex)
-            {
-                LogServerHopError(session.AccountId.Value, ex.Message);
-                launchRequest = session.Request;
-            }
-        }
 
-        await TrackLaunchAsync(session.AccountId, launchRequest, () => _launcher.LaunchAsync(launchRequest)).ConfigureAwait(false);
+            await TrackLaunchAsync(session.AccountId, launchRequest, () => _launcher.LaunchAsync(launchRequest, rejoinToken), rejoinToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (rejoinToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (_pendingRejoins.TryGetValue(session.AccountId.Value, out CancellationTokenSource? current) && ReferenceEquals(current, rejoinCts))
+            {
+                _pendingRejoins.TryRemove(session.AccountId.Value, out _);
+            }
+            rejoinCts.Dispose();
+        }
     }
 
     private void OnGhostDisconnectDetected(int pid, string keyword)
@@ -439,14 +553,7 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
 
             _lastGhostKillTimes[pid] = now;
             LogGhostDisconnectDetected(pid, keyword);
-            if (autoReconnect)
-            {
-                RecoverSession(pid, keyword);
-            }
-            else
-            {
-                _processProvider.Kill(pid, graceful: false);
-            }
+            RecoverSession(pid, keyword);
         }
     }
 
@@ -456,6 +563,12 @@ public sealed partial class SessionTracker : BackgroundService, ISessionTracker
         {
             _logWatcher.GhostDisconnectDetected -= OnGhostDisconnectDetected;
         }
+
+        foreach (long accountId in _pendingRejoins.Keys.ToList())
+        {
+            CancelPendingRejoin(accountId);
+        }
+
         base.Dispose();
     }
 

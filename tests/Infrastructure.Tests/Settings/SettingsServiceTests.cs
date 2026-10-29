@@ -1,7 +1,9 @@
 namespace RbxManager.Infrastructure.Tests.Settings;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using RbxManager.Core.Settings;
 using RbxManager.Infrastructure.Settings;
@@ -104,5 +106,79 @@ public sealed class SettingsServiceTests
 
         Assert.True(File.Exists(settingsPath));
         Assert.False(File.Exists(settingsPath + ".tmp"));
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_ConcurrentUpdatesToDifferentFields_BothPersist()
+    {
+        using TempDirectory tempDir = new();
+        string settingsPath = tempDir.CreateFilePath();
+
+        using SettingsService service = new(settingsPath);
+        await service.LoadSettingsAsync();
+
+        using ManualResetEventSlim startGate = new(false);
+        Task<AppSettings> themeUpdate = Task.Run(() =>
+        {
+            startGate.Wait();
+            return service.UpdateSettingsAsync(s => s with { Theme = "Light" });
+        });
+        Task<AppSettings> delayUpdate = Task.Run(() =>
+        {
+            startGate.Wait();
+            return service.UpdateSettingsAsync(s => s with { LaunchDelaySeconds = 45 });
+        });
+
+        startGate.Set();
+        await Task.WhenAll(themeUpdate, delayUpdate);
+
+        Assert.Equal("Light", service.CurrentSettings.Theme);
+        Assert.Equal(45, service.CurrentSettings.LaunchDelaySeconds);
+
+        SettingsService reader = new(settingsPath);
+        AppSettings persisted = await reader.LoadSettingsAsync();
+        Assert.Equal("Light", persisted.Theme);
+        Assert.Equal(45, persisted.LaunchDelaySeconds);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_ManyConcurrentIncrements_NoneAreLost()
+    {
+        using TempDirectory tempDir = new();
+        string settingsPath = tempDir.CreateFilePath();
+
+        using SettingsService service = new(settingsPath);
+        await service.SaveSettingsAsync(AppSettings.Default with { LaunchDelaySeconds = 20 });
+
+        const int updateCount = 20;
+        Task[] updates = new Task[updateCount];
+        for (int i = 0; i < updateCount; i++)
+        {
+            updates[i] = Task.Run(() => service.UpdateSettingsAsync(s => s with { LaunchDelaySeconds = s.LaunchDelaySeconds + 1 }));
+        }
+
+        await Task.WhenAll(updates);
+
+        SettingsService reader = new(settingsPath);
+        AppSettings persisted = await reader.LoadSettingsAsync();
+        Assert.Equal(20 + updateCount, persisted.LaunchDelaySeconds);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_ClampsAndRaisesSettingsChangedOnce()
+    {
+        using TempDirectory tempDir = new();
+        string settingsPath = tempDir.CreateFilePath();
+
+        using SettingsService service = new(settingsPath);
+        List<AppSettings> raised = [];
+        service.SettingsChanged += raised.Add;
+
+        AppSettings returned = await service.UpdateSettingsAsync(s => s with { RejoinMaxAttempts = 0 });
+
+        Assert.Equal(AppSettings.MinimumRejoinMaxAttempts, returned.RejoinMaxAttempts);
+        Assert.Equal(returned, service.CurrentSettings);
+        AppSettings notified = Assert.Single(raised);
+        Assert.Equal(returned, notified);
     }
 }

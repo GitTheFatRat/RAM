@@ -28,6 +28,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="WPF-UI" />
     <PackageReference Include="Obfuscar">
       <PrivateAssets>all</PrivateAssets>

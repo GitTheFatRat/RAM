@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RbxManager Local Bridge</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #111827;
+      --border: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --success: #34d399;
+      --error: #fb7185;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 310px;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+      padding: 16px;
+    }
+
+    .card {
+      background-color: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(99, 102, 241, 0.16);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: 14px;
+    }
+
+    button {
+      width: 100%;
+      background-color: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      min-height: 18px;
+      word-break: break-word;
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .status.error {
+      color: var(--error);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="badge">R</div>
+      <div>
+        <div class="title">RbxManager Bridge</div>
+        <div class="subtitle">127.0.0.1:48123</div>
+      </div>
+    </div>
+    <p class="desc">
+      Imports the current <strong>.ROBLOSECURITY</strong> cookie into RbxManager, clears only that cookie locally, and opens Roblox Login for the next account.
+    </p>
+    <button id="importBtn" type="button">Import &amp; Next Account</button>
+    <div id="statusText" class="status"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

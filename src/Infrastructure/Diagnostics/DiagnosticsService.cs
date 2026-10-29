@@ -14,6 +14,7 @@ using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Diagnostics;
 using RbxManager.Core.Instance;
+using RbxManager.Core.Integrations;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
 using RbxManager.Core.Processes;
@@ -46,6 +47,7 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
     private readonly ISettingsService _settingsService;
     private readonly IRobloxAuthService _authService;
     private readonly HttpClient _httpClient;
+    private readonly IPotassiumService? _potassiumService;
 
     public DiagnosticsService(
         IRegistryProvider registryProvider,
@@ -53,7 +55,8 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
         IInstanceGate instanceGate,
         ISettingsService settingsService,
         IRobloxAuthService authService,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IPotassiumService? potassiumService = null)
     {
         _registryProvider = registryProvider;
         _processProvider = processProvider;
@@ -61,6 +64,7 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
         _settingsService = settingsService;
         _authService = authService;
         _httpClient = httpClient;
+        _potassiumService = potassiumService;
     }
 
     public async Task<string> RunDiagnosticsAsync(Account? targetAccount = null, CancellationToken ct = default)
@@ -204,7 +208,26 @@ public sealed partial class DiagnosticsService : IDiagnosticsService
         sb.AppendLine(CultureInfo.InvariantCulture, $"PlaceLauncherUrlTemplate: OverrideActive={(placeOverrideActive ? "yes" : "no")}, Valid={(placeOverrideValid ? "yes" : "no")}");
         sb.AppendLine();
 
-        // 5. Optional Per-Account Check
+        // 5. Potassium Integration
+        if (_potassiumService != null)
+        {
+            PotassiumScanResult potassium = await _potassiumService.ScanAsync(ct).ConfigureAwait(false);
+            sb.AppendLine("[Potassium Integration]");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Installed: {(potassium.IsInstalled ? "yes" : "no")}");
+            string runningPids = potassium.RunningProcessIds.Count > 0
+                ? $" (PIDs: {string.Join(", ", potassium.RunningProcessIds)})"
+                : string.Empty;
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Running: {(potassium.IsRunning ? "yes" : "no")}{runningPids}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"ExecutablePath: {potassium.ExecutablePath ?? "not found"}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"CoreDllPath: {potassium.CoreDllPath ?? "not found"}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"DataFolderExists: {(potassium.DataDirectoryPath != null ? "yes" : "no")}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"AutoExecScriptsCount: {potassium.AutoExecScriptCount}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"WorkspaceFolderExists: {(potassium.WorkspaceDirectoryPath != null ? "yes" : "no")}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"McpTokenExists: {(potassium.McpTokenPath != null ? "yes" : "no")}");
+            sb.AppendLine();
+        }
+
+        // 6. Optional Per-Account Check
         if (targetAccount != null)
         {
             sb.AppendLine(CultureInfo.InvariantCulture, $"[Account Check: {targetAccount.Alias}]");

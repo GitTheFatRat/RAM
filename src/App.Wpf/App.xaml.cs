@@ -52,7 +52,10 @@ public partial class App : Application
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
 
+        // UseSerilog replaces the default MEL providers (Console/Debug/EventLog), so every Infrastructure
+        // ILogger<T> lands in logs/app-.log and passes through RobloxSecretRedactionEnricher.
         _host = Host.CreateDefaultBuilder()
+            .UseSerilog(dispose: false)
             .ConfigureServices(ConfigureServices)
             .Build();
     }
@@ -206,7 +209,6 @@ public partial class App : Application
 
     private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)
     {
-        services.AddSingleton<Serilog.ILogger>(Log.Logger);
 
         // Core & Infrastructure
         services.AddInfrastructureServices();
@@ -252,10 +254,10 @@ public partial class App : Application
         services.AddSingleton<ServersPage>();
         services.AddSingleton<RunningViewModel>();
         services.AddSingleton<RunningPage>();
-        services.AddTransient<SettingsViewModel>();
-        services.AddTransient<SettingsPage>();
-        services.AddTransient<ViewModels.DiagnosticsViewModel>();
-        services.AddTransient<Views.Pages.DiagnosticsPage>();
+        services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<SettingsPage>();
+        services.AddSingleton<ViewModels.DiagnosticsViewModel>();
+        services.AddSingleton<Views.Pages.DiagnosticsPage>();
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -329,8 +331,14 @@ public partial class App : Application
 
         // One place sizes/tiles every tracked Roblox window: manual launches, Servers-tab joins and auto-reconnect relaunches.
         sessionTracker.SessionStarted += session =>
-            _ = Services.RobloxWindowSizer.ApplyIfEnabledAsync(settingsService, session.ProcessId, CancellationToken.None);
+            _ = Services.RobloxWindowSizer.ApplyIfEnabledAsync(settingsService, session.ProcessId, CancellationToken.None, session.AccountId);
         Services.RobloxWindowSizer.ApplyToRunningProcesses(settingsService);
+
+        if (_host.Services.GetService<Core.Rotation.IRotationManager>() is Infrastructure.Rotation.RotationManager rotationManager)
+        {
+            AccountsViewModel accountsViewModel = _host.Services.GetRequiredService<AccountsViewModel>();
+            rotationManager.ModerationRecoveryHandler = accountsViewModel.RecoverModeratedAccountForRotationAsync;
+        }
 
         sessionTracker.GhostDisconnectOccurred += (session, keyword) =>
         {
@@ -354,12 +362,34 @@ public partial class App : Application
         };
 
         bool isUiTest = Environment.GetEnvironmentVariable("RBXMANAGER_UITEST") == "1";
-        if (!isUiTest || settings.MultiInstanceEnabled)
+        IInstanceGate? instanceGate = _host.Services.GetService<IInstanceGate>();
+        if (settings.MultiInstanceEnabled)
         {
-            EnsureGlobalRobloxMutexHeld();
-            IInstanceGate? instanceGate = _host.Services.GetService<IInstanceGate>();
+            if (!isUiTest)
+            {
+                EnsureGlobalRobloxMutexHeld();
+            }
+
             instanceGate?.TryEnable();
         }
+
+        settingsService.SettingsChanged += updatedSettings =>
+        {
+            if (isUiTest)
+            {
+                return;
+            }
+
+            if (updatedSettings.MultiInstanceEnabled)
+            {
+                EnsureGlobalRobloxMutexHeld();
+            }
+            else
+            {
+                ReleaseGlobalRobloxMutex(ref _globalRobloxMutex);
+                ReleaseGlobalRobloxMutex(ref _globalRobloxSingletonMutex);
+            }
+        };
 
         if (settings.IsMasterPasswordEnabled)
         {
@@ -482,6 +512,14 @@ public partial class App : Application
             _host.Services.GetService<AccountsViewModel>()?.CancelBulkLaunch();
             _host.Services.GetService<ServersViewModel>()?.CancelJoin();
             RbxManager.App.Services.IncognitoBrowserLauncher.CleanupAllSessions();
+
+            // Resolution edits sit in a 500 ms debounce before hitting disk. Flush synchronously (bounded): continuations
+            // of this async void override are not guaranteed to run once the dispatcher has shut down.
+            if (_host.Services.GetService<SettingsViewModel>() is SettingsViewModel settingsViewModel &&
+                !Task.Run(settingsViewModel.FlushPendingAsync).Wait(TimeSpan.FromSeconds(3)))
+            {
+                Log.Warning("Pending settings flush did not finish before shutdown.");
+            }
         }
         catch (Exception ex)
         {

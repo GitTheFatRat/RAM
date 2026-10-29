@@ -485,4 +485,30 @@ public sealed class RobloxAuthServiceTests
         Assert.True(r3.IsSuccess);
         Assert.Equal(2, validateCalls);
     }
+
+    [Fact]
+    public async Task ValidateAndGetAuthTicket_403UserIsModerated_ReturnsModeratedErrorCode_NotRateLimited()
+    {
+        const string moderatedJson = """{"errors":[{"code":0,"message":"User is moderated"}]}""";
+
+        using HttpClient client = CreateClient(new DelegatingMockHandler(_ =>
+        {
+            HttpResponseMessage resp = new(HttpStatusCode.Forbidden)
+            {
+                Content = new StringContent(moderatedJson, Encoding.UTF8, "application/json")
+            };
+            return Task.FromResult(resp);
+        }));
+
+        RobloxAuthService service = new(client);
+        using SecretValue cookie = SecretValue.FromString(FakeCookie);
+
+        Result<RobloxUser> validateResult = await service.ValidateCookieAsync(cookie);
+        Assert.False(validateResult.IsSuccess);
+        Assert.Equal(AuthErrorCodes.Moderated, validateResult.ErrorCode);
+
+        Result<SecretValue> ticketResult = await service.GetAuthTicketAsync(cookie);
+        Assert.False(ticketResult.IsSuccess);
+        Assert.Equal(AuthErrorCodes.Moderated, ticketResult.ErrorCode);
+    }
 }

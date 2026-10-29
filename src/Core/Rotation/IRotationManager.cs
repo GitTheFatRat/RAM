@@ -29,12 +29,16 @@ public enum RotationPhase
 {
     Idle,
     Launching,
+    WaitingForRecovery,
     Farming,
     Stopping,
     Cleaning
 }
 
-public sealed record RotationStatus(RotationPhase Phase, string? CurrentGroup, DateTimeOffset? NextSwitchAt)
+public sealed record RotationStatus(
+    RotationPhase Phase,
+    string? CurrentGroup,
+    DateTimeOffset? NextSwitchAt)
 {
     public static readonly RotationStatus Idle = new(RotationPhase.Idle, null, null);
 

@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "RbxManager Local Bridge",
+  "version": "1.0.0",
+  "description": "1-click native .ROBLOSECURITY import to RbxManager without invalidating the captured token.",
+  "permissions": [
+    "cookies",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.roblox.com/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Import to RbxManager",
+    "default_popup": "popup.html"
+  }
+}

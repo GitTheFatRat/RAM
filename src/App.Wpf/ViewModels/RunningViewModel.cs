@@ -106,9 +106,15 @@ public partial class RunningViewModel : ObservableObject, IDisposable
 
     private void OnSessionStarted(RunningSession session)
     {
-        Application.Current?.Dispatcher.Invoke(async () =>
+        Application.Current?.Dispatcher.InvokeAsync(async () =>
         {
-            await AddOrUpdateSessionItemAsync(session);
+            try
+            {
+                await AddOrUpdateSessionItemAsync(session);
+            }
+            catch
+            {
+            }
         });
     }
 
@@ -130,29 +136,39 @@ public partial class RunningViewModel : ObservableObject, IDisposable
     {
         IReadOnlyList<RunningSession> activeSessions = _sessionTracker.ActiveSessions;
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
-        Dictionary<long, Account> accountsById = accounts.ToDictionary(a => a.Id.Value);
-
-        IReadOnlyList<ProcessSnapshot> processes = _processProvider.GetRobloxProcesses();
-        Dictionary<int, ProcessSnapshot> processesById = processes.ToDictionary(p => p.Pid);
-
-        Sessions.Clear();
-        foreach (RunningSession session in activeSessions)
+        try
         {
-            accountsById.TryGetValue(session.AccountId.Value, out Account? account);
-            processesById.TryGetValue(session.ProcessId, out ProcessSnapshot? proc);
+            Dictionary<long, Account> accountsById = accounts.ToDictionary(a => a.Id.Value);
 
-            string alias = account?.Alias ?? $"Account #{session.AccountId.Value}";
-            double memoryMb = proc != null ? Math.Round(proc.WorkingSetBytes / (1024.0 * 1024.0), 1) : 0;
-            bool autoRejoin = _sessionTracker.GetAutoRejoin(session.AccountId);
-            bool gaveUp = _sessionTracker.IsRejoinGaveUp(session.AccountId);
+            IReadOnlyList<ProcessSnapshot> processes = _processProvider.GetRobloxProcesses();
+            Dictionary<int, ProcessSnapshot> processesById = processes.ToDictionary(p => p.Pid);
 
-            Sessions.Add(new RunningSessionItemViewModel(session, alias, memoryMb, autoRejoin, gaveUp, (s, enabled) =>
+            Sessions.Clear();
+            foreach (RunningSession session in activeSessions)
             {
-                _sessionTracker.SetAutoRejoin(s.AccountId, enabled);
-            }));
-        }
+                accountsById.TryGetValue(session.AccountId.Value, out Account? account);
+                processesById.TryGetValue(session.ProcessId, out ProcessSnapshot? proc);
 
-        HasSessions = Sessions.Count > 0;
+                string alias = account?.Alias ?? $"Account #{session.AccountId.Value}";
+                double memoryMb = proc != null ? Math.Round(proc.WorkingSetBytes / (1024.0 * 1024.0), 1) : 0;
+                bool autoRejoin = _sessionTracker.GetAutoRejoin(session.AccountId);
+                bool gaveUp = _sessionTracker.IsRejoinGaveUp(session.AccountId);
+
+                Sessions.Add(new RunningSessionItemViewModel(session, alias, memoryMb, autoRejoin, gaveUp, (s, enabled) =>
+                {
+                    _sessionTracker.SetAutoRejoin(s.AccountId, enabled);
+                }));
+            }
+
+            HasSessions = Sessions.Count > 0;
+        }
+        finally
+        {
+            foreach (Account acc in accounts)
+            {
+                acc.Cookie.Dispose();
+            }
+        }
     }
 
     [RelayCommand]
@@ -226,19 +242,30 @@ public partial class RunningViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public Task StopRotationAsync() => _rotationManager.StopAsync();
 
-    private async Task LoadRotationOptionsAsync()
+    public async Task LoadRotationOptionsAsync()
     {
         AppSettings settings = _settingsService.CurrentSettings ?? AppSettings.Default;
-        HashSet<string> saved = new(settings.RotationGroups ?? [], StringComparer.OrdinalIgnoreCase);
+        HashSet<string> saved = RotationGroups.Count > 0
+            ? new(RotationGroups.Where(g => g.IsSelected).Select(g => g.Name), StringComparer.OrdinalIgnoreCase)
+            : new(settings.RotationGroups ?? [], StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync() ?? [];
-
-        RotationGroups.Clear();
-        foreach (IGrouping<string, Account> group in accounts
-                     .Where(a => !string.IsNullOrWhiteSpace(a.Group))
-                     .GroupBy(a => a.Group!.Trim(), StringComparer.OrdinalIgnoreCase)
-                     .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase))
+        try
         {
-            RotationGroups.Add(new RotationGroupOption(group.Key, group.Count(), saved.Contains(group.Key)));
+            RotationGroups.Clear();
+            foreach (IGrouping<string, Account> group in accounts
+                         .Where(a => !string.IsNullOrWhiteSpace(a.Group))
+                         .GroupBy(a => a.Group!.Trim(), StringComparer.OrdinalIgnoreCase)
+                         .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase))
+            {
+                RotationGroups.Add(new RotationGroupOption(group.Key, group.Count(), saved.Contains(group.Key)));
+            }
+        }
+        finally
+        {
+            foreach (Account acc in accounts)
+            {
+                acc.Cookie.Dispose();
+            }
         }
 
         HasRotationGroups = RotationGroups.Count > 0;
@@ -263,6 +290,12 @@ public partial class RunningViewModel : ObservableObject, IDisposable
     {
         status ??= RotationStatus.Idle;
         IsRotationRunning = status.IsRunning;
+        if (status.Phase == RotationPhase.WaitingForRecovery)
+        {
+            RotationStatusText = AccountsViewModel.RecoveryWaitingStatusText;
+            return;
+        }
+
         string format = status.Phase switch
         {
             RotationPhase.Launching => Strings.RotationStatusLaunching,
@@ -281,8 +314,19 @@ public partial class RunningViewModel : ObservableObject, IDisposable
     private async Task AddOrUpdateSessionItemAsync(RunningSession session)
     {
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync();
-        Account? account = accounts.FirstOrDefault(a => a.Id == session.AccountId);
-        string alias = account?.Alias ?? $"Account #{session.AccountId.Value}";
+        string alias;
+        try
+        {
+            Account? account = accounts.FirstOrDefault(a => a.Id == session.AccountId);
+            alias = account?.Alias ?? $"Account #{session.AccountId.Value}";
+        }
+        finally
+        {
+            foreach (Account acc in accounts)
+            {
+                acc.Cookie.Dispose();
+            }
+        }
 
         RunningSessionItemViewModel? existing = Sessions.FirstOrDefault(s => s.Pid == session.ProcessId);
         if (existing == null)

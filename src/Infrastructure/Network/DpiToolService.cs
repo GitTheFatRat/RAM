@@ -122,7 +122,7 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
 
     public async Task<Result> EnsureInstalledAndStartAsync(CancellationToken ct = default)
     {
-        if (IsRunning())
+        if (await Task.Run(IsRunning, ct).ConfigureAwait(false))
         {
             return Result.Success();
         }
@@ -149,7 +149,8 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
             try
             {
                 _uatLogger?.LogTrace($"DpiToolService: Installing Cloudflare WARP via \"{installPsi.FileName} {installPsi.Arguments}\"");
-                if (!_processRunner(installPsi))
+                bool installed = await Task.Run(() => _processRunner(installPsi), ct).ConfigureAwait(false);
+                if (!installed)
                 {
                     return Result.Failure("Failed to install Cloudflare WARP.", DpiErrorCodes.LaunchFailed);
                 }
@@ -173,7 +174,7 @@ public sealed partial class DpiToolService : IDpiToolService, IDisposable
             }
         }
 
-        return ConnectWarpCli(warpCliPath);
+        return await Task.Run(() => ConnectWarpCli(warpCliPath), ct).ConfigureAwait(false);
     }
 
     private Result ConnectWarpCli(string warpCliPath)

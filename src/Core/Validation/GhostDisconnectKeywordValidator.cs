@@ -14,7 +14,9 @@ public static class GhostDisconnectKeywordValidator
     [
         "Connection lost",
         "Error 277",
-        "Error 268"
+        "Error 268",
+        "returnToLuaApp",
+        "SurfaceController[_:1]::stop"
     ];
 
     public static Result Validate(IReadOnlyList<string>? keywords)

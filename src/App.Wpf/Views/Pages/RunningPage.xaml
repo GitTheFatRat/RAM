@@ -14,126 +14,176 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Page.Resources>
 
-    <Grid Margin="{StaticResource MarginLarge}">
+    <Grid Margin="10,6">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Page Header -->
-        <TextBlock Grid.Row="0"
-                   Text="{x:Static res:Strings.RunningPageTitle}"
-                   Style="{StaticResource PageTitleStyle}"
-                   Margin="{StaticResource MarginBottomMedium}" />
+        <!-- Compact Two-Tier Toolbar Bar: Title, Inline Group Rotation Controls & Close All -->
+        <Border Grid.Row="0"
+                AutomationProperties.AutomationId="Running_RotationExpander"
+                Style="{StaticResource CommandBarCardStyle}"
+                Padding="10,6"
+                Margin="0,0,0,6">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-        <!-- Controls Bar -->
-        <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+                <!-- Tier 1: Page Title + Inline Rotation Groups + Close All -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-            <!-- Group rotation: farm groups in turn, closing + cleaning between them -->
-            <Expander Grid.Column="0"
-                      AutomationProperties.AutomationId="Running_RotationExpander"
-                      Header="{x:Static res:Strings.RotationSectionTitle}"
-                      Margin="0,0,16,0">
-                <StackPanel Margin="4,8,4,4">
-                    <TextBlock Text="{x:Static res:Strings.RotationGroupsLabel}"
-                               FontWeight="SemiBold" />
-                    <ItemsControl ItemsSource="{Binding RotationGroups}"
-                                  AutomationProperties.AutomationId="Running_RotationGroups"
-                                  IsEnabled="{Binding IsRotationIdle}"
-                                  Margin="0,4,0,0">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <CheckBox Content="{Binding DisplayName}"
-                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                          Margin="0,0,16,4" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock Text="{x:Static res:Strings.RotationNoGroups}"
-                               Style="{StaticResource DescriptionTextStyle}"
-                               Visibility="{Binding HasNoRotationGroups, Converter={StaticResource BoolToVis}}" />
+                    <!-- Page Icon + Title -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="Play24"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="{x:Static res:Strings.RunningPageTitle}"
+                                   Style="{StaticResource PageTitleStyle}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
 
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,8,0,0"
-                                IsEnabled="{Binding IsRotationIdle}">
-                        <TextBlock Text="{x:Static res:Strings.RotationDurationLabel}"
+                    <Border Grid.Column="1" Style="{StaticResource ToolbarSeparatorStyle}" Margin="6,0" />
+
+                    <!-- Inline Rotation Groups: a Grid star column (not a horizontal StackPanel) gives the
+                         WrapPanel a finite width, so extra groups wrap onto new lines instead of being clipped. -->
+                    <Grid Grid.Column="2" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="{x:Static res:Strings.RotationGroupsLabel}"
+                                   FontSize="12"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
                                    Margin="0,0,8,0" />
-                        <TextBox Width="64"
+                        <ItemsControl Grid.Column="1"
+                                      ItemsSource="{Binding RotationGroups}"
+                                      AutomationProperties.AutomationId="Running_RotationGroups"
+                                      IsEnabled="{Binding IsRotationIdle}"
+                                      VerticalAlignment="Center">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding DisplayName}"
+                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              Margin="0,2,10,2"
+                                              VerticalAlignment="Center" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Grid.Column="1"
+                                   Text="{x:Static res:Strings.RotationNoGroups}"
+                                   Style="{StaticResource DescriptionTextStyle}"
+                                   VerticalAlignment="Center"
+                                   Visibility="{Binding HasNoRotationGroups, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+
+                    <!-- Close All Button -->
+                    <ui:Button Grid.Column="3"
+                               VerticalAlignment="Center"
+                               AutomationProperties.AutomationId="Running_CloseAllButton"
+                               AutomationProperties.Name="{x:Static res:Strings.CloseAll}"
+                               Content="{x:Static res:Strings.CloseAll}"
+                               Icon="{ui:SymbolIcon Dismiss24}"
+                               Appearance="Danger"
+                               Padding="10,5"
+                               Command="{Binding CloseAllSessionsCommand}"
+                               IsEnabled="{Binding HasSessions}" />
+                </Grid>
+
+                <!-- Tier 2: Rotation Duration, Place ID, Start/Stop & Status -->
+                <Grid Grid.Row="1" Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Inline Rotation Duration & Place ID -->
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                IsEnabled="{Binding IsRotationIdle}">
+                        <TextBlock Text="{x:Static res:Strings.RotationDurationLabel}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,6,0" />
+                        <TextBox Width="48"
                                  AutomationProperties.AutomationId="Running_RotationHours"
                                  AutomationProperties.Name="{x:Static res:Strings.RotationHoursSuffix}"
                                  Text="{Binding RotationHours, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  VerticalAlignment="Center" />
                         <TextBlock Text="{x:Static res:Strings.RotationHoursSuffix}"
+                                   FontSize="11"
                                    VerticalAlignment="Center"
-                                   Margin="6,0,12,0" />
-                        <TextBox Width="64"
+                                   Margin="4,0,8,0" />
+                        <TextBox Width="48"
                                  AutomationProperties.AutomationId="Running_RotationMinutes"
                                  AutomationProperties.Name="{x:Static res:Strings.RotationMinutesSuffix}"
                                  Text="{Binding RotationMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  VerticalAlignment="Center" />
                         <TextBlock Text="{x:Static res:Strings.RotationMinutesSuffix}"
+                                   FontSize="11"
                                    VerticalAlignment="Center"
-                                   Margin="6,0,24,0" />
-                        <ui:TextBox Width="160"
+                                   Margin="4,0,10,0" />
+                        <ui:TextBox Width="150"
                                     AutomationProperties.AutomationId="Running_RotationPlaceId"
                                     PlaceholderText="{x:Static res:Strings.PlaceIdLabel}"
                                     Text="{Binding RotationPlaceIdText, UpdateSourceTrigger=PropertyChanged}"
                                     VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <!-- Start/Stop Rotation & Status -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBlock AutomationProperties.AutomationId="Running_RotationStatus"
+                                   Text="{Binding RotationStatusText}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0" />
                         <ui:Button AutomationProperties.AutomationId="Running_RotationStartButton"
+                                   AutomationProperties.Name="{x:Static res:Strings.RotationStart}"
                                    Content="{x:Static res:Strings.RotationStart}"
                                    Icon="{ui:SymbolIcon ArrowRepeatAll24}"
                                    Appearance="Primary"
+                                   Padding="10,5"
                                    Command="{Binding StartRotationCommand}"
                                    Visibility="{Binding IsRotationIdle, Converter={StaticResource BoolToVis}}" />
                         <ui:Button AutomationProperties.AutomationId="Running_RotationStopButton"
+                                   AutomationProperties.Name="{x:Static res:Strings.RotationStop}"
                                    Content="{x:Static res:Strings.RotationStop}"
                                    Icon="{ui:SymbolIcon Stop24}"
                                    Appearance="Danger"
+                                   Padding="10,5"
                                    Command="{Binding StopRotationCommand}"
                                    Visibility="{Binding IsRotationRunning, Converter={StaticResource BoolToVis}}" />
-                        <TextBlock AutomationProperties.AutomationId="Running_RotationStatus"
-                                   Text="{Binding RotationStatusText}"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="12,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="{x:Static res:Strings.RotationHint}"
-                               Style="{StaticResource DescriptionTextStyle}"
-                               TextWrapping="Wrap"
-                               Margin="0,8,0,0" />
-                </StackPanel>
-            </Expander>
+                </Grid>
+            </Grid>
+        </Border>
 
-            <ui:Button Grid.Column="1"
-                       VerticalAlignment="Top"
-                       AutomationProperties.AutomationId="Running_CloseAllButton"
-                       Content="{x:Static res:Strings.CloseAll}"
-                       Icon="{ui:SymbolIcon Dismiss24}"
-                       Appearance="Danger"
-                       Command="{Binding CloseAllSessionsCommand}"
-                       IsEnabled="{Binding HasSessions}" />
-        </Grid>
-
-        <!-- Main Content Area: Elevated Container -->
-        <Border Grid.Row="2" Style="{StaticResource ElevatedContainerStyle}">
+        <!-- Main Content Area: Viewport-Fitted Sessions Grid -->
+        <Border Grid.Row="1" Style="{StaticResource ElevatedContainerStyle}">
             <Grid>
-                <!-- Data Grid -->
                 <ui:DataGrid ItemsSource="{Binding Sessions}"
                              AutomationProperties.AutomationId="Running_DataGrid"
                              AutoGenerateColumns="False"
@@ -142,7 +192,7 @@
                              IsReadOnly="True"
                              SelectionMode="Single"
                              GridLinesVisibility="None"
-                             RowHeight="36"
+                             RowHeight="28"
                              Background="{DynamicResource CardBackgroundBrush}"
                              RowBackground="{DynamicResource ControlFillColorDefaultBrush}"
                              AlternatingRowBackground="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -155,91 +205,94 @@
                              VirtualizingPanel.VirtualizationMode="Recycling"
                              VirtualizingPanel.ScrollUnit="Pixel"
                              ScrollViewer.CanContentScroll="True"
-                             ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                <ui:DataGrid.Columns>
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnAlias}"
-                                        Binding="{Binding Alias}"
-                                        Width="140"
-                                        MinWidth="100" />
-                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPid}"
-                                            Width="80"
-                                            MinWidth="60">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Pid}"
-                                           Style="{StaticResource MonospaceTextStyle}" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPlace}"
-                                            Width="120"
-                                            MinWidth="90">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding PlaceId}"
-                                           Style="{StaticResource MonospaceTextStyle}" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnStarted}"
-                                        Binding="{Binding StartedFormatted}"
-                                        Width="130"
-                                        MinWidth="100" />
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnUptime}"
-                                        Binding="{Binding UptimeFormatted}"
-                                        Width="130"
-                                        MinWidth="100" />
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnMemory}"
-                                        Binding="{Binding MemoryMb, StringFormat='{}{0} MB'}"
-                                        Width="110"
-                                        MinWidth="80" />
-                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAutoRejoin}"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ui:DataGrid.Columns>
+                        <DataGridTextColumn Header="{x:Static res:Strings.ColumnAlias}"
+                                            Binding="{Binding Alias}"
+                                            Width="140"
+                                            MinWidth="100" />
+                        <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPid}"
+                                                Width="80"
+                                                MinWidth="60">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Pid}"
+                                               Style="{StaticResource MonospaceTextStyle}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPlace}"
+                                                Width="120"
+                                                MinWidth="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding PlaceId}"
+                                               Style="{StaticResource MonospaceTextStyle}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="{x:Static res:Strings.ColumnStarted}"
+                                            Binding="{Binding StartedFormatted}"
                                             Width="130"
-                                            MinWidth="100">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox IsChecked="{Binding AutoRejoin, Mode=TwoWay}"
-                                              Margin="{StaticResource MarginTight}" />
-                                    <ui:InfoBadge Severity="Critical"
-                                                  Value="{x:Static res:Strings.RejoinGaveUp}"
-                                                  Visibility="{Binding GaveUpVisibility}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAction}"
-                                            Width="*"
-                                            MinWidth="90">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <ui:Button Content="{x:Static res:Strings.CloseAction}"
-                                           Icon="{ui:SymbolIcon Dismiss24}"
-                                           Appearance="Secondary"
-                                           Command="{Binding DataContext.CloseSessionCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
-                                           CommandParameter="{Binding}" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </ui:DataGrid.Columns>
-            </ui:DataGrid>
+                                            MinWidth="100" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.ColumnUptime}"
+                                            Binding="{Binding UptimeFormatted}"
+                                            Width="130"
+                                            MinWidth="100" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.ColumnMemory}"
+                                            Binding="{Binding MemoryMb, StringFormat='{}{0} MB'}"
+                                            Width="110"
+                                            MinWidth="80" />
+                        <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAutoRejoin}"
+                                                Width="130"
+                                                MinWidth="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <CheckBox IsChecked="{Binding AutoRejoin, Mode=TwoWay}"
+                                                  Margin="2,0" />
+                                        <ui:InfoBadge Severity="Critical"
+                                                      Value="{x:Static res:Strings.RejoinGaveUp}"
+                                                      Visibility="{Binding GaveUpVisibility}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAction}"
+                                                Width="*"
+                                                MinWidth="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ui:Button Content="{x:Static res:Strings.CloseAction}"
+                                               AutomationProperties.Name="{x:Static res:Strings.CloseAction}"
+                                               Icon="{ui:SymbolIcon Dismiss24}"
+                                               Appearance="Secondary"
+                                               Padding="8,2"
+                                               Command="{Binding DataContext.CloseSessionCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
+                                               CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </ui:DataGrid.Columns>
+                </ui:DataGrid>
 
                 <!-- Empty State Overlay -->
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
                     <ui:SymbolIcon Symbol="AppGeneric24"
-                                   FontSize="48"
+                                   FontSize="36"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center"
-                                   Margin="{StaticResource MarginMedium}"
+                                   Margin="{StaticResource MarginBase}"
                                    Opacity="0.6" />
                     <TextBlock Text="{x:Static res:Strings.NoRunningSessions}"
                                Style="{StaticResource EmptyStateTitleStyle}" />
                     <TextBlock Text="{x:Static res:Strings.Running_EmptyHint}"
                                Style="{StaticResource EmptyStateHintStyle}" />
                 </StackPanel>
-        </Grid>
-    </Border>
-</Grid>
+            </Grid>
+        </Border>
+    </Grid>
 </Page>

@@ -196,6 +196,9 @@
   <data name="ExpiredHint" xml:space="preserve">
     <value>Cookie tài khoản đã hết hạn. Vui lòng thêm lại qua đăng nhập để làm mới.</value>
   </data>
+  <data name="ModeratedHint" xml:space="preserve">
+    <value>Tài khoản đang bị cảnh cáo trên Roblox (User is moderated). Vui lòng mở trình duyệt đăng nhập lại và bấm 'Reactivate My Account' (Kích hoạt lại).</value>
+  </data>
   <data name="LaunchDialogTitle" xml:space="preserve">
     <value>Khởi chạy Roblox</value>
   </data>
@@ -335,22 +338,22 @@
     <value>Hệ thống</value>
   </data>
   <data name="LaunchDelayLabel" xml:space="preserve">
-    <value>Khoảng cách khởi chạy (Giây)</value>
+    <value>Giãn cách (giây)</value>
   </data>
   <data name="LaunchDelayDescription" xml:space="preserve">
-    <value>Khoảng cách giữa hai lần khởi chạy tài khoản. Khoảng cách quá ngắn có thể bị coi là hoạt động bất thường. Mặc định là 20 giây.</value>
+    <value>Mặc định 20 giây</value>
   </data>
   <data name="NextAccountCountdown" xml:space="preserve">
     <value>Tài khoản tiếp theo sau {0} giây</value>
   </data>
   <data name="RejoinDelayLabel" xml:space="preserve">
-    <value>Thời gian trễ khi tự động vào lại (giây)</value>
+    <value>Chờ vào lại (giây)</value>
   </data>
   <data name="RejoinMaxAttemptsLabel" xml:space="preserve">
-    <value>Số lần thử vào lại tối đa</value>
+    <value>Số lần thử tối đa</value>
   </data>
   <data name="MultiInstanceLabel" xml:space="preserve">
-    <value>Chạy nhiều tài khoản Roblox</value>
+    <value>Chạy nhiều tài khoản</value>
   </data>
   <data name="MultiInstanceNotAvailable" xml:space="preserve">
     <value>Tính năng chạy nhiều tài khoản không khả dụng trong bản dựng này.</value>
@@ -473,16 +476,16 @@
     <value>-- Không chọn --</value>
   </data>
   <data name="AdvancedSettingsTitle" xml:space="preserve">
-    <value>Mẫu nâng cao</value>
+    <value>Nâng cao</value>
   </data>
   <data name="AdvancedSettingsSubtitle" xml:space="preserve">
-    <value>Cấu hình mẫu URI khởi chạy và PlaceLauncher qua settings.json.</value>
+    <value>Cấu hình hệ thống</value>
   </data>
   <data name="LaunchUriTemplateStatus" xml:space="preserve">
-    <value>Mẫu Launch URI:</value>
+    <value>Liên kết khởi chạy</value>
   </data>
   <data name="PlaceLauncherUrlTemplateStatus" xml:space="preserve">
-    <value>Mẫu PlaceLauncher URL:</value>
+    <value>Liên kết vào game</value>
   </data>
   <data name="TemplateDefault" xml:space="preserve">
     <value>Mặc định (đang dùng)</value>
@@ -491,7 +494,7 @@
     <value>Tùy chỉnh (hợp lệ)</value>
   </data>
   <data name="TemplateCustomInvalid" xml:space="preserve">
-    <value>Tùy chỉnh (không hợp lệ - bị bỏ qua)</value>
+    <value>Tùy chỉnh (lỗi - bỏ qua)</value>
   </data>
   <data name="MoreActions" xml:space="preserve">
     <value>Khác</value>
@@ -518,37 +521,37 @@
     <value>Giao diện</value>
   </data>
   <data name="AppearanceSectionSubtitle" xml:space="preserve">
-    <value>Tùy chỉnh chủ đề và ngôn ngữ giao diện</value>
+    <value>Chủ đề &amp; ngôn ngữ</value>
   </data>
   <data name="LaunchingSectionTitle" xml:space="preserve">
     <value>Khởi chạy</value>
   </data>
   <data name="LaunchingSectionSubtitle" xml:space="preserve">
-    <value>Cấu hình độ trễ và tùy chọn khởi chạy</value>
+    <value>Tùy chọn khởi chạy</value>
   </data>
   <data name="AutoRejoinSectionTitle" xml:space="preserve">
     <value>Tự động vào lại</value>
   </data>
   <data name="AutoRejoinSectionSubtitle" xml:space="preserve">
-    <value>Tự động kết nối lại khi bị ngắt kết nối</value>
+    <value>Vào lại khi rớt mạng</value>
   </data>
   <data name="MultiInstanceSectionTitle" xml:space="preserve">
-    <value>Đa phiên (Multi-Instance)</value>
+    <value>Đa phiên</value>
   </data>
   <data name="MultiInstanceSectionSubtitle" xml:space="preserve">
-    <value>Chạy đồng thời nhiều cửa sổ Roblox</value>
+    <value>Chạy nhiều cửa sổ</value>
   </data>
   <data name="BackupSectionTitle" xml:space="preserve">
     <value>Sao lưu &amp; Khôi phục</value>
   </data>
   <data name="BackupSectionSubtitle" xml:space="preserve">
-    <value>Xuất hoặc nhập bản sao lưu kho mã hóa</value>
+    <value>Sao lưu dữ liệu</value>
   </data>
   <data name="AdvancedSectionTitle" xml:space="preserve">
     <value>Nâng cao</value>
   </data>
   <data name="AdvancedSectionSubtitle" xml:space="preserve">
-    <value>Tùy biến mẫu URI khởi chạy trò chơi</value>
+    <value>Cấu hình hệ thống</value>
   </data>
   <data name="Retry" xml:space="preserve">
     <value>Thử lại</value>
@@ -557,13 +560,13 @@
     <value>Bảo mật</value>
   </data>
   <data name="SecuritySectionSubtitle" xml:space="preserve">
-    <value>Mã hóa kho lưu trữ và mật khẩu chính</value>
+    <value>Bảo vệ tài khoản</value>
   </data>
   <data name="ResourceOptimizationSectionTitle" xml:space="preserve">
     <value>Hiệu năng &amp; Tối ưu</value>
   </data>
   <data name="ResourceOptimizationSectionSubtitle" xml:space="preserve">
-    <value>Tiết kiệm tài nguyên cho các tiến trình chạy nền</value>
+    <value>Tiết kiệm tài nguyên</value>
   </data>
   <data name="MasterPasswordTitle" xml:space="preserve">
     <value>Mật khẩu chính</value>
@@ -584,10 +587,10 @@
     <value>Vui lòng nhập mật khẩu chính.</value>
   </data>
   <data name="EnableMasterPassword" xml:space="preserve">
-    <value>Bật mật khẩu chính</value>
+    <value>Khóa ứng dụng</value>
   </data>
   <data name="EnableMasterPasswordDescription" xml:space="preserve">
-    <value>Bảo vệ kho lưu trữ bằng mã hóa Argon2id kết hợp Windows DPAPI.</value>
+    <value>Bảo vệ dữ liệu</value>
   </data>
   <data name="SetupMasterPasswordTitle" xml:space="preserve">
     <value>Thiết lập mật khẩu chính</value>
@@ -614,43 +617,43 @@
     <value>Tắt mật khẩu chính</value>
   </data>
   <data name="DisableMasterPasswordMessage" xml:space="preserve">
-    <value>Bạn có chắc chắn muốn tắt mật khẩu chính? Kho lưu trữ sẽ chỉ được bảo vệ bởi Windows DPAPI.</value>
+    <value>Tắt mật khẩu chính? Dữ liệu vẫn được mã hóa trên máy này.</value>
   </data>
   <data name="ThrottleBackgroundRoblox" xml:space="preserve">
-    <value>Tối ưu tài nguyên Roblox chạy nền</value>
+    <value>Giảm tải CPU/GPU</value>
   </data>
   <data name="ThrottleBackgroundRobloxDescription" xml:space="preserve">
-    <value>Thu nhỏ các cửa sổ Roblox chạy nền để giảm tối đa mức sử dụng CPU và GPU.</value>
+    <value>Thu nhỏ cửa sổ nền</value>
   </data>
   <data name="TabGeneral" xml:space="preserve">
     <value>Chung</value>
   </data>
   <data name="EnableRamCleaner" xml:space="preserve">
-    <value>Bật tối ưu RAM tự động</value>
+    <value>Tự động dọn RAM</value>
   </data>
   <data name="EnableRamCleanerDescription" xml:space="preserve">
-    <value>Định kỳ giải phóng bộ nhớ đệm của các tiến trình Roblox đang chạy để giảm tiêu thụ RAM.</value>
+    <value>Tối ưu RAM ngầm</value>
   </data>
   <data name="RamCleanerInterval" xml:space="preserve">
-    <value>Chu kỳ giải phóng RAM</value>
+    <value>Thời gian dọn dẹp</value>
   </data>
   <data name="RamCleanerIntervalDescription" xml:space="preserve">
-    <value>Tần suất tối ưu hóa bộ nhớ (từ 5 đến 120 phút).</value>
+    <value>5 – 120 phút</value>
   </data>
   <data name="RamCleanerIntervalFormat" xml:space="preserve">
     <value>{0} phút</value>
   </data>
   <data name="EnableSmartServerHopping" xml:space="preserve">
-    <value>Tự động đổi máy chủ khi vào lại</value>
+    <value>Tự đổi máy chủ</value>
   </data>
   <data name="EnableSmartServerHoppingDescription" xml:space="preserve">
-    <value>Tự động tìm và chuyển sang máy chủ công khai còn chỗ mới khi trò chơi bị đóng thay vì vào lại máy chủ cũ.</value>
+    <value>Vào máy chủ còn trống</value>
   </data>
   <data name="EnableGhostDisconnectDetection" xml:space="preserve">
-    <value>Tự động phát hiện mất kết nối ngầm (Đọc Log)</value>
+    <value>Phát hiện rớt mạng</value>
   </data>
   <data name="EnableGhostDisconnectDetectionDescription" xml:space="preserve">
-    <value>Đọc tệp nhật ký Roblox cục bộ để phát hiện đơ mạng hoặc lỗi mất kết nối (như lỗi 277) và tắt tiến trình để kích hoạt vào lại.</value>
+    <value>Khi game bị treo</value>
   </data>
   <data name="LoadingRoblox" xml:space="preserve">
     <value>Đang tải Roblox...</value>
@@ -668,22 +671,22 @@
     <value>Xác nhận rủi ro: Thu nhỏ cửa sổ nền</value>
   </data>
   <data name="ThrottleRiskDialogContent" xml:space="preserve">
-    <value>Tính năng này tự động thu nhỏ các cửa sổ Roblox chạy nền. Do can thiệp vào cửa sổ client Roblox, hệ thống anti-cheat có thể xem thao tác ngoài này là hành vi bất thường. Sử dụng hoàn toàn theo rủi ro của bạn.</value>
+    <value>Tính năng này tự thu nhỏ cửa sổ Roblox chạy nền, có thể bị hệ thống chống gian lận coi là bất thường. Sử dụng hoàn toàn theo rủi ro của bạn.</value>
   </data>
   <data name="RamCleanerRiskDialogTitle" xml:space="preserve">
     <value>Xác nhận rủi ro: Dọn dẹp RAM</value>
   </data>
   <data name="RamCleanerRiskDialogContent" xml:space="preserve">
-    <value>Tính năng này tối ưu hóa bộ nhớ working set của các tiến trình Roblox. Việc dọn dẹp bộ nhớ tiến trình từ bên ngoài có thể bị hệ thống anti-cheat coi là hành vi bất thường. Sử dụng hoàn toàn theo rủi ro của bạn.</value>
+    <value>Tính năng này dọn bộ nhớ của Roblox từ bên ngoài, có thể bị hệ thống chống gian lận coi là bất thường. Sử dụng hoàn toàn theo rủi ro của bạn.</value>
   </data>
   <data name="RamCleanerAccessDeniedDisabled" xml:space="preserve">
     <value>Trình dọn dẹp RAM đã tự động bị vô hiệu hóa sau nhiều chu kỳ bị từ chối truy cập.</value>
   </data>
   <data name="GhostDisconnectMode" xml:space="preserve">
-    <value>Chế độ phát hiện mất kết nối ngầm</value>
+    <value>Phát hiện rớt mạng</value>
   </data>
   <data name="GhostDisconnectModeDescription" xml:space="preserve">
-    <value>Theo dõi log client Roblox để phát hiện sự kiện mất kết nối. Chỉ thông báo sẽ cảnh báo qua giao diện; Đóng tiến trình &amp; Vào lại sẽ đóng client và khởi chạy lại.</value>
+    <value>Khi game bị treo</value>
   </data>
   <data name="GhostDisconnectMode_Off" xml:space="preserve">
     <value>Tắt</value>
@@ -692,7 +695,7 @@
     <value>Chỉ thông báo</value>
   </data>
   <data name="GhostDisconnectMode_KillAndRejoin" xml:space="preserve">
-    <value>Đóng tiến trình &amp; Vào lại</value>
+    <value>Tắt &amp; vào lại</value>
   </data>
   <data name="GhostDisconnectDetectedNotification" xml:space="preserve">
     <value>Phát hiện mất kết nối ngầm cho phiên (PID: {0}, từ khóa: '{1}').</value>
@@ -740,10 +743,10 @@
     <value>Không thể khởi chạy trình duyệt ở chế độ ẩn danh.</value>
   </data>
   <data name="EnableUatTelemetry" xml:space="preserve">
-    <value>Bật chế độ ghi log thực chiến ra Desktop</value>
+    <value>Xuất log ra Desktop</value>
   </data>
   <data name="EnableUatTelemetryDescription" xml:space="preserve">
-    <value>Ghi lại chi tiết luồng thực thi (đã che giấu mã bí mật) ra tệp RbxManager_UAT_Trace.txt ngoài Desktop để kiểm thử minh bạch.</value>
+    <value>Dùng khi báo lỗi</value>
   </data>
   <data name="InstallAndStartGoodbyeDpi" xml:space="preserve">
     <value>Cài đặt &amp; Bật Cloudflare WARP (1.1.1.1)</value>
@@ -770,10 +773,10 @@
     <value>Tắt</value>
   </data>
   <data name="EnableCustomResolution" xml:space="preserve">
-    <value>Ép độ phân giải cửa sổ tùy chỉnh</value>
+    <value>Ép độ phân giải</value>
   </data>
   <data name="EnableCustomResolutionDescription" xml:space="preserve">
-    <value>Tự động thu nhỏ cửa sổ Roblox mới mở qua Win32 API để tiết kiệm GPU/CPU khi treo nhiều acc.</value>
+    <value>Thu nhỏ cửa sổ mới</value>
   </data>
   <data name="ResolutionWidthLabel" xml:space="preserve">
     <value>Chiều rộng (px)</value>
@@ -867,5 +870,32 @@
   </data>
   <data name="RotationStatusCleaning" xml:space="preserve">
     <value>Đang dọn cache...</value>
+  </data>
+  <data name="ScanPotassium" xml:space="preserve">
+    <value>Quét Potassium</value>
+  </data>
+  <data name="LaunchPotassium" xml:space="preserve">
+    <value>Mở Potassium</value>
+  </data>
+  <data name="PotassiumStatusNotScanned" xml:space="preserve">
+    <value>Potassium: Chưa quét</value>
+  </data>
+  <data name="PotassiumStatusNotFound" xml:space="preserve">
+    <value>Potassium: Không tìm thấy</value>
+  </data>
+  <data name="PotassiumStatusRunningFormat" xml:space="preserve">
+    <value>Potassium: Đang chạy ({0} PID) • AutoExec: {1}</value>
+  </data>
+  <data name="PotassiumStatusInstalledFormat" xml:space="preserve">
+    <value>Potassium: Đã cài • AutoExec: {0}</value>
+  </data>
+  <data name="PotassiumLaunchedSuccess" xml:space="preserve">
+    <value>Đã khởi chạy Potassium.</value>
+  </data>
+  <data name="PotassiumLaunchFailed" xml:space="preserve">
+    <value>Không thể mở Potassium.</value>
+  </data>
+  <data name="ExtensionBridgeImportedStatusFormat" xml:space="preserve">
+    <value>[Extension Bridge] Đã nhập: {0} (Tổng: {1})</value>
   </data>
 </root>

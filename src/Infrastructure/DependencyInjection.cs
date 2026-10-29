@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using RbxManager.Core.Auth;
 using RbxManager.Core.Backup;
 using RbxManager.Core.Instance;
+using RbxManager.Core.Integrations;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Network;
 using RbxManager.Core.Processes;
@@ -80,19 +81,29 @@ public static class InfrastructureServiceExtensions
         services.AddHttpClient(RobloxHttpClientName, client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "RbxManager/1.0");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", RobloxHttpClientFactory.DefaultBrowserUserAgent);
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
         })
         .ConfigurePrimaryHttpMessageHandler(CreatePrimarySocketsHttpHandler)
         .AddHttpMessageHandler<RobloxHostGuardHandler>()
         .AddHttpMessageHandler<RobloxCsrfHandler>()
         .AddHttpMessageHandler<RobloxRetryHandler>();
 
-        services.AddTransient<IRobloxAuthService>(sp =>
+        services.AddSingleton<IRobloxAuthService>(sp =>
         {
             IRobloxHttpClientFactory factory = sp.GetRequiredService<IRobloxHttpClientFactory>();
             ILogger<RobloxAuthService>? logger = sp.GetService<ILogger<RobloxAuthService>>();
             return new RobloxAuthService(factory, logger);
         });
+
+        services.AddSingleton<Core.Bridge.ILocalExtensionBridge>(sp => new Bridge.LocalExtensionBridgeService(
+            sp.GetRequiredService<IAccountStore>(),
+            sp.GetRequiredService<IRobloxAuthService>(),
+            sp.GetService<ILogger<Bridge.LocalExtensionBridgeService>>()));
+
+        services.AddSingleton<IPotassiumService>(sp => new Integrations.PotassiumService(
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetService<ILogger<Integrations.PotassiumService>>()));
 
         services.AddTransient<IServerBrowserService>(sp =>
         {
@@ -118,7 +129,8 @@ public static class InfrastructureServiceExtensions
             IRobloxAuthService authService = sp.GetRequiredService<IRobloxAuthService>();
             IHttpClientFactory factory = sp.GetRequiredService<IHttpClientFactory>();
             HttpClient httpClient = factory.CreateClient(RobloxHttpClientName);
-            return new Diagnostics.DiagnosticsService(registryProvider, processProvider, instanceGate, settingsService, authService, httpClient);
+            IPotassiumService? potassiumService = sp.GetService<IPotassiumService>();
+            return new Diagnostics.DiagnosticsService(registryProvider, processProvider, instanceGate, settingsService, authService, httpClient, potassiumService);
         });
 
         services.AddSingleton<IRobloxLogWatcher, RobloxLogWatcher>();

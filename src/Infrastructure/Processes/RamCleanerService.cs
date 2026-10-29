@@ -89,6 +89,7 @@ public sealed partial class RamCleanerService : BackgroundService
                             else if (_memoryOptimizer.LastTrimmedCount > 0)
                             {
                                 _consecutiveAccessDeniedCycles = 0;
+                                LastDisabledDueToAccessDenied = false;
                             }
 
                             LogCleanerCycleTrimmed(_logger, _memoryOptimizer.LastTrimmedCount);

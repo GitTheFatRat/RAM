@@ -48,6 +48,32 @@ public sealed partial class RobloxCacheCleanerService : IRobloxCacheCleaner
 
     public Task<CacheCleanResult> CleanAsync(CancellationToken ct = default) => Task.Run(() => Clean(ct), ct);
 
+    public bool ClearSharedCookiesFile()
+    {
+        string cookiesPath = Path.Combine(_robloxLocalDirectory, "LocalStorage", "RobloxCookies.dat");
+        try
+        {
+            if (!File.Exists(cookiesPath))
+            {
+                return false;
+            }
+
+            FileAttributes attributes = File.GetAttributes(cookiesPath);
+            if ((attributes & FileAttributes.ReadOnly) != 0)
+            {
+                File.SetAttributes(cookiesPath, attributes & ~FileAttributes.ReadOnly);
+            }
+
+            File.Delete(cookiesPath);
+            LogSharedCookiesCleared();
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     internal CacheCleanResult Clean(CancellationToken ct)
     {
         IReadOnlyList<ProcessSnapshot> running = _processProvider.GetRobloxProcesses();
@@ -84,7 +110,7 @@ public sealed partial class RobloxCacheCleanerService : IRobloxCacheCleaner
                 TryDelete(file, tally);
             }
 
-            RemoveEmptySubdirectories(cacheRoot);
+            RemoveEmptySubdirectories(cacheRoot, liveContentFolders);
         }
 
         CacheCleanResult result = new(tally.Deleted, tally.Bytes, tally.Skipped);
@@ -102,11 +128,20 @@ public sealed partial class RobloxCacheCleanerService : IRobloxCacheCleaner
             })
             : [];
 
-    private static bool IsInsideLiveContentFolder(FileInfo file, string cacheRoot, HashSet<string> liveFolders)
+    private static bool IsInsideLiveContentFolder(FileInfo file, string cacheRoot, HashSet<string> liveFolders) =>
+        IsPathInsideLiveContentFolder(file.FullName, cacheRoot, liveFolders);
+
+    private static bool IsPathInsideLiveContentFolder(string fullPath, string cacheRoot, HashSet<string> liveFolders)
     {
-        string relative = Path.GetRelativePath(cacheRoot, file.FullName);
+        if (liveFolders.Count == 0)
+        {
+            return false;
+        }
+
+        string relative = Path.GetRelativePath(cacheRoot, fullPath);
         int separator = relative.IndexOf(Path.DirectorySeparatorChar, StringComparison.Ordinal);
-        return separator > 0 && liveFolders.Contains(relative[..separator]);
+        string topSegment = separator > 0 ? relative[..separator] : relative;
+        return liveFolders.Contains(topSegment);
     }
 
     private static void TryDelete(FileInfo file, Tally tally)
@@ -125,17 +160,29 @@ public sealed partial class RobloxCacheCleanerService : IRobloxCacheCleaner
         }
     }
 
-    private static void RemoveEmptySubdirectories(string root)
+    private static void RemoveEmptySubdirectories(string root, HashSet<string> liveFolders)
     {
         if (!Directory.Exists(root))
         {
             return;
         }
 
+        EnumerationOptions options = new()
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint
+        };
+
         // Deepest first so parents become empty after their children are removed; the root itself is kept.
-        foreach (string directory in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories)
+        foreach (string directory in Directory.EnumerateDirectories(root, "*", options)
                      .OrderByDescending(d => d.Length))
         {
+            if (IsPathInsideLiveContentFolder(directory, root, liveFolders))
+            {
+                continue;
+            }
+
             try
             {
                 if (!Directory.EnumerateFileSystemEntries(directory).Any())
@@ -151,6 +198,9 @@ public sealed partial class RobloxCacheCleanerService : IRobloxCacheCleaner
 
     [LoggerMessage(EventId = 701, Level = LogLevel.Information, Message = "Roblox cache cleaned: {Deleted} files, {MegabytesFreed:F1} MB freed, {Skipped} skipped (in use).")]
     private partial void LogCleaned(int deleted, double megabytesFreed, int skipped);
+
+    [LoggerMessage(EventId = 702, Level = LogLevel.Debug, Message = "Cleared shared LocalStorage/RobloxCookies.dat before account launch.")]
+    private partial void LogSharedCookiesCleared();
 
     private sealed class Tally
     {

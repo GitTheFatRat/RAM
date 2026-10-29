@@ -196,6 +196,9 @@
   <data name="ExpiredHint" xml:space="preserve">
     <value>Account cookie has expired. Please re-add via login to update.</value>
   </data>
+  <data name="ModeratedHint" xml:space="preserve">
+    <value>Account has a pending moderation warning on Roblox (User is moderated). Please log in via browser and click 'Reactivate My Account'.</value>
+  </data>
   <data name="LaunchDialogTitle" xml:space="preserve">
     <value>Launch Roblox</value>
   </data>
@@ -335,22 +338,22 @@
     <value>System</value>
   </data>
   <data name="LaunchDelayLabel" xml:space="preserve">
-    <value>Launch Spacing (Seconds)</value>
+    <value>Launch spacing (s)</value>
   </data>
   <data name="LaunchDelayDescription" xml:space="preserve">
-    <value>The spacing between two account launches. Short spacing may be treated as unusual activity. The default is 20 seconds.</value>
+    <value>Default: 20 seconds</value>
   </data>
   <data name="NextAccountCountdown" xml:space="preserve">
     <value>Next account in {0} s</value>
   </data>
   <data name="RejoinDelayLabel" xml:space="preserve">
-    <value>Initial Rejoin Delay (seconds)</value>
+    <value>Rejoin delay (s)</value>
   </data>
   <data name="RejoinMaxAttemptsLabel" xml:space="preserve">
-    <value>Max Rejoin Attempts</value>
+    <value>Max attempts</value>
   </data>
   <data name="MultiInstanceLabel" xml:space="preserve">
-    <value>Enable Multi-Instance Roblox</value>
+    <value>Run multiple accounts</value>
   </data>
   <data name="MultiInstanceNotAvailable" xml:space="preserve">
     <value>Multi-instance feature is not available in this build.</value>
@@ -473,16 +476,16 @@
     <value>-- None --</value>
   </data>
   <data name="AdvancedSettingsTitle" xml:space="preserve">
-    <value>Advanced Templates</value>
+    <value>Advanced</value>
   </data>
   <data name="AdvancedSettingsSubtitle" xml:space="preserve">
-    <value>Configurable launch URI and PlaceLauncher templates via settings.json.</value>
+    <value>System config</value>
   </data>
   <data name="LaunchUriTemplateStatus" xml:space="preserve">
-    <value>Launch URI Template:</value>
+    <value>Launch link</value>
   </data>
   <data name="PlaceLauncherUrlTemplateStatus" xml:space="preserve">
-    <value>PlaceLauncher URL Template:</value>
+    <value>Join link</value>
   </data>
   <data name="TemplateDefault" xml:space="preserve">
     <value>Default (active)</value>
@@ -518,37 +521,37 @@
     <value>Appearance</value>
   </data>
   <data name="AppearanceSectionSubtitle" xml:space="preserve">
-    <value>Customize theme and UI language</value>
+    <value>Theme &amp; language</value>
   </data>
   <data name="LaunchingSectionTitle" xml:space="preserve">
     <value>Launching</value>
   </data>
   <data name="LaunchingSectionSubtitle" xml:space="preserve">
-    <value>Configure launch delays and options</value>
+    <value>Launch options</value>
   </data>
   <data name="AutoRejoinSectionTitle" xml:space="preserve">
     <value>Auto-rejoin</value>
   </data>
   <data name="AutoRejoinSectionSubtitle" xml:space="preserve">
-    <value>Automatic reconnection on disconnect</value>
+    <value>Rejoin on disconnect</value>
   </data>
   <data name="MultiInstanceSectionTitle" xml:space="preserve">
     <value>Multi-instance</value>
   </data>
   <data name="MultiInstanceSectionSubtitle" xml:space="preserve">
-    <value>Run multiple Roblox clients concurrently</value>
+    <value>Run multiple windows</value>
   </data>
   <data name="BackupSectionTitle" xml:space="preserve">
     <value>Backup &amp; Restore</value>
   </data>
   <data name="BackupSectionSubtitle" xml:space="preserve">
-    <value>Export or import encrypted vault backup</value>
+    <value>Back up your data</value>
   </data>
   <data name="AdvancedSectionTitle" xml:space="preserve">
     <value>Advanced</value>
   </data>
   <data name="AdvancedSectionSubtitle" xml:space="preserve">
-    <value>Customizable launch URI templates</value>
+    <value>System config</value>
   </data>
   <data name="Retry" xml:space="preserve">
     <value>Retry</value>
@@ -557,13 +560,13 @@
     <value>Security</value>
   </data>
   <data name="SecuritySectionSubtitle" xml:space="preserve">
-    <value>Vault encryption and master password</value>
+    <value>Account protection</value>
   </data>
   <data name="ResourceOptimizationSectionTitle" xml:space="preserve">
     <value>Performance &amp; Optimization</value>
   </data>
   <data name="ResourceOptimizationSectionSubtitle" xml:space="preserve">
-    <value>Background process resource saving</value>
+    <value>Save resources</value>
   </data>
   <data name="MasterPasswordTitle" xml:space="preserve">
     <value>Master Password</value>
@@ -584,10 +587,10 @@
     <value>Master password is required.</value>
   </data>
   <data name="EnableMasterPassword" xml:space="preserve">
-    <value>Enable Master Password</value>
+    <value>Lock app</value>
   </data>
   <data name="EnableMasterPasswordDescription" xml:space="preserve">
-    <value>Protect the vault with Argon2id encryption in addition to Windows DPAPI.</value>
+    <value>Protect data</value>
   </data>
   <data name="SetupMasterPasswordTitle" xml:space="preserve">
     <value>Set Master Password</value>
@@ -614,43 +617,43 @@
     <value>Disable Master Password</value>
   </data>
   <data name="DisableMasterPasswordMessage" xml:space="preserve">
-    <value>Are you sure you want to disable the master password? The vault will be protected by Windows DPAPI only.</value>
+    <value>Disable the master password? Your data stays encrypted on this PC.</value>
   </data>
   <data name="ThrottleBackgroundRoblox" xml:space="preserve">
-    <value>Throttle background Roblox instances</value>
+    <value>Reduce CPU/GPU</value>
   </data>
   <data name="ThrottleBackgroundRobloxDescription" xml:space="preserve">
-    <value>Minimizes non-foreground Roblox windows to drastically reduce CPU and GPU usage.</value>
+    <value>Minimize background windows</value>
   </data>
   <data name="TabGeneral" xml:space="preserve">
     <value>General</value>
   </data>
   <data name="EnableRamCleaner" xml:space="preserve">
-    <value>Enable Smart RAM Cleaner</value>
+    <value>Auto-clean RAM</value>
   </data>
   <data name="EnableRamCleanerDescription" xml:space="preserve">
-    <value>Periodically trims idle memory pages of running Roblox processes to reduce RAM consumption.</value>
+    <value>Optimize background RAM</value>
   </data>
   <data name="RamCleanerInterval" xml:space="preserve">
-    <value>Trim Interval</value>
+    <value>Clean interval</value>
   </data>
   <data name="RamCleanerIntervalDescription" xml:space="preserve">
-    <value>How often to optimize memory (5 to 120 minutes).</value>
+    <value>5 – 120 minutes</value>
   </data>
   <data name="RamCleanerIntervalFormat" xml:space="preserve">
     <value>{0} min</value>
   </data>
   <data name="EnableSmartServerHopping" xml:space="preserve">
-    <value>Enable Smart Server Hopping on Rejoin</value>
+    <value>Auto server hop</value>
   </data>
   <data name="EnableSmartServerHoppingDescription" xml:space="preserve">
-    <value>Automatically hops to a new available public server when a session crashes instead of retrying the old server.</value>
+    <value>Join an open server</value>
   </data>
   <data name="EnableGhostDisconnectDetection" xml:space="preserve">
-    <value>Enable Ghost Disconnect Detection (Read Logs)</value>
+    <value>Disconnect detection</value>
   </data>
   <data name="EnableGhostDisconnectDetectionDescription" xml:space="preserve">
-    <value>Tails local Roblox logs to detect in-game freezes or network disconnects (e.g. Error 277) and terminates frozen processes so auto-rejoin can trigger.</value>
+    <value>When the game freezes</value>
   </data>
   <data name="LoadingRoblox" xml:space="preserve">
     <value>Loading Roblox...</value>
@@ -668,22 +671,22 @@
     <value>Risk Acknowledgment: Window Throttling</value>
   </data>
   <data name="ThrottleRiskDialogContent" xml:space="preserve">
-    <value>This feature minimizes background Roblox windows. Because it interacts with Roblox client windows, anti-cheat systems may view external window manipulation as abnormal behavior. Enable at your own risk.</value>
+    <value>This feature minimizes background Roblox windows, which anti-cheat systems may treat as abnormal. Enable at your own risk.</value>
   </data>
   <data name="RamCleanerRiskDialogTitle" xml:space="preserve">
     <value>Risk Acknowledgment: RAM Cleaner</value>
   </data>
   <data name="RamCleanerRiskDialogContent" xml:space="preserve">
-    <value>This feature optimizes working set memory for Roblox processes. External process memory trimming may be treated as abnormal behavior by anti-cheat systems. Enable at your own risk.</value>
+    <value>This feature frees Roblox memory from outside the game, which anti-cheat systems may treat as abnormal. Enable at your own risk.</value>
   </data>
   <data name="RamCleanerAccessDeniedDisabled" xml:space="preserve">
     <value>RAM cleaner was automatically disabled after multiple access-denied cycles.</value>
   </data>
   <data name="GhostDisconnectMode" xml:space="preserve">
-    <value>Ghost Disconnect Detection Mode</value>
+    <value>Disconnect detection</value>
   </data>
   <data name="GhostDisconnectModeDescription" xml:space="preserve">
-    <value>Monitors Roblox client logs for disconnect events. Notify Only warns via UI; Kill and Rejoin closes and restarts the session.</value>
+    <value>When the game freezes</value>
   </data>
   <data name="GhostDisconnectMode_Off" xml:space="preserve">
     <value>Off</value>
@@ -692,7 +695,7 @@
     <value>Notify Only</value>
   </data>
   <data name="GhostDisconnectMode_KillAndRejoin" xml:space="preserve">
-    <value>Kill and Rejoin</value>
+    <value>Close &amp; rejoin</value>
   </data>
   <data name="GhostDisconnectDetectedNotification" xml:space="preserve">
     <value>Ghost disconnect detected for session (PID: {0}, keyword: '{1}').</value>
@@ -740,10 +743,10 @@
     <value>Could not launch browser in incognito mode.</value>
   </data>
   <data name="EnableUatTelemetry" xml:space="preserve">
-    <value>Enable UAT live trace logging to Desktop</value>
+    <value>Export log to Desktop</value>
   </data>
   <data name="EnableUatTelemetryDescription" xml:space="preserve">
-    <value>Writes unencrypted execution traces (with masked secrets) to RbxManager_UAT_Trace.txt on Desktop for transparent manual testing.</value>
+    <value>For bug reports</value>
   </data>
   <data name="InstallAndStartGoodbyeDpi" xml:space="preserve">
     <value>Install &amp; Start Cloudflare WARP (1.1.1.1)</value>
@@ -770,10 +773,10 @@
     <value>Kill</value>
   </data>
   <data name="EnableCustomResolution" xml:space="preserve">
-    <value>Force custom window resolution</value>
+    <value>Force resolution</value>
   </data>
   <data name="EnableCustomResolutionDescription" xml:space="preserve">
-    <value>Automatically resizes newly launched Roblox windows via Win32 API to save GPU/CPU resources.</value>
+    <value>Shrink new windows</value>
   </data>
   <data name="ResolutionWidthLabel" xml:space="preserve">
     <value>Width (px)</value>
@@ -867,5 +870,32 @@
   </data>
   <data name="RotationStatusCleaning" xml:space="preserve">
     <value>Cleaning cache...</value>
+  </data>
+  <data name="ScanPotassium" xml:space="preserve">
+    <value>Scan Potassium</value>
+  </data>
+  <data name="LaunchPotassium" xml:space="preserve">
+    <value>Launch Potassium</value>
+  </data>
+  <data name="PotassiumStatusNotScanned" xml:space="preserve">
+    <value>Potassium: Not scanned</value>
+  </data>
+  <data name="PotassiumStatusNotFound" xml:space="preserve">
+    <value>Potassium: Not found</value>
+  </data>
+  <data name="PotassiumStatusRunningFormat" xml:space="preserve">
+    <value>Potassium: Running ({0} PID) • AutoExec: {1}</value>
+  </data>
+  <data name="PotassiumStatusInstalledFormat" xml:space="preserve">
+    <value>Potassium: Installed • AutoExec: {0}</value>
+  </data>
+  <data name="PotassiumLaunchedSuccess" xml:space="preserve">
+    <value>Launched Potassium.</value>
+  </data>
+  <data name="PotassiumLaunchFailed" xml:space="preserve">
+    <value>Failed to launch Potassium.</value>
+  </data>
+  <data name="ExtensionBridgeImportedStatusFormat" xml:space="preserve">
+    <value>[Extension Bridge] Imported: {0} (Total: {1})</value>
   </data>
 </root>

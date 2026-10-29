@@ -27,7 +27,12 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     private const byte Version1Byte = 0x01;
     private const byte Version2Byte = 0x02;
     private const byte KdfTypeDpapi = 0x00;
+    // Legacy: the Argon2 output was the data key and was itself DPAPI-wrapped (password bypassable). Load-only.
     private const byte KdfTypeArgon2idDpapi = 0x01;
+    private const byte KdfTypeArgon2idKeyWrap = 0x02;
+    private const int Argon2HeaderLength = 34;
+    private const int KeyEnvelopeLength = 12 + 16 + DerivedKeyLength;
+    private const string CredentialFailureDataKey = "RbxManager.Vault.CredentialFailure";
 
     public const int Argon2MemorySizeKb = 65536; // 64 MB
     public const int Argon2Iterations = 3;
@@ -36,8 +41,11 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     public const int DerivedKeyLength = 32;
 
     public const int MinimumArgon2MemorySizeKb = 65536; // 64 MiB
+    public const int MaximumArgon2MemorySizeKb = 1_048_576; // 1 GiB
     public const int MinimumArgon2Iterations = 3;
+    public const int MaximumArgon2Iterations = 100;
     public const int MinimumArgon2Parallelism = 1;
+    public const int MaximumArgon2Parallelism = 64;
 
     public static readonly string DefaultPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -49,6 +57,8 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     private readonly ILogger<EncryptedFileVault>? _logger;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private bool _disposed;
+    private bool _recoveredFromBackup;
+    private bool _legacyBackupsPurged;
 
     public string VaultPath => _filePath;
 
@@ -210,6 +220,45 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
     }
 
+    public async Task ReencryptAsync(SecretValue? newKey, CancellationToken ct = default)
+    {
+        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+        List<Account>? loadedAccounts = null;
+        try
+        {
+            loadedAccounts = await LoadInternalAsync(ct).ConfigureAwait(false);
+            if (_keyProvider != null)
+            {
+                if (newKey != null && newKey.HasContent)
+                {
+                    _keyProvider.SetKey(newKey.Clone());
+                }
+                else
+                {
+                    _keyProvider.Clear();
+                }
+            }
+
+            await SaveInternalAsync(loadedAccounts, ct).ConfigureAwait(false);
+
+            // Backups still carry the previous protection level (e.g. no password / old password).
+            List<string> staleBackups = GetLegacyV1BackupPaths();
+            staleBackups.Add(_filePath + ".bak");
+            SecureDeleteFiles(staleBackups);
+        }
+        finally
+        {
+            if (loadedAccounts != null)
+            {
+                foreach (Account loaded in loadedAccounts)
+                {
+                    loaded.Cookie.Dispose();
+                }
+            }
+            _semaphore.Release();
+        }
+    }
+
     public static byte[] DeriveKey(
         SecretValue password,
         byte[] salt,
@@ -248,6 +297,65 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
 
         byte[] fileBytes = await File.ReadAllBytesAsync(_filePath, ct).ConfigureAwait(false);
 
+        List<Account> accounts;
+        try
+        {
+            accounts = DecodeVault(fileBytes);
+        }
+        catch (VaultCorruptedException primaryFailure) when (!IsCredentialFailure(primaryFailure))
+        {
+            List<Account>? recovered = await TryLoadBackupAsync(ct).ConfigureAwait(false);
+            if (recovered == null)
+            {
+                throw;
+            }
+
+            _recoveredFromBackup = true;
+            if (_logger != null)
+            {
+                LogRecoveredFromBackup(_logger, primaryFailure.Message);
+            }
+
+            return recovered;
+        }
+
+        _recoveredFromBackup = false;
+
+        // v1 upgrade backups are kept only until the upgraded (v2+) primary has been proven readable.
+        if (fileBytes[4] != Version1Byte && !_legacyBackupsPurged)
+        {
+            SecureDeleteFiles(GetLegacyV1BackupPaths());
+            _legacyBackupsPurged = true;
+        }
+
+        return accounts;
+    }
+
+    private async Task<List<Account>?> TryLoadBackupAsync(CancellationToken ct)
+    {
+        string bakPath = _filePath + ".bak";
+        if (!File.Exists(bakPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            byte[] backupBytes = await File.ReadAllBytesAsync(bakPath, ct).ConfigureAwait(false);
+            return DecodeVault(backupBytes);
+        }
+        catch (VaultCorruptedException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
+
+    private List<Account> DecodeVault(byte[] fileBytes)
+    {
         if (fileBytes.Length < 7)
         {
             throw new VaultCorruptedException("Vault file is too short to contain a valid header.");
@@ -418,7 +526,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 CryptographicOperations.ZeroMemory(dataKey);
             }
         }
-        else if (kdfType == KdfTypeArgon2idDpapi)
+        else if (kdfType == KdfTypeArgon2idDpapi || kdfType == KdfTypeArgon2idKeyWrap)
         {
             // Magic (4) + Version (1) + KdfType (1) + Memory (4) + Iterations (4) + Parallelism (4) + Salt (16) = 34 bytes
             // + WrappedKeyLength (2 bytes) = 36 bytes minimum before wrapped key
@@ -436,14 +544,29 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 throw new VaultCorruptedException($"Vault Argon2 memory size {memorySizeKb} KB is below minimum {MinimumArgon2MemorySizeKb} KB.");
             }
 
+            if (memorySizeKb > MaximumArgon2MemorySizeKb)
+            {
+                throw new VaultCorruptedException($"Vault Argon2 memory size {memorySizeKb} KB exceeds maximum {MaximumArgon2MemorySizeKb} KB.");
+            }
+
             if (iterations < MinimumArgon2Iterations)
             {
                 throw new VaultCorruptedException($"Vault Argon2 iterations {iterations} is below minimum {MinimumArgon2Iterations}.");
             }
 
+            if (iterations > MaximumArgon2Iterations)
+            {
+                throw new VaultCorruptedException($"Vault Argon2 iterations {iterations} exceeds maximum {MaximumArgon2Iterations}.");
+            }
+
             if (parallelism < MinimumArgon2Parallelism)
             {
                 throw new VaultCorruptedException($"Vault Argon2 parallelism {parallelism} is below minimum {MinimumArgon2Parallelism}.");
+            }
+
+            if (parallelism > MaximumArgon2Parallelism)
+            {
+                throw new VaultCorruptedException($"Vault Argon2 parallelism {parallelism} exceeds maximum {MaximumArgon2Parallelism}.");
             }
 
             byte[] argonSalt = fileBytes.AsSpan(18, Argon2SaltLength).ToArray();
@@ -465,20 +588,19 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             offset += 16;
 
             ReadOnlySpan<byte> ciphertext = fileBytes.AsSpan(offset);
-            byte[] aad = fileBytes.AsSpan(0, 34).ToArray(); // Authenticate all 34 header prefix bytes
+            byte[] aad = fileBytes.AsSpan(0, Argon2HeaderLength).ToArray(); // Authenticate all 34 header prefix bytes
 
             if (_keyProvider == null || !_keyProvider.HasKey)
             {
-                throw new VaultCorruptedException("Master password is required to unlock this vault.");
+                throw CredentialFailure("Master password is required to unlock this vault.");
             }
 
             SecretValue? masterPassword = _keyProvider.GetKey();
             if (masterPassword == null || !masterPassword.HasContent)
             {
-                throw new VaultCorruptedException("Master password is required to unlock this vault.");
+                throw CredentialFailure("Master password is required to unlock this vault.");
             }
 
-            byte[] argonKey = DeriveKey(masterPassword, argonSalt, (int)memorySizeKb, (int)iterations, (int)parallelism);
             byte[] dpapiUnwrapped;
             try
             {
@@ -486,21 +608,27 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             }
             catch (CryptographicException ex)
             {
-                CryptographicOperations.ZeroMemory(argonKey);
                 throw new VaultCorruptedException("Failed to unwrap encryption key via DPAPI.", ex);
             }
 
-            if (!CryptographicOperations.FixedTimeEquals(dpapiUnwrapped, argonKey))
+            byte[] passwordKey = DeriveKey(masterPassword, argonSalt, (int)memorySizeKb, (int)iterations, (int)parallelism);
+            byte[] dataKey;
+            try
+            {
+                dataKey = kdfType == KdfTypeArgon2idKeyWrap
+                    ? UnwrapDataKey(dpapiUnwrapped, passwordKey, aad)
+                    : VerifyLegacyArgonKey(dpapiUnwrapped, passwordKey);
+            }
+            finally
             {
                 CryptographicOperations.ZeroMemory(dpapiUnwrapped);
-                CryptographicOperations.ZeroMemory(argonKey);
-                throw new VaultCorruptedException("Invalid master password.");
+                CryptographicOperations.ZeroMemory(passwordKey);
             }
 
             byte[] plaintextBytes = new byte[ciphertext.Length];
             try
             {
-                using AesGcm aesGcm = new(argonKey, 16);
+                using AesGcm aesGcm = new(dataKey, 16);
                 aesGcm.Decrypt(nonce, ciphertext, tag, plaintextBytes, aad);
                 return plaintextBytes;
             }
@@ -510,8 +638,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             }
             finally
             {
-                CryptographicOperations.ZeroMemory(dpapiUnwrapped);
-                CryptographicOperations.ZeroMemory(argonKey);
+                CryptographicOperations.ZeroMemory(dataKey);
             }
         }
         else
@@ -519,6 +646,50 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             throw new VaultCorruptedException($"Unsupported vault KDF type '{kdfType}'.");
         }
     }
+
+    private static byte[] UnwrapDataKey(byte[] keyEnvelope, byte[] passwordKey, byte[] aad)
+    {
+        if (keyEnvelope.Length != KeyEnvelopeLength)
+        {
+            throw new VaultCorruptedException("Vault key envelope has an invalid length.");
+        }
+
+        ReadOnlySpan<byte> wrapNonce = keyEnvelope.AsSpan(0, 12);
+        ReadOnlySpan<byte> wrapTag = keyEnvelope.AsSpan(12, 16);
+        ReadOnlySpan<byte> wrappedDataKey = keyEnvelope.AsSpan(28, DerivedKeyLength);
+        byte[] dataKey = new byte[DerivedKeyLength];
+        try
+        {
+            using AesGcm keyWrap = new(passwordKey, 16);
+            keyWrap.Decrypt(wrapNonce, wrappedDataKey, wrapTag, dataKey, aad);
+            return dataKey;
+        }
+        catch (CryptographicException)
+        {
+            CryptographicOperations.ZeroMemory(dataKey);
+            throw CredentialFailure("Invalid master password.");
+        }
+    }
+
+    private static byte[] VerifyLegacyArgonKey(byte[] dpapiUnwrapped, byte[] passwordKey)
+    {
+        if (!CryptographicOperations.FixedTimeEquals(dpapiUnwrapped, passwordKey))
+        {
+            throw CredentialFailure("Invalid master password.");
+        }
+
+        return (byte[])passwordKey.Clone();
+    }
+
+    private static VaultCorruptedException CredentialFailure(string message)
+    {
+        VaultCorruptedException exception = new(message);
+        exception.Data[CredentialFailureDataKey] = true;
+        return exception;
+    }
+
+    internal static bool IsCredentialFailure(VaultCorruptedException exception) =>
+        exception.Data[CredentialFailureDataKey] is true;
 
     private async Task SaveInternalAsync(List<Account> accounts, CancellationToken ct = default)
     {
@@ -543,20 +714,19 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         byte[] plaintextBytes = JsonSerializer.SerializeToUtf8Bytes(dtos, RbxManagerJsonContext.Default.ListAccountDto);
 
         bool useArgon2 = _keyProvider != null && _keyProvider.HasKey;
-        byte kdfType = useArgon2 ? KdfTypeArgon2idDpapi : KdfTypeDpapi;
+        byte kdfType = useArgon2 ? KdfTypeArgon2idKeyWrap : KdfTypeDpapi;
 
-        byte[] dataKey;
-        byte[]? argonSalt = null;
+        byte[] dataKey = RandomNumberGenerator.GetBytes(DerivedKeyLength);
         byte[] aad;
+        byte[] keyMaterialToProtect;
 
         if (useArgon2)
         {
-            argonSalt = RandomNumberGenerator.GetBytes(Argon2SaltLength);
+            byte[] argonSalt = RandomNumberGenerator.GetBytes(Argon2SaltLength);
             SecretValue secret = _keyProvider!.GetKey()!;
-            dataKey = DeriveKey(secret, argonSalt, Argon2MemorySizeKb, Argon2Iterations, Argon2Parallelism);
 
             // AAD authenticates Magic (4) + Version (1) + KdfType (1) + Memory (4) + Iterations (4) + Parallelism (4) + Salt (16) = 34 bytes
-            aad = new byte[34];
+            aad = new byte[Argon2HeaderLength];
             MagicBytes.CopyTo(aad.AsSpan(0, 4));
             aad[4] = Version2Byte;
             aad[5] = kdfType;
@@ -564,11 +734,21 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             BinaryPrimitives.WriteUInt32LittleEndian(aad.AsSpan(10, 4), (uint)Argon2Iterations);
             BinaryPrimitives.WriteUInt32LittleEndian(aad.AsSpan(14, 4), (uint)Argon2Parallelism);
             argonSalt.CopyTo(aad.AsSpan(18, Argon2SaltLength));
+
+            byte[] passwordKey = DeriveKey(secret, argonSalt, Argon2MemorySizeKb, Argon2Iterations, Argon2Parallelism);
+            try
+            {
+                keyMaterialToProtect = WrapDataKey(dataKey, passwordKey, aad);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(passwordKey);
+            }
         }
         else
         {
-            dataKey = RandomNumberGenerator.GetBytes(32);
             aad = [MagicBytes[0], MagicBytes[1], MagicBytes[2], MagicBytes[3], Version2Byte, kdfType];
+            keyMaterialToProtect = dataKey;
         }
 
         byte[] nonce = RandomNumberGenerator.GetBytes(12);
@@ -585,7 +765,9 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
             CryptographicOperations.ZeroMemory(plaintextBytes);
         }
 
-        byte[] wrappedKey = ProtectedData.Protect(dataKey, null, DataProtectionScope.CurrentUser);
+        // In Argon2 mode DPAPI only adds user binding on top of the password-wrapped envelope.
+        byte[] wrappedKey = ProtectedData.Protect(keyMaterialToProtect, null, DataProtectionScope.CurrentUser);
+        CryptographicOperations.ZeroMemory(keyMaterialToProtect);
         CryptographicOperations.ZeroMemory(dataKey);
 
         if (wrappedKey.Length > ushort.MaxValue)
@@ -594,7 +776,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
 
         ushort wrappedKeyLength = (ushort)wrappedKey.Length;
-        int headerPrefixLength = useArgon2 ? 34 : 6;
+        int headerPrefixLength = aad.Length;
         int totalLength = headerPrefixLength + 2 + wrappedKey.Length + 12 + 16 + ciphertext.Length;
         byte[] outputBuffer = new byte[totalLength];
 
@@ -633,22 +815,92 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
 
         if (File.Exists(_filePath))
         {
-            BackupV1VaultIfUpgrading(_filePath);
-            File.Replace(tmpPath, _filePath, bakPath);
+            if (_recoveredFromBackup)
+            {
+                // The primary is known-corrupted: replace it without rotating it over the good .bak.
+                File.Move(tmpPath, _filePath, overwrite: true);
+            }
+            else
+            {
+                if (BackupV1VaultIfUpgrading(_filePath))
+                {
+                    _legacyBackupsPurged = false;
+                }
+
+                File.Replace(tmpPath, _filePath, bakPath);
+            }
         }
         else
         {
             File.Move(tmpPath, _filePath);
         }
+
+        _recoveredFromBackup = false;
     }
 
-    private static void BackupV1VaultIfUpgrading(string filePath)
+    private static byte[] WrapDataKey(byte[] dataKey, byte[] passwordKey, byte[] aad)
+    {
+        byte[] keyEnvelope = new byte[KeyEnvelopeLength];
+        RandomNumberGenerator.Fill(keyEnvelope.AsSpan(0, 12));
+        using AesGcm keyWrap = new(passwordKey, 16);
+        keyWrap.Encrypt(
+            keyEnvelope.AsSpan(0, 12),
+            dataKey,
+            keyEnvelope.AsSpan(28, DerivedKeyLength),
+            keyEnvelope.AsSpan(12, 16),
+            aad);
+        return keyEnvelope;
+    }
+
+    private List<string> GetLegacyV1BackupPaths()
+    {
+        string? directory = Path.GetDirectoryName(Path.GetFullPath(_filePath));
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+        {
+            return new List<string>();
+        }
+
+        string fileName = Path.GetFileName(_filePath);
+        return Directory.GetFiles(directory, fileName + ".v1*.bak").ToList();
+    }
+
+    private void SecureDeleteFiles(IEnumerable<string> paths)
+    {
+        foreach (string path in paths)
+        {
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            try
+            {
+                using (FileStream fs = new(path, FileMode.Open, FileAccess.Write, FileShare.None))
+                {
+                    byte[] zeros = new byte[fs.Length];
+                    fs.Write(zeros, 0, zeros.Length);
+                    fs.Flush(true);
+                }
+
+                File.Delete(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (_logger != null)
+                {
+                    LogBackupDeletionFailed(_logger, Path.GetFileName(path), ex.GetType().Name);
+                }
+            }
+        }
+    }
+
+    private static bool BackupV1VaultIfUpgrading(string filePath)
     {
         try
         {
             if (!File.Exists(filePath))
             {
-                return;
+                return false;
             }
 
             byte[] header = new byte[5];
@@ -657,7 +909,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 int read = fs.Read(header, 0, header.Length);
                 if (read < 5)
                 {
-                    return;
+                    return false;
                 }
             }
 
@@ -676,11 +928,16 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                     string tsBak = $"{filePath}.v1.{timestamp}.bak";
                     File.Copy(filePath, tsBak, overwrite: false);
                 }
+
+                return true;
             }
+
+            return false;
         }
         catch
         {
             // Do not fail upgrade if backup operation cannot read existing file
+            return false;
         }
     }
 
@@ -706,4 +963,10 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
 
     [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Removed account with ID {AccountId}. Remaining accounts: {Count}.")]
     private static partial void LogRemovedAccount(ILogger logger, long accountId, int count);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Warning, Message = "Primary vault file could not be read ({Reason}); recovered accounts from backup. The next save rewrites the primary file.")]
+    private static partial void LogRecoveredFromBackup(ILogger logger, string reason);
+
+    [LoggerMessage(EventId = 6, Level = LogLevel.Warning, Message = "Could not securely delete stale vault backup {FileName} ({ErrorType}).")]
+    private static partial void LogBackupDeletionFailed(ILogger logger, string fileName, string errorType);
 }

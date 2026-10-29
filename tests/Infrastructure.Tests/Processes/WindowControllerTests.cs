@@ -279,4 +279,63 @@ public sealed class WindowControllerTests
             Native.User32.SetWindowPosOverride = null;
         }
     }
+
+    [Fact]
+    public async System.Threading.Tasks.Task WindowSizeLock_WhenBurstLimitExceeded_SchedulesTrailingEnforcement()
+    {
+        IntPtr targetHwnd = (IntPtr)0xDEF0;
+        int setWindowPosCalls = 0;
+        System.Threading.Tasks.TaskCompletionSource<bool> trailingCall = new();
+
+        Native.User32.IsIconicOverride = _ => false;
+        Native.User32.IsZoomedOverride = _ => false;
+        Native.User32.GetWindowLongOverride = (_, _) => Native.User32.WS_CAPTION | Native.User32.WS_VISIBLE;
+        Native.User32.SetWindowLongOverride = (_, _, style) => style;
+        Native.User32.SetWindowPosOverride = (_, _, _, _, _, _, _) =>
+        {
+            if (System.Threading.Interlocked.Increment(ref setWindowPosCalls) >= 9)
+            {
+                trailingCall.TrySetResult(true);
+            }
+            return true;
+        };
+
+        try
+        {
+            using Native.WindowSizeLock sizeLock = new(
+                targetHwnd,
+                width: 200,
+                height: 400,
+                tilePosition: null,
+                getBoundsOverride: () => (0, 0, 800, 600));
+
+            for (int i = 0; i < 10; i++)
+            {
+                sizeLock.OnWinEvent(
+                    IntPtr.Zero,
+                    Native.WindowSizeLock.EVENT_OBJECT_LOCATIONCHANGE,
+                    targetHwnd,
+                    Native.WindowSizeLock.OBJID_WINDOW,
+                    0,
+                    0,
+                    0);
+            }
+
+            // First 8 calls happen synchronously; the 9th is deferred until the 1000ms burst window expires.
+            Assert.Equal(8, setWindowPosCalls);
+
+            System.Threading.Tasks.Task completed = await System.Threading.Tasks.Task.WhenAny(
+                trailingCall.Task,
+                System.Threading.Tasks.Task.Delay(2500));
+            Assert.Same(trailingCall.Task, completed);
+        }
+        finally
+        {
+            Native.User32.IsIconicOverride = null;
+            Native.User32.IsZoomedOverride = null;
+            Native.User32.GetWindowLongOverride = null;
+            Native.User32.SetWindowLongOverride = null;
+            Native.User32.SetWindowPosOverride = null;
+        }
+    }
 }

@@ -462,8 +462,12 @@ public sealed class CheckAllPacingTests
                 MultiInstanceAcknowledged = true
             };
             settingsService.CurrentSettings.Returns(_ => currentSettings);
-            settingsService.SaveSettingsAsync(Arg.Do<RbxManager.Core.Settings.AppSettings>(s => currentSettings = s))
-                .Returns(Task.CompletedTask);
+            settingsService.UpdateSettingsAsync(Arg.Any<Func<RbxManager.Core.Settings.AppSettings, RbxManager.Core.Settings.AppSettings>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    currentSettings = call.Arg<Func<RbxManager.Core.Settings.AppSettings, RbxManager.Core.Settings.AppSettings>>()(currentSettings);
+                    return Task.FromResult(currentSettings);
+                });
 
             RbxManager.Core.Instance.IInstanceGate instanceGate = Substitute.For<RbxManager.Core.Instance.IInstanceGate>();
             instanceGate.IsAvailable.Returns(true);
@@ -518,8 +522,12 @@ public sealed class CheckAllPacingTests
             RbxManager.Core.Settings.ISettingsService settingsService = Substitute.For<RbxManager.Core.Settings.ISettingsService>();
             RbxManager.Core.Settings.AppSettings currentSettings = RbxManager.Core.Settings.AppSettings.Default;
             settingsService.CurrentSettings.Returns(_ => currentSettings);
-            settingsService.SaveSettingsAsync(Arg.Do<RbxManager.Core.Settings.AppSettings>(s => currentSettings = s.Clamp()))
-                .Returns(Task.CompletedTask);
+            settingsService.UpdateSettingsAsync(Arg.Any<Func<RbxManager.Core.Settings.AppSettings, RbxManager.Core.Settings.AppSettings>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    currentSettings = call.Arg<Func<RbxManager.Core.Settings.AppSettings, RbxManager.Core.Settings.AppSettings>>()(currentSettings).Clamp();
+                    return Task.FromResult(currentSettings);
+                });
 
             RbxManager.Core.Instance.IInstanceGate instanceGate = Substitute.For<RbxManager.Core.Instance.IInstanceGate>();
             IContentDialogService dialogService = Substitute.For<IContentDialogService>();
@@ -534,6 +542,13 @@ public sealed class CheckAllPacingTests
             vm.ResolutionWidth = 200;
             vm.ResolutionHeight = 400;
 
+            // Dimension edits are debounced: nothing is written until the quiet period ends or a flush happens.
+            Assert.True(currentSettings.EnableCustomResolution);
+            Assert.Equal(800, currentSettings.ResolutionWidth);
+            Assert.Equal(600, currentSettings.ResolutionHeight);
+
+            vm.FlushPendingAsync().GetAwaiter().GetResult();
+
             Assert.True(currentSettings.EnableCustomResolution);
             Assert.Equal(200, currentSettings.ResolutionWidth);
             Assert.Equal(400, currentSettings.ResolutionHeight);
@@ -543,6 +558,148 @@ public sealed class CheckAllPacingTests
             Assert.True(vmAfterNavigation.EnableCustomResolution);
             Assert.Equal(200, vmAfterNavigation.ResolutionWidth);
             Assert.Equal(400, vmAfterNavigation.ResolutionHeight);
+        });
+    }
+
+    [Fact]
+    public void ExecuteSequentialLaunchQueueAsync_WhenRateLimitedOrModerated_SurvivesAndResumesAfterBackoff()
+    {
+        StaRunner.Run(() =>
+        {
+            RbxManager.App.Services.RobloxWindowSizer.ClearOverrides();
+            FakeTimeProvider timeProvider = new();
+            using SecretValue c1 = SecretValue.FromString("fake-cookie-1");
+            using SecretValue c2 = SecretValue.FromString("fake-cookie-2");
+            using SecretValue c3 = SecretValue.FromString("fake-cookie-3");
+
+            RbxManager.Core.Settings.ISettingsService settingsService = Substitute.For<RbxManager.Core.Settings.ISettingsService>();
+            RbxManager.Core.Settings.AppSettings globalSettings = RbxManager.Core.Settings.AppSettings.Default with
+            {
+                EnableCustomResolution = true,
+                ResolutionWidth = 200,
+                ResolutionHeight = 200
+            };
+            settingsService.CurrentSettings.Returns(_ => globalSettings);
+
+            ILauncher launcher = Substitute.For<ILauncher>();
+            List<AccountId> launchedIds = [];
+            int account1Attempts = 0;
+            launcher.LaunchAsync(Arg.Any<LaunchRequest>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    AccountId accountId = call.Arg<LaunchRequest>().AccountId;
+                    launchedIds.Add(accountId);
+                    if (accountId.Value == 1)
+                    {
+                        return ++account1Attempts == 1
+                            ? Task.FromResult(Result.Failure("User is moderated", AuthErrorCodes.Moderated))
+                            : Task.FromResult(Result.Success());
+                    }
+
+                    return accountId.Value switch
+                    {
+                        2 => Task.FromResult(Result.Failure("Too many requests", AuthErrorCodes.RateLimited)),
+                        _ => Task.FromResult(Result.Success())
+                    };
+                });
+
+            AccountsViewModel vm = new(
+                new FakeAccountStore(
+                    new Account(new AccountId(1), "A1", null, null, c1, DateTimeOffset.UtcNow),
+                    new Account(new AccountId(2), "A2", null, null, c2, DateTimeOffset.UtcNow),
+                    new Account(new AccountId(3), "A3", null, null, c3, DateTimeOffset.UtcNow)),
+                Substitute.For<IContentDialogService>(),
+                Substitute.For<ISnackbarService>(),
+                new FakeAuthService(timeProvider),
+                launcher,
+                settingsService: settingsService,
+                timeProvider: timeProvider,
+                randomDelayGenerator: (_, _) => 5);
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            AccountItemViewModel item1Before = vm.FilteredAccounts[0];
+
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+
+            // Account 1 fails initial validation with Moderated -> DO NOT skip; triggers recovery launch,
+            // sets status text to "Đang chờ xử lý lỗi...", and overrides RobloxWindowSizer to 800x600 without changing global AppSettings.
+            Assert.Equal([new AccountId(1), new AccountId(1)], launchedIds);
+            Assert.Same(item1Before, vm.FilteredAccounts[0]);
+            Assert.Equal("Đang chờ xử lý lỗi...", item1Before.StatusText);
+
+            var (enabled1, width1, height1, _) = RbxManager.App.Services.RobloxWindowSizer.ResolveTargetResolution(
+                settingsService,
+                processId: 424242,
+                accountId: new AccountId(1));
+            Assert.True(enabled1);
+            Assert.Equal(800, width1);
+            Assert.Equal(600, height1);
+
+            // Subsequent normal account must receive global 200x200 resolution, not a leaked 800x600 pending override
+            var (enabled3, width3, height3, _) = RbxManager.App.Services.RobloxWindowSizer.ResolveTargetResolution(
+                settingsService,
+                processId: 434343,
+                accountId: new AccountId(3));
+            Assert.True(enabled3);
+            Assert.Equal(200, width3);
+            Assert.Equal(200, height3);
+
+            // Global AppSettings remain untouched at 200x200
+            Assert.Equal(200, settingsService.CurrentSettings.ResolutionWidth);
+            Assert.Equal(200, settingsService.CurrentSettings.ResolutionHeight);
+
+            for (int i = 0; i < 5; i++)
+            {
+                timeProvider.Advance(TimeSpan.FromSeconds(1));
+            }
+
+            // Account 2 fails with RateLimited -> triggers 30s backoff countdown instead of aborting the queue.
+            Assert.Equal([new AccountId(1), new AccountId(1), new AccountId(2)], launchedIds);
+            Assert.True(vm.IsBulkLaunching);
+            Assert.Contains("30", vm.BulkLaunchCountdownText, StringComparison.Ordinal);
+
+            for (int i = 0; i < 29; i++)
+            {
+                timeProvider.Advance(TimeSpan.FromSeconds(1));
+            }
+
+            // Still waiting on the last second of the 30s rate-limit backoff.
+            Assert.Equal(3, launchedIds.Count);
+            Assert.Contains("1", vm.BulkLaunchCountdownText, StringComparison.Ordinal);
+
+            timeProvider.Advance(TimeSpan.FromSeconds(1));
+
+            // Account 3 launches and succeeds after the 30s rate-limit backoff completes.
+            launchTask.GetAwaiter().GetResult();
+            Assert.Equal([new AccountId(1), new AccountId(1), new AccountId(2), new AccountId(3)], launchedIds);
+            Assert.False(vm.IsBulkLaunching);
+            Assert.Equal(string.Empty, vm.BulkLaunchCountdownText);
+        });
+    }
+
+    [Fact]
+    public void AccountItemViewModel_KillInstanceCommand_NotifiesSessionTrackerToPreventZombieAutoRejoin()
+    {
+        StaRunner.Run(() =>
+        {
+            using SecretValue cookie = SecretValue.FromString("fake-cookie");
+            RbxManager.Core.Sessions.ISessionTracker sessionTracker = Substitute.For<RbxManager.Core.Sessions.ISessionTracker>();
+            AccountsViewModel vm = new(
+                new FakeAccountStore(new Account(new AccountId(1), "A1", null, null, cookie, DateTimeOffset.UtcNow)),
+                Substitute.For<IContentDialogService>(),
+                Substitute.For<ISnackbarService>(),
+                new FakeAuthService(new FakeTimeProvider()),
+                Substitute.For<ILauncher>(),
+                sessionTracker: sessionTracker);
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            AccountItemViewModel item = Assert.Single(vm.FilteredAccounts);
+            item.ActiveProcessId = 999999;
+
+            item.KillInstanceCommand.Execute(null);
+
+            sessionTracker.Received(1).CloseSessionAsync(999999, graceful: false);
+            Assert.Null(item.ActiveProcessId);
         });
     }
 }

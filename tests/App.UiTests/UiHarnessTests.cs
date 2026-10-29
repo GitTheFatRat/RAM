@@ -111,88 +111,93 @@ public sealed class UiHarnessTests
             }
         });
 
-        // 5. AccountsContextMenu
+        // 5. AccountsContextMenu — the "More" menu must actually open (it lives in a separate popup HWND).
         RunScenario(session, "AccountsContextMenu", theme, artifactsDir, results, () =>
         {
-            AutomationElement? moreBtn = AutomationHelper.FindByAutomationId(root, "Accounts_MoreActionsButton", 3000);
-            if (moreBtn != null)
-            {
-                AutomationHelper.TryInvoke(moreBtn);
-                Thread.Sleep(300);
-            }
+            AutomationElement moreBtn = AutomationHelper.Require(
+                AutomationHelper.FindByAutomationId(root, "Accounts_MoreActionsButton", 3000),
+                "Accounts_MoreActionsButton exists");
+            AutomationHelper.RequireThat(AutomationHelper.TryInvoke(moreBtn), "More button is invokable");
+            AutomationHelper.Require(
+                AutomationHelper.FindInProcessWindows(session.Process.Id, "Accounts_EditMenuItem", 3000),
+                "More menu opened and shows the Edit item");
+            AutomationHelper.Require(
+                AutomationHelper.FindInProcessWindows(session.Process.Id, "Accounts_DeleteMenuItem", 1000),
+                "More menu shows the Delete item");
         }, postAction: () =>
         {
             SendEscape(session.MainWindowHandle);
             Thread.Sleep(200);
         });
 
-        // 6. AccountsAddCookieDialog
+        // 6. AccountsAddCookieDialog — the split-button menu opens and the editor dialog appears and accepts input.
         RunScenario(session, "AccountsAddCookieDialog", theme, artifactsDir, results, () =>
         {
-            AutomationElement? addSplit = AutomationHelper.FindByAutomationId(root, "Accounts_AddSplitButton", 3000);
-            if (addSplit != null)
-            {
-                AutomationHelper.TryInvoke(addSplit);
-                Thread.Sleep(200);
+            AutomationElement addSplit = AutomationHelper.Require(
+                AutomationHelper.FindByAutomationId(root, "Accounts_AddSplitButton", 3000),
+                "Accounts_AddSplitButton exists");
+            AutomationHelper.RequireThat(AutomationHelper.TryInvoke(addSplit), "Add split button is invokable");
 
-                AutomationElement? cookieItem = AutomationHelper.FindByAutomationId(root, "Accounts_AddViaCookieMenuItem", 2000);
-                if (cookieItem != null)
-                {
-                    AutomationHelper.TryInvoke(cookieItem);
-                    Thread.Sleep(400);
+            AutomationElement cookieItem = AutomationHelper.Require(
+                AutomationHelper.FindInProcessWindows(session.Process.Id, "Accounts_AddViaCookieMenuItem", 3000),
+                "Add menu opened and shows 'Add via cookie'");
+            AutomationHelper.RequireThat(AutomationHelper.TryInvoke(cookieItem), "'Add via cookie' item is invokable");
 
-                    AutomationElement? aliasBox = AutomationHelper.FindByAutomationId(root, "AccountEditor_AliasBox", 2000);
-                    if (aliasBox != null)
-                    {
-                        AutomationHelper.TrySetValue(aliasBox, "NewFakeAccount");
-                    }
-                }
-            }
+            AutomationElement aliasBox = AutomationHelper.Require(
+                AutomationHelper.FindByAutomationId(root, "AccountEditor_AliasBox", 3000),
+                "Add-account dialog opened with the alias editor");
+            AutomationHelper.RequireThat(AutomationHelper.TrySetValue(aliasBox, "NewFakeAccount"), "Alias box accepts input");
+            AutomationHelper.RequireThat(
+                AutomationHelper.WaitUntil(() => AutomationHelper.TryGetValue(aliasBox) == "NewFakeAccount", 1500),
+                "Alias box reflects the typed value");
         }, postAction: () =>
         {
             DismissOpenContentDialog(root, session.MainWindowHandle);
         });
 
-        // 7. AccountsEditDialog
+        // 7. AccountsEditDialog — select a real row, then Edit must open the editor prefilled with that account.
         RunScenario(session, "AccountsEditDialog", theme, artifactsDir, results, () =>
         {
-            AutomationElement? moreBtn = AutomationHelper.FindByAutomationId(root, "Accounts_MoreActionsButton", 3000);
-            if (moreBtn != null)
-            {
-                AutomationHelper.TryInvoke(moreBtn);
-                Thread.Sleep(200);
+            SelectFirstAccountRow(root);
+            OpenMoreMenuItem(session, root, "Accounts_EditMenuItem");
 
-                AutomationElement? editItem = AutomationHelper.FindByAutomationId(root, "Accounts_EditMenuItem", 2000);
-                if (editItem != null)
-                {
-                    AutomationHelper.TryInvoke(editItem);
-                    Thread.Sleep(400);
-                }
-            }
+            AutomationElement aliasBox = AutomationHelper.Require(
+                AutomationHelper.FindByAutomationId(root, "AccountEditor_AliasBox", 3000),
+                "Edit dialog opened with the alias editor");
+            AutomationHelper.RequireThat(
+                AutomationHelper.WaitUntil(() => !string.IsNullOrWhiteSpace(AutomationHelper.TryGetValue(aliasBox)), 1500),
+                "Edit dialog is prefilled with the selected account's alias");
         }, postAction: () =>
         {
             DismissOpenContentDialog(root, session.MainWindowHandle);
         });
 
-        // 8. AccountsDeleteConfirmation
+        // 8. AccountsDeleteConfirmation — Delete must raise the confirmation dialog and leave the vault untouched on cancel.
+        int rowsBeforeDelete = 0;
         RunScenario(session, "AccountsDeleteConfirmation", theme, artifactsDir, results, () =>
         {
-            AutomationElement? moreBtn = AutomationHelper.FindByAutomationId(root, "Accounts_MoreActionsButton", 3000);
-            if (moreBtn != null)
-            {
-                AutomationHelper.TryInvoke(moreBtn);
-                Thread.Sleep(200);
+            AutomationElement grid = SelectFirstAccountRow(root);
+            rowsBeforeDelete = AutomationHelper.CountDataItems(grid);
+            OpenMoreMenuItem(session, root, "Accounts_DeleteMenuItem");
 
-                AutomationElement? delItem = AutomationHelper.FindByAutomationId(root, "Accounts_DeleteMenuItem", 2000);
-                if (delItem != null)
-                {
-                    AutomationHelper.TryInvoke(delItem);
-                    Thread.Sleep(400);
-                }
-            }
+            AutomationHelper.Require(
+                AutomationHelper.FindByName(root, "Xác nhận xóa", 3000) ?? AutomationHelper.FindByName(root, "Confirm Delete", 500),
+                "Delete confirmation dialog is shown");
         }, postAction: () =>
         {
             DismissOpenContentDialog(root, session.MainWindowHandle);
+            AutomationElement? grid = AutomationHelper.FindByAutomationId(root, "Accounts_DataGrid", 2000);
+            if (grid != null && rowsBeforeDelete > 0 &&
+                !AutomationHelper.WaitUntil(() => AutomationHelper.CountDataItems(grid) == rowsBeforeDelete, 2000))
+            {
+                results.Add(new ScenarioRecord(
+                    "AccountsDeleteCancelKeepsRow",
+                    theme,
+                    false,
+                    string.Empty,
+                    string.Empty,
+                    "Cancelling the delete dialog removed an account row"));
+            }
         });
 
         // 9. AccountsEmptySearch
@@ -214,10 +219,26 @@ public sealed class UiHarnessTests
             }
         });
 
-        // 10. ServersPage (Canned List)
+        // 10. ServersPage (Canned List) — refresh a normal place ID and require the fake service's 3 servers as rows.
         RunScenario(session, "ServersPage", theme, artifactsDir, results, () =>
         {
             NavigateTo(session.MainWindowHandle, root, "NavItem_Servers");
+
+            AutomationElement placeBox = AutomationHelper.Require(
+                AutomationHelper.FindByAutomationId(root, "Servers_PlaceIdBox", 3000),
+                "Servers_PlaceIdBox exists");
+            AutomationElement refreshBtn = AutomationHelper.Require(
+                AutomationHelper.FindByAutomationId(root, "Servers_RefreshButton", 3000),
+                "Servers_RefreshButton exists");
+            AutomationHelper.RequireThat(AutomationHelper.TrySetValue(placeBox, "1818"), "Place ID box accepts input");
+            AutomationHelper.RequireThat(AutomationHelper.TryInvoke(refreshBtn), "Refresh button is invokable");
+
+            AutomationElement grid = AutomationHelper.Require(
+                AutomationHelper.FindByAutomationId(root, "Servers_DataGrid", 3000),
+                "Servers_DataGrid exists");
+            AutomationHelper.RequireThat(
+                AutomationHelper.WaitUntil(() => AutomationHelper.CountDataItems(grid) >= 3, 4000),
+                "Canned server list renders 3 rows");
         });
 
         // 11. ServersPageEmpty (Fixed fake place ID 999999)
@@ -423,6 +444,34 @@ public sealed class UiHarnessTests
         {
             postAction?.Invoke();
         }
+    }
+
+    private static AutomationElement SelectFirstAccountRow(AutomationElement root)
+    {
+        AutomationElement grid = AutomationHelper.Require(
+            AutomationHelper.FindByAutomationId(root, "Accounts_DataGrid", 3000),
+            "Accounts_DataGrid exists");
+        AutomationElement firstRow = AutomationHelper.Require(
+            grid.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.DataItem)),
+            "Accounts grid has at least one row");
+        AutomationHelper.RequireThat(AutomationHelper.TrySelect(firstRow), "First account row is selectable");
+        Thread.Sleep(200);
+        return grid;
+    }
+
+    private static void OpenMoreMenuItem(UiAppSession session, AutomationElement root, string menuItemAutomationId)
+    {
+        AutomationElement moreBtn = AutomationHelper.Require(
+            AutomationHelper.FindByAutomationId(root, "Accounts_MoreActionsButton", 3000),
+            "Accounts_MoreActionsButton exists");
+        AutomationHelper.RequireThat(AutomationHelper.TryInvoke(moreBtn), "More button is invokable");
+
+        AutomationElement item = AutomationHelper.Require(
+            AutomationHelper.FindInProcessWindows(session.Process.Id, menuItemAutomationId, 3000),
+            $"More menu shows {menuItemAutomationId}");
+        AutomationHelper.RequireThat(item.Current.IsEnabled, $"{menuItemAutomationId} is enabled once a row is selected");
+        AutomationHelper.RequireThat(AutomationHelper.TryInvoke(item), $"{menuItemAutomationId} is invokable");
+        Thread.Sleep(400);
     }
 
     private static void DismissOpenContentDialog(AutomationElement root, IntPtr hwnd)

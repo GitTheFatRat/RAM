@@ -28,6 +28,7 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
     private readonly ISettingsService? _settingsService;
     private readonly ILogger<RobloxLogWatcher> _logger;
     private readonly ConcurrentDictionary<int, WatcherContext> _activeWatchers = new();
+    private readonly ConcurrentDictionary<string, byte> _claimedPaths = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
     public event Action<int, string>? GhostDisconnectDetected;
@@ -56,10 +57,21 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
             return;
         }
 
-        string? logPath = explicitLogPath ?? ResolveLogFile(pid, startTime);
-        if (string.IsNullOrEmpty(logPath) || !File.Exists(logPath))
+        string? logPath = explicitLogPath;
+        if (logPath != null)
         {
-            return;
+            if (!File.Exists(logPath))
+            {
+                return;
+            }
+        }
+        else
+        {
+            logPath = ResolveLogFile(pid, startTime, out bool ambiguous);
+            if (ambiguous)
+            {
+                return;
+            }
         }
 
         CancellationTokenSource cts = new();
@@ -67,11 +79,18 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
 
         if (_activeWatchers.TryAdd(pid, context))
         {
-            LogStartedWatching(_logger, pid, logPath);
+            if (logPath != null)
+            {
+                LogStartedWatching(_logger, pid, logPath);
+            }
             context.Task = Task.Run(() => TailLogAsync(pid, context, startTime, cts.Token), cts.Token);
         }
         else
         {
+            if (!string.IsNullOrEmpty(logPath))
+            {
+                _claimedPaths.TryRemove(logPath, out _);
+            }
             cts.Dispose();
         }
     }
@@ -80,6 +99,10 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
     {
         if (_activeWatchers.TryRemove(pid, out WatcherContext? context))
         {
+            if (!string.IsNullOrEmpty(context.LogPath))
+            {
+                _claimedPaths.TryRemove(context.LogPath, out _);
+            }
             context.Dispose();
             try
             {
@@ -92,8 +115,9 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
         }
     }
 
-    private string? ResolveLogFile(int pid, DateTimeOffset startTime)
+    private string? ResolveLogFile(int pid, DateTimeOffset startTime, out bool ambiguous)
     {
+        ambiguous = false;
         try
         {
             if (!Directory.Exists(_logsDirectory))
@@ -113,22 +137,30 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
             }
 
             HashSet<string> assignedPaths = new(
-                _activeWatchers.Values.Select(v => v.LogPath),
+                _activeWatchers.Values
+                    .Select(v => v.LogPath)
+                    .Where(p => !string.IsNullOrEmpty(p))!,
                 StringComparer.OrdinalIgnoreCase);
 
-            // Bind only when exactly one unassigned log file was created within 20s of process start
+            // Bind only when exactly one unassigned log file was created near process start
             List<FileInfo> candidates = files
                 .Where(f => !assignedPaths.Contains(f.FullName) &&
-                            Math.Abs((f.CreationTimeUtc - startTime.UtcDateTime).TotalSeconds) <= 20)
+                            !_claimedPaths.ContainsKey(f.FullName) &&
+                            (f.CreationTimeUtc - startTime.UtcDateTime).TotalSeconds is >= -5 and <= 20)
                 .ToList();
 
             if (candidates.Count == 1)
             {
+                _claimedPaths[candidates[0].FullName] = 0;
                 return candidates[0].FullName;
             }
 
-            // Ambiguous mapping: do not monitor that session and log a warning (counts only)
-            LogAmbiguousMapping(_logger, pid, candidates.Count);
+            if (candidates.Count > 1)
+            {
+                ambiguous = true;
+                LogAmbiguousMapping(_logger, pid, candidates.Count);
+            }
+
             return null;
         }
         catch (Exception ex)
@@ -142,9 +174,31 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
     {
         try
         {
+            string? logPath = context.LogPath;
+            for (int attempt = 0; logPath == null && attempt < 20 && !ct.IsCancellationRequested; attempt++)
+            {
+                await Task.Delay(500, ct).ConfigureAwait(false);
+                logPath = ResolveLogFile(pid, startTime, out bool ambiguous);
+                if (ambiguous)
+                {
+                    return;
+                }
+            }
+
+            if (string.IsNullOrEmpty(logPath) || !File.Exists(logPath))
+            {
+                return;
+            }
+
+            if (context.LogPath == null)
+            {
+                context.LogPath = logPath;
+                LogStartedWatching(_logger, pid, logPath);
+            }
+
             // Open with FileShare.ReadWrite, never lock exclusively
             await using FileStream stream = new(
-                context.LogPath,
+                logPath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.ReadWrite);
@@ -164,7 +218,7 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
                             // Never copy full log lines into app logs or diagnostics, only the matched keyword
                             LogDisconnectDetected(_logger, pid, keyword);
                             GhostDisconnectDetected?.Invoke(pid, keyword);
-                            return;
+                            break;
                         }
                     }
                 }
@@ -198,11 +252,11 @@ public sealed partial class RobloxLogWatcher : IRobloxLogWatcher
 
     private sealed class WatcherContext : IDisposable
     {
-        public string LogPath { get; }
+        public string? LogPath { get; set; }
         public CancellationTokenSource Cts { get; }
         public Task? Task { get; set; }
 
-        public WatcherContext(string logPath, CancellationTokenSource cts)
+        public WatcherContext(string? logPath, CancellationTokenSource cts)
         {
             LogPath = logPath;
             Cts = cts;

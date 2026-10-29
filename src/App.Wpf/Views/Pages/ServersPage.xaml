@@ -14,113 +14,141 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Page.Resources>
 
-    <Grid Margin="{StaticResource MarginLarge}">
+    <Grid Margin="10,6">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Page Header -->
-        <TextBlock Grid.Row="0"
-                   Text="{x:Static res:Strings.ServersPageTitle}"
-                   Style="{StaticResource PageTitleStyle}"
-                   Margin="{StaticResource MarginBottomMedium}" />
+        <!-- Single Compact Toolbar Bar: Query, Sort, Refresh/LoadMore, Follow Target & Live Join Status -->
+        <Border Grid.Row="0"
+                AutomationProperties.AutomationId="Servers_CompactToolbar"
+                Style="{StaticResource CommandBarCardStyle}"
+                Padding="10,6"
+                Margin="0,0,0,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <!-- Controls Toolbar -->
-        <Grid Grid.Row="1" Margin="{StaticResource MarginBase}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+                <!-- Page Icon + Title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <Border Style="{StaticResource SectionIconBadgeStyle}">
+                        <ui:SymbolIcon Symbol="Server24"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="{x:Static res:Strings.ServersPageTitle}"
+                               Style="{StaticResource PageTitleStyle}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
 
-            <ui:TextBox Grid.Column="0"
-                        AutomationProperties.AutomationId="Servers_PlaceIdBox"
-                        Text="{Binding PlaceIdText, UpdateSourceTrigger=PropertyChanged}"
-                        PlaceholderText="{x:Static res:Strings.PlaceIdLabel}"
-                        Width="180"
-                        Margin="{StaticResource MarginTight}" />
+                <ui:TextBox Grid.Column="1"
+                            AutomationProperties.AutomationId="Servers_PlaceIdBox"
+                            Text="{Binding PlaceIdText, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="{x:Static res:Strings.PlaceIdLabel}"
+                            Icon="{ui:SymbolIcon Games24}"
+                            Width="160"
+                            VerticalAlignment="Center"
+                            Margin="0,0,6,0" />
 
-            <ComboBox Grid.Column="1"
-                      AutomationProperties.AutomationId="Servers_SortComboBox"
-                      SelectedIndex="{Binding SelectedSortIndex}"
-                      Width="200"
-                      Margin="{StaticResource MarginTight}">
-                <ComboBoxItem Content="{x:Static res:Strings.SortAscending}" />
-                <ComboBoxItem Content="{x:Static res:Strings.SortDescending}" />
-            </ComboBox>
+                <ComboBox Grid.Column="2"
+                          AutomationProperties.AutomationId="Servers_SortComboBox"
+                          SelectedIndex="{Binding SelectedSortIndex}"
+                          Width="150"
+                          VerticalAlignment="Center"
+                          Margin="0,0,6,0">
+                    <ComboBoxItem Content="{x:Static res:Strings.SortAscending}" />
+                    <ComboBoxItem Content="{x:Static res:Strings.SortDescending}" />
+                </ComboBox>
 
-            <Border Grid.Column="2" Style="{StaticResource ToolbarSeparatorStyle}" />
-
-            <!-- Join queue status: only visible while a sequential server join is waiting/launching -->
-            <StackPanel Grid.Column="4"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Margin="{StaticResource MarginTight}"
-                        Visibility="{Binding IsJoining, Converter={StaticResource BoolToVis}}">
-                <ui:ProgressRing IsIndeterminate="True"
-                                 Width="16"
-                                 Height="16"
-                                 Margin="0,0,8,0" />
-                <TextBlock AutomationProperties.AutomationId="Servers_JoinStatusText"
-                           Text="{Binding JoinStatusText}"
-                           FontWeight="SemiBold"
+                <ui:Button Grid.Column="3"
+                           AutomationProperties.AutomationId="Servers_RefreshButton"
+                           Content="{x:Static res:Strings.Refresh}"
+                           Icon="{ui:SymbolIcon ArrowSync24}"
+                           Appearance="Primary"
+                           Padding="10,5"
+                           CornerRadius="{StaticResource RadiusMedium}"
                            VerticalAlignment="Center"
-                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
-                <ui:Button AutomationProperties.AutomationId="Servers_CancelJoinButton"
-                           Content="{x:Static res:Strings.Cancel}"
-                           Icon="{ui:SymbolIcon Dismiss24}"
-                           Command="{Binding CancelJoinCommand}"
-                           Margin="8,0,0,0" />
-            </StackPanel>
+                           Margin="0,0,6,0"
+                           Command="{Binding RefreshCommand}" />
 
-            <ui:Button Grid.Column="3"
-                       AutomationProperties.AutomationId="Servers_RefreshButton"
-                       Content="{x:Static res:Strings.Refresh}"
-                       Icon="{ui:SymbolIcon ArrowSync24}"
-                       Appearance="Primary"
-                       Margin="{StaticResource MarginTight}"
-                       Command="{Binding RefreshCommand}" />
+                <ui:Button Grid.Column="4"
+                           AutomationProperties.AutomationId="Servers_LoadMoreButton"
+                           Content="{x:Static res:Strings.LoadMore}"
+                           Icon="{ui:SymbolIcon ArrowDown24}"
+                           Padding="10,5"
+                           CornerRadius="{StaticResource RadiusMedium}"
+                           VerticalAlignment="Center"
+                           Command="{Binding LoadMoreCommand}"
+                           IsEnabled="{Binding HasNextPage}" />
 
-            <ui:Button Grid.Column="5"
-                       AutomationProperties.AutomationId="Servers_LoadMoreButton"
-                       Content="{x:Static res:Strings.LoadMore}"
-                       Icon="{ui:SymbolIcon ArrowDown24}"
-                       Command="{Binding LoadMoreCommand}"
-                       IsEnabled="{Binding HasNextPage}" />
+                <Border Grid.Column="5" Style="{StaticResource ToolbarSeparatorStyle}" Margin="8,0" />
 
-            <!-- Follow a player: joins the exact server a target username is in -->
-            <StackPanel Grid.Row="1"
-                        Grid.ColumnSpan="6"
-                        Orientation="Horizontal"
-                        Margin="0,8,0,0">
-                <ui:TextBox AutomationProperties.AutomationId="Servers_FollowTargetBox"
+                <ui:TextBox Grid.Column="6"
+                            AutomationProperties.AutomationId="Servers_FollowTargetBox"
                             Text="{Binding FollowTargetUsername, UpdateSourceTrigger=PropertyChanged}"
                             PlaceholderText="{x:Static res:Strings.FollowTargetLabel}"
                             ToolTip="{x:Static res:Strings.FollowTargetHint}"
                             Icon="{ui:SymbolIcon Person24}"
-                            Width="388"
-                            Margin="{StaticResource MarginTight}" />
-                <ui:Button AutomationProperties.AutomationId="Servers_FollowTargetButton"
+                            VerticalAlignment="Center"
+                            Margin="0,0,6,0" />
+
+                <ui:Button Grid.Column="7"
+                           AutomationProperties.AutomationId="Servers_FollowTargetButton"
                            Content="{x:Static res:Strings.FollowTargetJoin}"
                            Icon="{ui:SymbolIcon Play24}"
                            Appearance="Success"
-                           Margin="{StaticResource MarginTight}"
+                           Padding="12,5"
+                           CornerRadius="{StaticResource RadiusMedium}"
+                           VerticalAlignment="Center"
                            Command="{Binding FollowTargetCommand}" />
-            </StackPanel>
-        </Grid>
 
-        <!-- Data Grid Area: Elevated Container -->
-        <Border Grid.Row="2" Style="{StaticResource ElevatedContainerStyle}">
+                <!-- Join queue status -->
+                <Border Grid.Column="8"
+                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                        BorderBrush="{DynamicResource AccentBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusSmall}"
+                        Padding="8,3"
+                        Margin="6,0,0,0"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsJoining, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:ProgressRing IsIndeterminate="True"
+                                         Width="14"
+                                         Height="14"
+                                         Margin="0,0,6,0" />
+                        <TextBlock AutomationProperties.AutomationId="Servers_JoinStatusText"
+                                   Text="{Binding JoinStatusText}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <ui:Button AutomationProperties.AutomationId="Servers_CancelJoinButton"
+                                   AutomationProperties.Name="{x:Static res:Strings.Cancel}"
+                                   Content="{x:Static res:Strings.Cancel}"
+                                   Icon="{ui:SymbolIcon Dismiss24}"
+                                   Padding="6,2"
+                                   Command="{Binding CancelJoinCommand}"
+                                   Margin="6,0,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Viewport-Fitted Server Grid Area -->
+        <Border Grid.Row="1" Style="{StaticResource ElevatedContainerStyle}">
             <Grid>
                 <ui:DataGrid ItemsSource="{Binding Servers}"
                              AutomationProperties.AutomationId="Servers_DataGrid"
@@ -130,7 +158,7 @@
                              IsReadOnly="True"
                              SelectionMode="Single"
                              GridLinesVisibility="None"
-                             RowHeight="36"
+                             RowHeight="28"
                              Background="{DynamicResource CardBackgroundBrush}"
                              RowBackground="{DynamicResource ControlFillColorDefaultBrush}"
                              AlternatingRowBackground="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -143,71 +171,90 @@
                              VirtualizingPanel.VirtualizationMode="Recycling"
                              VirtualizingPanel.ScrollUnit="Pixel"
                              ScrollViewer.CanContentScroll="True"
-                             ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                <ui:DataGrid.Columns>
-                    <!-- Server ID (Monospace) -->
-                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnServerId}"
-                                            Width="280"
-                                            MinWidth="200">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Id}"
-                                           Style="{StaticResource MonospaceTextStyle}" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ui:DataGrid.Columns>
+                        <!-- Server ID (Monospace) -->
+                        <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnServerId}"
+                                                Width="300"
+                                                MinWidth="200">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Id}"
+                                               Margin="8,0"
+                                               Style="{StaticResource MonospaceTextStyle}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPlayers}"
-                                            SortMemberPath="Playing"
-                                            Width="120"
-                                            MinWidth="90">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock VerticalAlignment="Center">
-                                    <TextBlock.Text>
-                                        <MultiBinding StringFormat="{}{0}/{1}">
-                                            <Binding Path="Playing" />
-                                            <Binding Path="MaxPlayers" />
-                                        </MultiBinding>
-                                    </TextBlock.Text>
-                                </TextBlock>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnFps}"
-                                        Binding="{Binding Fps, StringFormat='{}{0:F1}'}"
-                                        Width="100"
-                                        MinWidth="80" />
-                    <DataGridTextColumn Header="{x:Static res:Strings.ColumnPing}"
-                                        Binding="{Binding Ping, StringFormat='{}{0} ms'}"
-                                        Width="100"
-                                        MinWidth="80" />
-                    <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAction}"
-                                            Width="*"
-                                            MinWidth="260">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <ui:Button Content="{x:Static res:Strings.JoinWithAccount}"
-                                               Icon="{ui:SymbolIcon Play24}"
-                                               Appearance="Success"
-                                               Margin="{StaticResource MarginTight}"
-                                               Command="{Binding DataContext.JoinWithAccountCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
-                                               CommandParameter="{Binding}" />
-                                    <ui:Button Content="{x:Static res:Strings.CopyServerId}"
-                                               Icon="{ui:SymbolIcon Copy24}"
-                                               Command="{Binding DataContext.CopyServerIdCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
-                                               CommandParameter="{Binding}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </ui:DataGrid.Columns>
-            </ui:DataGrid>
+                        <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnPlayers}"
+                                                SortMemberPath="Playing"
+                                                Width="120"
+                                                MinWidth="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource RadiusPill}"
+                                            Padding="8,1"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0} / {1}">
+                                                    <Binding Path="Playing" />
+                                                    <Binding Path="MaxPlayers" />
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="{x:Static res:Strings.ColumnFps}"
+                                            Binding="{Binding Fps, StringFormat='{}{0:F1}'}"
+                                            Width="90"
+                                            MinWidth="70" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.ColumnPing}"
+                                            Binding="{Binding Ping, StringFormat='{}{0} ms'}"
+                                            Width="100"
+                                            MinWidth="75" />
+                        <DataGridTemplateColumn Header="{x:Static res:Strings.ColumnAction}"
+                                                Width="*"
+                                                MinWidth="240">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:Button Content="{x:Static res:Strings.JoinWithAccount}"
+                                                   AutomationProperties.Name="{x:Static res:Strings.JoinWithAccount}"
+                                                   Icon="{ui:SymbolIcon Play24}"
+                                                   Appearance="Success"
+                                                   Padding="10,2"
+                                                   CornerRadius="{StaticResource RadiusSmall}"
+                                                   Margin="0,0,6,0"
+                                                   Command="{Binding DataContext.JoinWithAccountCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
+                                                   CommandParameter="{Binding}" />
+                                        <ui:Button Content="{x:Static res:Strings.CopyServerId}"
+                                                   AutomationProperties.Name="{x:Static res:Strings.CopyServerId}"
+                                                   Icon="{ui:SymbolIcon Copy24}"
+                                                   Padding="8,2"
+                                                   CornerRadius="{StaticResource RadiusSmall}"
+                                                   Command="{Binding DataContext.CopyServerIdCommand, RelativeSource={RelativeSource AncestorType=ui:DataGrid}}"
+                                                   CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </ui:DataGrid.Columns>
+                </ui:DataGrid>
 
                 <!-- Loading indicator -->
                 <ProgressBar IsIndeterminate="True"
-                             Height="4"
+                             Height="3"
                              VerticalAlignment="Top"
                              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
 
@@ -216,10 +263,10 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVis}}">
                     <ui:SymbolIcon Symbol="Server24"
-                                   FontSize="48"
+                                   FontSize="36"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center"
-                                   Margin="{StaticResource MarginMedium}"
+                                   Margin="{StaticResource MarginBase}"
                                    Opacity="0.6" />
                     <TextBlock Text="{x:Static res:Strings.NoServersFound}"
                                Style="{StaticResource EmptyStateTitleStyle}" />
@@ -232,23 +279,24 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
                     <ui:SymbolIcon Symbol="Warning24"
-                                   FontSize="48"
+                                   FontSize="36"
                                    Foreground="{DynamicResource StatusErrorForegroundBrush}"
                                    HorizontalAlignment="Center"
-                                   Margin="{StaticResource MarginMedium}" />
+                                   Margin="{StaticResource MarginBase}" />
                     <TextBlock Text="{Binding ErrorMessage}"
                                Style="{StaticResource EmptyStateTitleStyle}" />
                     <TextBlock Text="{x:Static res:Strings.Servers_ErrorHint}"
                                Style="{StaticResource EmptyStateHintStyle}" />
                     <ui:Button Content="{x:Static res:Strings.Retry}"
                                AutomationProperties.AutomationId="Servers_RetryButton"
+                               AutomationProperties.Name="{x:Static res:Strings.Retry}"
                                Icon="{ui:SymbolIcon ArrowSync24}"
                                Appearance="Primary"
                                HorizontalAlignment="Center"
-                               Margin="{StaticResource MarginBase}"
+                               Margin="{StaticResource MarginTight}"
                                Command="{Binding RefreshCommand}" />
                 </StackPanel>
-        </Grid>
-    </Border>
-</Grid>
+            </Grid>
+        </Border>
+    </Grid>
 </Page>

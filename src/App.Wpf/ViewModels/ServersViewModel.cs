@@ -1,4 +1,4 @@
-namespace RbxManager.App.ViewModels;
+﻿namespace RbxManager.App.ViewModels;
 
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RbxManager.App.Resources;
 using RbxManager.App.Views.Controls;
+using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Models;
@@ -150,6 +151,11 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public async Task JoinWithAccountAsync(ServerInfo? server)
     {
+        if (IsJoining)
+        {
+            return;
+        }
+
         if (server == null || !long.TryParse(PlaceIdText.Trim(), out long placeId) || placeId <= 0)
         {
             _snackbarService.Show(Strings.ErrorTitle, Strings.PlaceIdRequired, ControlAppearance.Danger);
@@ -170,6 +176,11 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public async Task FollowTargetAsync()
     {
+        if (IsJoining)
+        {
+            return;
+        }
+
         string targetUsername = FollowTargetUsername.Trim();
         if (targetUsername.Length == 0)
         {
@@ -235,7 +246,19 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                 Content = pickerControl
             });
 
-        return dialogResult == ContentDialogResult.Primary ? pickerControl.GetSelectedAccounts() : [];
+        IReadOnlyList<Account> selected = dialogResult == ContentDialogResult.Primary
+            ? pickerControl.GetSelectedAccounts()
+            : [];
+        HashSet<Account> kept = new(selected);
+        foreach (Account account in accounts)
+        {
+            if (!kept.Contains(account))
+            {
+                account.Cookie.Dispose();
+            }
+        }
+
+        return selected;
     }
 
     /// <param name="buildRequest">Returns null to abort the remaining queue (e.g. target went offline).</param>
@@ -243,6 +266,11 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         IReadOnlyList<Account> queue,
         Func<Account, CancellationToken, Task<LaunchRequest?>> buildRequest)
     {
+        if (IsJoining)
+        {
+            return;
+        }
+
         if (_instanceGate is { IsMultiInstanceEnabled: false })
         {
             _instanceGate.TryEnable();
@@ -254,6 +282,7 @@ public partial class ServersViewModel : ObservableObject, IDisposable
 
         int successCount = 0;
         int currentIndex = 0;
+        int consecutiveRateLimits = 0;
         bool aborted = false;
         CancellationTokenSource joinCts = new();
         _joinCts = joinCts;
@@ -268,31 +297,156 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                 LaunchRequest? request = await buildRequest(account, ct);
                 if (request == null)
                 {
-                    aborted = true;
-                    break;
+                    if (queue.Count == 1)
+                    {
+                        aborted = true;
+                        break;
+                    }
+
+                    continue;
                 }
 
-                JoinStatusText = string.Create(
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    $"Launching {currentIndex} / {queue.Count}: {account.Alias}");
-                RunningSession? session = await _sessionTracker.TrackLaunchAsync(
-                    account.Id,
-                    request,
-                    () => _launcher.LaunchAsync(request, ct));
+                bool rateLimited = false;
 
-                if (session != null)
+                // Per-account isolation: a vault write or recovery failure for one account must never abort
+                // the remaining queue. Only cancellation is allowed to escape the loop.
+                try
                 {
-                    successCount++;
-                    account.ActiveProcessId = session.ProcessId;
+                    JoinStatusText = string.Create(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        $"Launching {currentIndex} / {queue.Count}: {account.Alias}");
+                    Result? launchResult = null;
+                    RunningSession? session = await _sessionTracker.TrackLaunchAsync(
+                        account.Id,
+                        request,
+                        async () =>
+                        {
+                            launchResult = await _launcher.LaunchAsync(request, ct);
+                            return launchResult;
+                        },
+                        ct);
+
+                    if (string.Equals(launchResult?.ErrorCode, AuthErrorCodes.Moderated, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Account moderated = account with
+                        {
+                            Cookie = account.Cookie.Clone(),
+                            Status = AccountStatus.Error,
+                            LastCheckedAt = DateTimeOffset.UtcNow
+                        };
+                        try
+                        {
+                            await _accountStore.UpdateAsync(moderated, CancellationToken.None);
+                        }
+                        finally
+                        {
+                            moderated.Cookie.Dispose();
+                        }
+
+                        JoinStatusText = AccountsViewModel.RecoveryWaitingStatusText;
+                        Services.RobloxWindowSizer.SetSessionOverride(
+                            account.Id,
+                            Services.RobloxWindowSizer.RecoveryWidth,
+                            Services.RobloxWindowSizer.RecoveryHeight);
+
+                        string? recoveredCookie = await Services.IncognitoBrowserLauncher
+                            .LaunchRecoveryAsync(account.Cookie, ct);
+                        if (!string.IsNullOrWhiteSpace(recoveredCookie))
+                        {
+                            Account reactivated = account with
+                            {
+                                Cookie = SecretValue.FromString(recoveredCookie.Trim()),
+                                Status = AccountStatus.Valid,
+                                LastCheckedAt = DateTimeOffset.UtcNow
+                            };
+                            try
+                            {
+                                await _accountStore.UpdateAsync(reactivated, CancellationToken.None);
+                            }
+                            finally
+                            {
+                                reactivated.Cookie.Dispose();
+                            }
+                        }
+
+                        session = await _sessionTracker.TrackLaunchAsync(
+                            account.Id,
+                            request,
+                            async () =>
+                            {
+                                launchResult = await _launcher.LaunchAsync(request, ct);
+                                return launchResult;
+                            },
+                            ct);
+
+                        if (launchResult is not { IsSuccess: true })
+                        {
+                            Services.RobloxWindowSizer.CancelSessionOverride(account.Id);
+                        }
+                    }
+
+                    if (session != null || launchResult is { IsSuccess: true })
+                    {
+                        successCount++;
+                        consecutiveRateLimits = 0;
+                        if (session != null)
+                        {
+                            account.ActiveProcessId = session.ProcessId;
+                        }
+                    }
+                    else if (string.Equals(launchResult?.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
+                    {
+                        rateLimited = true;
+                        consecutiveRateLimits = LaunchBackoffPolicy.NextStrikeCount(consecutiveRateLimits);
+                        _snackbarService.Show(account.Alias, launchResult?.Error ?? Strings.ErrorTitle, ControlAppearance.Caution);
+                    }
+                    else if (string.Equals(launchResult?.ErrorCode, AuthErrorCodes.Expired, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Account expired = account with
+                        {
+                            Cookie = account.Cookie.Clone(),
+                            Status = AccountStatus.Expired,
+                            LastCheckedAt = DateTimeOffset.UtcNow
+                        };
+                        try
+                        {
+                            await _accountStore.UpdateAsync(expired, CancellationToken.None);
+                        }
+                        finally
+                        {
+                            expired.Cookie.Dispose();
+                        }
+                        _snackbarService.Show(account.Alias, launchResult?.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
+                    }
+                    else if (launchResult is { IsSuccess: false })
+                    {
+                        _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Serilog.Log.Warning(
+                        "Join queue item {AccountId} failed with {ExceptionType}; continuing with the next account.",
+                        account.Id.Value,
+                        ex.GetType().Name);
+                    _snackbarService.Show(account.Alias, Strings.ErrorTitle, ControlAppearance.Danger);
                 }
 
                 if (currentIndex < queue.Count)
                 {
-                    int randomSeconds = Random.Shared.Next(
-                        AccountsViewModel.MinSequentialLaunchDelaySeconds,
-                        AccountsViewModel.MaxSequentialLaunchDelaySeconds + 1);
+                    int configuredDelay = _settingsService?.CurrentSettings.LaunchDelaySeconds ?? 0;
+                    int pacingSeconds = Math.Max(
+                        configuredDelay,
+                        Random.Shared.Next(
+                            AccountsViewModel.MinSequentialLaunchDelaySeconds,
+                            AccountsViewModel.MaxSequentialLaunchDelaySeconds + 1));
+
+                    // Backoff only stretches the normal pacing; it must never shorten the gap after a 429.
+                    int waitSeconds = rateLimited
+                        ? Math.Max(pacingSeconds, LaunchBackoffPolicy.ComputeBackoffSeconds(consecutiveRateLimits))
+                        : pacingSeconds;
                     System.Text.CompositeFormat countdownFormat = System.Text.CompositeFormat.Parse(Strings.NextAccountCountdown);
-                    for (int remainingSeconds = randomSeconds; remainingSeconds >= 1; remainingSeconds--)
+                    for (int remainingSeconds = waitSeconds; remainingSeconds >= 1; remainingSeconds--)
                     {
                         ct.ThrowIfCancellationRequested();
                         JoinStatusText = string.Format(
@@ -312,6 +466,11 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         }
         finally
         {
+            foreach (Account account in queue)
+            {
+                account.Cookie.Dispose();
+            }
+
             if (ReferenceEquals(_joinCts, joinCts))
             {
                 _joinCts = null;

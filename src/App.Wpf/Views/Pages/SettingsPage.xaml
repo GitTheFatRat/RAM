@@ -11,672 +11,562 @@
     <Page.Resources>
         <Style x:Key="SettingLabelStyle" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="15" />
         </Style>
     </Page.Resources>
 
-    <Grid Margin="{StaticResource MarginLarge}">
+    <Grid Margin="10,6">
         <Grid.RowDefinitions>
-            <!-- Row 0: Page Title & Save Action Header -->
+            <!-- Row 0: Compact Header Bar & Save Action -->
             <RowDefinition Height="Auto" />
-            <!-- Row 1: Settings Cards Grid -->
+            <!-- Row 1: Viewport-Locked Multi-Column Bento Grid (All 8 Cards, Zero-Scroll) -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header: Title and Save Action Bar -->
-        <Grid Grid.Row="0" Margin="{StaticResource MarginBottomMedium}">
+        <!-- Compact Header & Save Action Bar -->
+        <Border Grid.Row="0" Style="{StaticResource CommandBarCardStyle}" Padding="10,5" Margin="4,0,4,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Style="{StaticResource SectionIconBadgeStyle}">
+                        <ui:SymbolIcon Symbol="Settings24"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="{x:Static resources:Strings.SettingsPageTitle}"
+                               Style="{StaticResource PageTitleStyle}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <ui:Button Grid.Column="1"
+                           Appearance="Primary"
+                           AutomationProperties.AutomationId="Settings_SaveButton"
+                           AutomationProperties.Name="{x:Static resources:Strings.Save}"
+                           Content="{x:Static resources:Strings.Save}"
+                           Icon="{ui:SymbolIcon Save24}"
+                           Command="{Binding SaveSettingsCommand}"
+                           Padding="14,5"
+                           CornerRadius="{StaticResource RadiusMedium}"
+                           MinWidth="110"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Zero-Scroll Multi-Column Bento Grid: All 8 Configuration Cards Visible Simultaneously -->
+        <Grid x:Name="SettingsBentoGrid"
+              AutomationProperties.AutomationId="Settings_BentoGrid"
+              Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1.15*" />
+                <ColumnDefinition Width="1.25*" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1.05*" />
+                <RowDefinition Height="1.05*" />
+                <RowDefinition Height="1.05*" />
+                <RowDefinition Height="0.85*" />
+            </Grid.RowDefinitions>
 
-            <TextBlock Grid.Column="0"
-                       Text="{x:Static resources:Strings.SettingsPageTitle}"
-                       Style="{StaticResource PageTitleStyle}"
-                       VerticalAlignment="Center" />
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 1 (Col 0, Row 0): Giao diện (Appearance)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="0" Grid.Row="0" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-            <ui:Button Grid.Column="1"
-                       Appearance="Primary"
-                       AutomationProperties.AutomationId="Settings_SaveButton"
-                       AutomationProperties.Name="{x:Static resources:Strings.Save}"
-                       Content="{x:Static resources:Strings.Save}"
-                       Icon="{ui:SymbolIcon Save24}"
-                       Command="{Binding SaveSettingsCommand}"
-                       MinWidth="130"
-                       VerticalAlignment="Center" />
-        </Grid>
-
-        <!-- Main Content: Settings Cards -->
-        <StackPanel Grid.Row="1" MaxWidth="860" HorizontalAlignment="Left">
-
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 1: Giao diện (Appearance)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.AppearanceSectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.AppearanceSectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="Color24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.AppearanceSectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.AppearanceSectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
+                    </StackPanel>
 
-                        <!-- Row 1: Language -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.LanguageLabel}"
-                                       Style="{StaticResource SettingLabelStyle}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static resources:Strings.LanguageLabel}" Style="{StaticResource SettingLabelStyle}" Margin="0,2,8,2" />
+                    <ComboBox Grid.Row="1" Grid.Column="1"
+                              SelectedValuePath="Tag"
+                              AutomationProperties.AutomationId="Settings_LanguageComboBox"
+                              AutomationProperties.Name="{x:Static resources:Strings.LanguageLabel}"
+                              SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
+                              Width="168"
+                              VerticalAlignment="Center">
+                        <ComboBoxItem Content="Tiếng Việt (vi-VN)" Tag="vi" />
+                        <ComboBoxItem Content="English (en-US)" Tag="en" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static resources:Strings.ThemeLabel}" Style="{StaticResource SettingLabelStyle}" Margin="0,2,8,2" />
+                    <ComboBox Grid.Row="2" Grid.Column="1"
+                              SelectedValuePath="Tag"
+                              AutomationProperties.AutomationId="Settings_ThemeComboBox"
+                              AutomationProperties.Name="{x:Static resources:Strings.ThemeLabel}"
+                              SelectedValue="{Binding SelectedTheme, Mode=TwoWay}"
+                              Width="168"
+                              VerticalAlignment="Center">
+                        <ComboBoxItem Content="{x:Static resources:Strings.ThemeDark}" Tag="Dark" />
+                        <ComboBoxItem Content="{x:Static resources:Strings.ThemeLight}" Tag="Light" />
+                        <ComboBoxItem Content="{x:Static resources:Strings.ThemeSystem}" Tag="System" />
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 2 (Col 0, Row 1): Khởi chạy (Launching)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="0" Grid.Row="1" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="Rocket24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.LaunchingSectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.LaunchingSectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
-                        <ComboBox Grid.Row="1" Grid.Column="1"
-                                  SelectedValuePath="Tag"
-                                  AutomationProperties.AutomationId="Settings_LanguageComboBox"
-                                  AutomationProperties.Name="{x:Static resources:Strings.LanguageLabel}"
-                                  SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
-                                  Width="260"
-                                  VerticalAlignment="Center">
-                            <ComboBoxItem Content="Tiếng Việt (vi-VN)" Tag="vi" />
-                            <ComboBoxItem Content="English (en-US)" Tag="en" />
-                        </ComboBox>
+                    </StackPanel>
 
-                        <!-- Divider -->
-                        <Rectangle Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
-
-                        <!-- Row 2: Theme -->
-                        <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.ThemeLabel}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                        </StackPanel>
-                        <ComboBox Grid.Row="3" Grid.Column="1"
-                                  SelectedValuePath="Tag"
-                                  AutomationProperties.AutomationId="Settings_ThemeComboBox"
-                                  AutomationProperties.Name="{x:Static resources:Strings.ThemeLabel}"
-                                  SelectedValue="{Binding SelectedTheme, Mode=TwoWay}"
-                                  Width="260"
-                                  VerticalAlignment="Center">
-                            <ComboBoxItem Content="{x:Static resources:Strings.ThemeDark}" Tag="Dark" />
-                            <ComboBoxItem Content="{x:Static resources:Strings.ThemeLight}" Tag="Light" />
-                            <ComboBoxItem Content="{x:Static resources:Strings.ThemeSystem}" Tag="System" />
-                        </ComboBox>
-                    </Grid>
-                </Border>
-
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 2: Khởi chạy (Launching)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.LaunchingSectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.LaunchingSectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
-                        </StackPanel>
-
-                        <!-- Row 1: Launch Delay -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.LaunchDelayLabel}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.LaunchDelayDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ui:NumberBox Grid.Row="1" Grid.Column="1"
-                                      AutomationProperties.AutomationId="Settings_LaunchDelayNumberBox"
-                                      AutomationProperties.Name="{x:Static resources:Strings.LaunchDelayLabel}"
-                                      Value="{Binding LaunchDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      Minimum="1"
-                                      Maximum="600"
-                                      SpinButtonPlacementMode="Inline"
-                                      Width="260"
-                                      VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
-
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 3: Tự động vào lại (Auto-rejoin)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
-                        </StackPanel>
-
-                        <!-- Row 1: Rejoin Delay -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.RejoinDelayLabel}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                        </StackPanel>
-                        <TextBox Grid.Row="1" Grid.Column="1"
-                                 AutomationProperties.AutomationId="Settings_RejoinDelayTextBox"
-                                 AutomationProperties.Name="{x:Static resources:Strings.RejoinDelayLabel}"
-                                 Text="{Binding RejoinDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="260"
-                                 VerticalAlignment="Center" />
-
-                        <!-- Divider 1 -->
-                        <Rectangle Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
-
-                        <!-- Row 2: Rejoin Max Attempts -->
-                        <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.RejoinMaxAttemptsLabel}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                        </StackPanel>
-                        <TextBox Grid.Row="3" Grid.Column="1"
-                                 AutomationProperties.AutomationId="Settings_RejoinMaxAttemptsTextBox"
-                                 AutomationProperties.Name="{x:Static resources:Strings.RejoinMaxAttemptsLabel}"
-                                 Text="{Binding RejoinMaxAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="260"
-                                 VerticalAlignment="Center" />
-
-                        <!-- Divider 2 -->
-                        <Rectangle Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
-
-                        <!-- Row 3: Smart Server Hopping -->
-                        <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHopping}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHoppingDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Row="5" Grid.Column="1"
-                                         AutomationProperties.AutomationId="Settings_SmartServerHoppingToggle"
-                                         AutomationProperties.Name="{x:Static resources:Strings.EnableSmartServerHopping}"
-                                         IsChecked="{Binding EnableSmartServerHopping, Mode=OneWay}"
-                                         Command="{Binding EnableSmartServerHoppingToggledCommand}"
-                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                         VerticalAlignment="Center" />
-
-                        <!-- Divider 3 -->
-                        <Rectangle Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
-
-                        <!-- Row 4: Ghost Disconnect Detection -->
-                        <StackPanel Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.GhostDisconnectMode}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.GhostDisconnectModeDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ComboBox Grid.Row="7" Grid.Column="1"
-                                  SelectedValuePath="Tag"
-                                  AutomationProperties.AutomationId="Settings_GhostDisconnectComboBox"
-                                  AutomationProperties.Name="{x:Static resources:Strings.GhostDisconnectMode}"
-                                  SelectedValue="{Binding SelectedGhostDisconnectMode, Mode=TwoWay}"
-                                  Width="260"
-                                  VerticalAlignment="Center">
-                            <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_Off}" Tag="{x:Static processes:GhostDisconnectMode.Off}" />
-                            <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_NotifyOnly}" Tag="{x:Static processes:GhostDisconnectMode.NotifyOnly}" />
-                            <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_KillAndRejoin}" Tag="{x:Static processes:GhostDisconnectMode.KillAndRejoin}" />
-                        </ComboBox>
-
-                        <!-- Divider 4 -->
-                        <Rectangle Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
-
-                        <!-- Row 5: Auto-Reconnect (hang + disconnect recovery) -->
-                        <StackPanel Grid.Row="9" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.EnableAutoReconnect}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.EnableAutoReconnectDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Row="9" Grid.Column="1"
-                                         AutomationProperties.AutomationId="Settings_AutoReconnectToggle"
-                                         AutomationProperties.Name="{x:Static resources:Strings.EnableAutoReconnect}"
-                                         IsChecked="{Binding EnableAutoReconnect, Mode=OneWay}"
-                                         Command="{Binding EnableAutoReconnectToggledCommand}"
-                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                         VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
-
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 4: Đa phiên bản (Multi-Instance)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
-                        </StackPanel>
-
-                        <!-- Row 1: Multi-Instance Toggle -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.MultiInstanceLabel}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                        </StackPanel>
-                        <CheckBox Grid.Row="1" Grid.Column="1"
-                                  AutomationProperties.AutomationId="Settings_MultiInstanceToggle"
-                                  AutomationProperties.Name="{x:Static resources:Strings.MultiInstanceLabel}"
-                                  IsChecked="{Binding MultiInstanceEnabled, Mode=TwoWay}"
-                                  Command="{Binding MultiInstanceToggledCommand}"
-                                  CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                    <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <TextBlock Text="{x:Static resources:Strings.LaunchDelayLabel}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.LaunchDelayDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <ui:NumberBox Grid.Row="1" Grid.Column="1"
+                                  AutomationProperties.AutomationId="Settings_LaunchDelayNumberBox"
+                                  AutomationProperties.Name="{x:Static resources:Strings.LaunchDelayLabel}"
+                                  Value="{Binding LaunchDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Minimum="1"
+                                  Maximum="600"
+                                  SpinButtonPlacementMode="Inline"
+                                  Width="130"
                                   VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
+                </Grid>
+            </Border>
 
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 5: Bảo mật (Security)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 4 (Col 0, Row 2): Đa phiên bản (Multi-Instance)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="0" Grid.Row="2" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.SecuritySectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.SecuritySectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="WindowMultiple20" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.MultiInstanceSectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
+                    </StackPanel>
 
-                        <!-- Row 1: Master Password -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.EnableMasterPassword}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.EnableMasterPasswordDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static resources:Strings.MultiInstanceLabel}" Style="{StaticResource SettingLabelStyle}" Margin="0,0,8,0" />
+                    <CheckBox Grid.Row="1" Grid.Column="1"
+                              AutomationProperties.AutomationId="Settings_MultiInstanceToggle"
+                              AutomationProperties.Name="{x:Static resources:Strings.MultiInstanceLabel}"
+                              IsChecked="{Binding MultiInstanceEnabled, Mode=TwoWay}"
+                              Command="{Binding MultiInstanceToggledCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                              VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 5 (Col 0, Row 3): Bảo mật (Security)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="0" Grid.Row="3" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="ShieldKeyhole24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.SecuritySectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.SecuritySectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
-                        <CheckBox Grid.Row="1" Grid.Column="1"
-                                  AutomationProperties.AutomationId="Settings_MasterPasswordToggle"
-                                  AutomationProperties.Name="{x:Static resources:Strings.EnableMasterPassword}"
-                                  IsChecked="{Binding IsMasterPasswordEnabled, Mode=OneWay}"
-                                  Command="{Binding MasterPasswordToggledCommand}"
-                                  CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                  VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
+                    </StackPanel>
 
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 6: Tối ưu tài nguyên & RAM (Performance & Optimization)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <TextBlock Text="{x:Static resources:Strings.EnableMasterPassword}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.EnableMasterPasswordDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <CheckBox Grid.Row="1" Grid.Column="1"
+                              AutomationProperties.AutomationId="Settings_MasterPasswordToggle"
+                              AutomationProperties.Name="{x:Static resources:Strings.EnableMasterPassword}"
+                              IsChecked="{Binding IsMasterPasswordEnabled, Mode=OneWay}"
+                              Command="{Binding MasterPasswordToggledCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                              VerticalAlignment="Center" />
+                </Grid>
+            </Border>
 
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 3 (Col 1, Row 0..2): Tự động vào lại (Auto-rejoin)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="1" Grid.Row="0" Grid.RowSpan="3" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="0.75*" />
+                        <RowDefinition Height="0.75*" />
+                        <RowDefinition Height="0.9*" />
+                        <RowDefinition Height="0.9*" />
+                        <RowDefinition Height="1.7*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="ArrowSync24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.AutoRejoinSectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
+                    </StackPanel>
 
-                        <!-- Row 1: Throttle Background Roblox -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRoblox}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRobloxDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
+                    <!-- Row 1: Rejoin Delay -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static resources:Strings.RejoinDelayLabel}" Style="{StaticResource SettingLabelStyle}" Margin="0,2,8,2" />
+                    <TextBox Grid.Row="1" Grid.Column="1"
+                             AutomationProperties.AutomationId="Settings_RejoinDelayTextBox"
+                             AutomationProperties.Name="{x:Static resources:Strings.RejoinDelayLabel}"
+                             Text="{Binding RejoinDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Width="120"
+                             VerticalAlignment="Center" />
+
+                    <!-- Row 2: Rejoin Max Attempts -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static resources:Strings.RejoinMaxAttemptsLabel}" Style="{StaticResource SettingLabelStyle}" Margin="0,2,8,2" />
+                    <TextBox Grid.Row="2" Grid.Column="1"
+                             AutomationProperties.AutomationId="Settings_RejoinMaxAttemptsTextBox"
+                             AutomationProperties.Name="{x:Static resources:Strings.RejoinMaxAttemptsLabel}"
+                             Text="{Binding RejoinMaxAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Width="120"
+                             VerticalAlignment="Center" />
+
+                    <!-- Row 3: Smart Server Hopping -->
+                    <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,8,2">
+                        <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHopping}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.EnableSmartServerHoppingDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Row="3" Grid.Column="1"
+                                     AutomationProperties.AutomationId="Settings_SmartServerHoppingToggle"
+                                     AutomationProperties.Name="{x:Static resources:Strings.EnableSmartServerHopping}"
+                                     IsChecked="{Binding EnableSmartServerHopping, Mode=OneWay}"
+                                     Command="{Binding EnableSmartServerHoppingToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     VerticalAlignment="Center" />
+
+                    <!-- Row 4: Ghost Disconnect Detection -->
+                    <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,8,2">
+                        <TextBlock Text="{x:Static resources:Strings.GhostDisconnectMode}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.GhostDisconnectModeDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <ComboBox Grid.Row="4" Grid.Column="1"
+                              SelectedValuePath="Tag"
+                              AutomationProperties.AutomationId="Settings_GhostDisconnectComboBox"
+                              AutomationProperties.Name="{x:Static resources:Strings.GhostDisconnectMode}"
+                              SelectedValue="{Binding SelectedGhostDisconnectMode, Mode=TwoWay}"
+                              Width="140"
+                              VerticalAlignment="Center">
+                        <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_Off}" Tag="{x:Static processes:GhostDisconnectMode.Off}" />
+                        <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_NotifyOnly}" Tag="{x:Static processes:GhostDisconnectMode.NotifyOnly}" />
+                        <ComboBoxItem Content="{x:Static resources:Strings.GhostDisconnectMode_KillAndRejoin}" Tag="{x:Static processes:GhostDisconnectMode.KillAndRejoin}" />
+                    </ComboBox>
+
+                    <!-- Row 5: Auto-Reconnect -->
+                    <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,8,2">
+                        <TextBlock Text="{x:Static resources:Strings.EnableAutoReconnect}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.EnableAutoReconnectDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Row="5" Grid.Column="1"
+                                     AutomationProperties.AutomationId="Settings_AutoReconnectToggle"
+                                     AutomationProperties.Name="{x:Static resources:Strings.EnableAutoReconnect}"
+                                     IsChecked="{Binding EnableAutoReconnect, Mode=OneWay}"
+                                     Command="{Binding EnableAutoReconnectToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 7 (Col 1, Row 3): Sao lưu & Khôi phục (Backup & Restore)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="1" Grid.Row="3" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="CloudArchive24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.BackupSectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.BackupSectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
-                        <CheckBox Grid.Row="1" Grid.Column="1"
-                                  AutomationProperties.AutomationId="Settings_ThrottleRobloxCheckbox"
-                                  AutomationProperties.Name="{x:Static resources:Strings.ThrottleBackgroundRoblox}"
-                                  IsChecked="{Binding ThrottleBackgroundRoblox, Mode=OneWay}"
-                                  Command="{Binding ThrottleBackgroundRobloxToggledCommand}"
-                                  CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                  VerticalAlignment="Center" />
+                    </StackPanel>
 
-                        <!-- Divider 1 -->
-                        <Rectangle Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:Button Content="{x:Static resources:Strings.ExportBackup}"
+                                   AutomationProperties.AutomationId="Settings_ExportBackupButton"
+                                   AutomationProperties.Name="{x:Static resources:Strings.ExportBackup}"
+                                   Icon="{ui:SymbolIcon ArrowUpload24}"
+                                   Padding="10,5"
+                                   CornerRadius="{StaticResource RadiusMedium}"
+                                   Margin="0,0,8,0"
+                                   Command="{Binding ExportBackupCommand}" />
+                        <ui:Button Content="{x:Static resources:Strings.ImportBackup}"
+                                   AutomationProperties.AutomationId="Settings_ImportBackupButton"
+                                   AutomationProperties.Name="{x:Static resources:Strings.ImportBackup}"
+                                   Icon="{ui:SymbolIcon ArrowDownload24}"
+                                   Padding="10,5"
+                                   CornerRadius="{StaticResource RadiusMedium}"
+                                   Command="{Binding ImportBackupCommand}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
 
-                        <!-- Row 2: Smart RAM Cleaner -->
-                        <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.EnableRamCleaner}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.EnableRamCleanerDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 6 (Col 2, Row 0..2): Tối ưu tài nguyên & RAM (Performance & Optimization)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="2" Grid.Row="0" Grid.RowSpan="3" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="0.8*" />
+                        <RowDefinition Height="0.8*" />
+                        <RowDefinition Height="0.65*" />
+                        <RowDefinition Height="0.8*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="1.35*" />
+                        <RowDefinition Height="1.6*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,4">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="TopSpeed24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.ResourceOptimizationSectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
-                        <ui:ToggleSwitch Grid.Row="3" Grid.Column="1"
-                                         AutomationProperties.AutomationId="Settings_RamCleanerToggle"
-                                         AutomationProperties.Name="{x:Static resources:Strings.EnableRamCleaner}"
-                                         IsChecked="{Binding EnableRamCleaner, Mode=OneWay}"
-                                         Command="{Binding EnableRamCleanerToggledCommand}"
-                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                         VerticalAlignment="Center" />
+                    </StackPanel>
 
-                        <!-- Divider 2 -->
-                        <Rectangle Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
+                    <!-- Row 1: Throttle Background Roblox -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,1,8,1">
+                        <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRoblox}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.ThrottleBackgroundRobloxDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <CheckBox Grid.Row="1" Grid.Column="1"
+                              AutomationProperties.AutomationId="Settings_ThrottleRobloxCheckbox"
+                              AutomationProperties.Name="{x:Static resources:Strings.ThrottleBackgroundRoblox}"
+                              IsChecked="{Binding ThrottleBackgroundRoblox, Mode=OneWay}"
+                              Command="{Binding ThrottleBackgroundRobloxToggledCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                              VerticalAlignment="Center" />
 
-                        <!-- Row 3: RAM Cleaner Interval -->
-                        <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.RamCleanerInterval}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.RamCleanerIntervalDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Slider Width="180"
-                                    AutomationProperties.AutomationId="Settings_RamCleanerSlider"
-                                    AutomationProperties.Name="{x:Static resources:Strings.RamCleanerInterval}"
-                                    Minimum="5"
-                                    Maximum="120"
-                                    TickFrequency="5"
-                                    IsSnapToTickEnabled="True"
-                                    Value="{Binding RamCleanerIntervalMinutes, Mode=TwoWay}"
-                                    IsEnabled="{Binding EnableRamCleaner}"
-                                    VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding RamCleanerIntervalDisplay}"
-                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                       VerticalAlignment="Center"
-                                       MinWidth="60"
-                                       Margin="8,0,0,0" />
-                        </StackPanel>
+                    <!-- Row 2: Smart RAM Cleaner -->
+                    <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,1,8,1">
+                        <TextBlock Text="{x:Static resources:Strings.EnableRamCleaner}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.EnableRamCleanerDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Row="2" Grid.Column="1"
+                                     AutomationProperties.AutomationId="Settings_RamCleanerToggle"
+                                     AutomationProperties.Name="{x:Static resources:Strings.EnableRamCleaner}"
+                                     IsChecked="{Binding EnableRamCleaner, Mode=OneWay}"
+                                     Command="{Binding EnableRamCleanerToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     VerticalAlignment="Center" />
 
-                        <!-- Divider 3 -->
-                        <Rectangle Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
+                    <!-- Row 3: RAM Cleaner Interval -->
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static resources:Strings.RamCleanerInterval}" Style="{StaticResource SettingLabelStyle}" Margin="0,1,8,1" />
+                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Slider Width="110"
+                                AutomationProperties.AutomationId="Settings_RamCleanerSlider"
+                                AutomationProperties.Name="{x:Static resources:Strings.RamCleanerInterval}"
+                                Minimum="5"
+                                Maximum="120"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True"
+                                Value="{Binding RamCleanerIntervalMinutes, Mode=TwoWay}"
+                                IsEnabled="{Binding EnableRamCleaner}"
+                                VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding RamCleanerIntervalDisplay}"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   FontWeight="SemiBold"
+                                   FontSize="11"
+                                   VerticalAlignment="Center"
+                                   MinWidth="48"
+                                   Margin="6,0,0,0" />
+                    </StackPanel>
 
-                        <!-- Row 4: Force Custom Window Resolution Toggle -->
-                        <StackPanel Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.EnableCustomResolution}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.EnableCustomResolutionDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Row="7" Grid.Column="1"
-                                         AutomationProperties.AutomationId="Settings_CustomResolutionToggle"
-                                         AutomationProperties.Name="{x:Static resources:Strings.EnableCustomResolution}"
-                                         IsChecked="{Binding EnableCustomResolution, Mode=TwoWay}"
-                                         Command="{Binding EnableCustomResolutionToggledCommand}"
-                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                         VerticalAlignment="Center" />
+                    <!-- Row 4: Force Custom Window Resolution Toggle -->
+                    <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Margin="0,1,8,1">
+                        <TextBlock Text="{x:Static resources:Strings.EnableCustomResolution}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.EnableCustomResolutionDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Row="4" Grid.Column="1"
+                                     AutomationProperties.AutomationId="Settings_CustomResolutionToggle"
+                                     AutomationProperties.Name="{x:Static resources:Strings.EnableCustomResolution}"
+                                     IsChecked="{Binding EnableCustomResolution, Mode=OneWay}"
+                                     Command="{Binding EnableCustomResolutionToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     VerticalAlignment="Center" />
 
-                        <!-- Row 5: Custom Resolution Width & Height -->
-                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
-                                    Orientation="Horizontal"
-                                    Margin="4,8,4,0"
-                                    IsEnabled="{Binding EnableCustomResolution}">
-                            <TextBlock Text="{x:Static resources:Strings.ResolutionWidthLabel}"
-                                       Style="{StaticResource SettingLabelStyle}"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,8,0" />
-                            <TextBox Width="140"
+                    <!-- Row 5: Custom Resolution Width & Height -->
+                    <Border Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusSmall}"
+                            Padding="8,4"
+                            Margin="0,2"
+                            IsEnabled="{Binding EnableCustomResolution}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.ResolutionWidthLabel}" Style="{StaticResource SettingLabelStyle}" Margin="0,0,6,0" />
+                            <TextBox Width="80"
                                      AutomationProperties.AutomationId="Settings_ResolutionWidthTextBox"
                                      AutomationProperties.Name="{x:Static resources:Strings.ResolutionWidthLabel}"
                                      Text="{Binding ResolutionWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,24,0"
+                                     Margin="0,0,12,0"
                                      VerticalAlignment="Center" />
-                            <TextBlock Text="{x:Static resources:Strings.ResolutionHeightLabel}"
-                                       Style="{StaticResource SettingLabelStyle}"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,8,0" />
-                            <TextBox Width="140"
+                            <TextBlock Text="{x:Static resources:Strings.ResolutionHeightLabel}" Style="{StaticResource SettingLabelStyle}" Margin="0,0,6,0" />
+                            <TextBox Width="80"
                                      AutomationProperties.AutomationId="Settings_ResolutionHeightTextBox"
                                      AutomationProperties.Name="{x:Static resources:Strings.ResolutionHeightLabel}"
                                      Text="{Binding ResolutionHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      VerticalAlignment="Center" />
                         </StackPanel>
+                    </Border>
 
-                        <!-- Row 6: Auto-Tile (needs a fixed window size to compute the grid) -->
-                        <Grid Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2"
-                              Margin="0,12,0,0"
-                              IsEnabled="{Binding EnableCustomResolution}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                                <TextBlock Text="{x:Static resources:Strings.EnableAutoTile}"
-                                           Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="{x:Static resources:Strings.EnableAutoTileDescription}"
-                                           Style="{StaticResource DescriptionTextStyle}"
-                                           Margin="0,2,0,0" />
-                            </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1"
-                                             AutomationProperties.AutomationId="Settings_AutoTileToggle"
-                                             AutomationProperties.Name="{x:Static resources:Strings.EnableAutoTile}"
-                                             IsChecked="{Binding EnableAutoTile, Mode=OneWay}"
-                                             Command="{Binding EnableAutoTileToggledCommand}"
-                                             CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                             VerticalAlignment="Center" />
-                        </Grid>
-
-                        <!-- Row 7: Auto-clean Roblox cache before launching -->
-                        <StackPanel Grid.Row="10" Grid.Column="0" VerticalAlignment="Center" Margin="4,12,4,4">
-                            <TextBlock Text="{x:Static resources:Strings.EnableAutoCleanCache}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.EnableAutoCleanCacheDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Row="10" Grid.Column="1"
-                                         AutomationProperties.AutomationId="Settings_AutoCleanCacheToggle"
-                                         AutomationProperties.Name="{x:Static resources:Strings.EnableAutoCleanCache}"
-                                         IsChecked="{Binding EnableAutoCleanCache, Mode=OneWay}"
-                                         Command="{Binding EnableAutoCleanCacheToggledCommand}"
-                                         CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
-                                         VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
-
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 7: Sao lưu & Khôi phục (Backup & Restore)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                    <!-- Row 6: Auto-Tile -->
+                    <Grid Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" IsEnabled="{Binding EnableCustomResolution}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.BackupSectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.BackupSectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,1,8,1">
+                            <TextBlock Text="{x:Static resources:Strings.EnableAutoTile}" Style="{StaticResource SettingLabelStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.EnableAutoTileDescription}" Style="{StaticResource DescriptionTextStyle}" />
                         </StackPanel>
-
-                        <!-- Actions -->
-                        <TextBlock Grid.Row="1" Grid.Column="0"
-                                   Text="{x:Static resources:Strings.BackupSectionSubtitle}"
-                                   Style="{StaticResource DescriptionTextStyle}"
-                                   VerticalAlignment="Center" />
-                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <ui:Button Content="{x:Static resources:Strings.ExportBackup}"
-                                       AutomationProperties.AutomationId="Settings_ExportBackupButton"
-                                       AutomationProperties.Name="{x:Static resources:Strings.ExportBackup}"
-                                       Icon="{ui:SymbolIcon ArrowUpload24}"
-                                       Margin="0,0,8,0"
-                                       Command="{Binding ExportBackupCommand}" />
-                            <ui:Button Content="{x:Static resources:Strings.ImportBackup}"
-                                       AutomationProperties.AutomationId="Settings_ImportBackupButton"
-                                       AutomationProperties.Name="{x:Static resources:Strings.ImportBackup}"
-                                       Icon="{ui:SymbolIcon ArrowDownload24}"
-                                       Command="{Binding ImportBackupCommand}" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <!-- ══════════════════════════════════════════════════════════
-                     CARD 8: Nâng cao (Advanced)
-                     ══════════════════════════════════════════════════════════ -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="{StaticResource MarginBottomMedium}">
-                            <TextBlock Text="{x:Static resources:Strings.AdvancedSectionTitle}"
-                                       Style="{StaticResource SectionHeaderStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.AdvancedSectionSubtitle}"
-                                       Style="{StaticResource DescriptionTextStyle}" />
-                        </StackPanel>
-
-                        <!-- Row 1: Launch URI Template -->
-                        <TextBlock Grid.Row="1" Grid.Column="0"
-                                   Text="{x:Static resources:Strings.LaunchUriTemplateStatus}"
-                                   Style="{StaticResource SettingLabelStyle}"
-                                   Margin="{StaticResource MarginTight}" />
-                        <TextBlock Grid.Row="1" Grid.Column="1"
-                                   Text="{Binding LaunchUriTemplateStatus}"
-                                   Style="{StaticResource MonospaceTextStyle}"
-                                   VerticalAlignment="Center" />
-
-                        <!-- Divider -->
-                        <Rectangle Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
-
-                        <!-- Row 2: Place Launcher URL Template -->
-                        <TextBlock Grid.Row="3" Grid.Column="0"
-                                   Text="{x:Static resources:Strings.PlaceLauncherUrlTemplateStatus}"
-                                   Style="{StaticResource SettingLabelStyle}"
-                                   Margin="{StaticResource MarginTight}" />
-                        <TextBlock Grid.Row="3" Grid.Column="1"
-                                   Text="{Binding PlaceLauncherUrlTemplateStatus}"
-                                   Style="{StaticResource MonospaceTextStyle}"
-                                   VerticalAlignment="Center" />
-
-                        <!-- Divider 2 -->
-                        <Rectangle Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                                   Height="1"
-                                   Fill="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                   Margin="0,8" />
-
-                        <!-- Row 3: UAT Live Trace Telemetry -->
-                        <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource MarginTight}">
-                            <TextBlock Text="{x:Static resources:Strings.EnableUatTelemetry}"
-                                       Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock Text="{x:Static resources:Strings.EnableUatTelemetryDescription}"
-                                       Style="{StaticResource DescriptionTextStyle}"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Row="5" Grid.Column="1"
-                                         AutomationProperties.AutomationId="Settings_UatTelemetryToggle"
-                                         AutomationProperties.Name="{x:Static resources:Strings.EnableUatTelemetry}"
-                                         IsChecked="{Binding EnableUatTelemetry, Mode=OneWay}"
-                                         Command="{Binding EnableUatTelemetryToggledCommand}"
+                        <ui:ToggleSwitch Grid.Column="1"
+                                         AutomationProperties.AutomationId="Settings_AutoTileToggle"
+                                         AutomationProperties.Name="{x:Static resources:Strings.EnableAutoTile}"
+                                         IsChecked="{Binding EnableAutoTile, Mode=OneWay}"
+                                         Command="{Binding EnableAutoTileToggledCommand}"
                                          CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
                                          VerticalAlignment="Center" />
                     </Grid>
-                </Border>
 
-            </StackPanel>
+                    <!-- Row 7: Auto-clean Roblox cache -->
+                    <StackPanel Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Margin="0,1,8,1">
+                        <TextBlock Text="{x:Static resources:Strings.EnableAutoCleanCache}" Style="{StaticResource SettingLabelStyle}" />
+                        <TextBlock Text="{x:Static resources:Strings.EnableAutoCleanCacheDescription}" Style="{StaticResource DescriptionTextStyle}" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Row="7" Grid.Column="1"
+                                     AutomationProperties.AutomationId="Settings_AutoCleanCacheToggle"
+                                     AutomationProperties.Name="{x:Static resources:Strings.EnableAutoCleanCache}"
+                                     IsChecked="{Binding EnableAutoCleanCache, Mode=OneWay}"
+                                     Command="{Binding EnableAutoCleanCacheToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════
+                 CARD 8 (Col 2, Row 3): Nâng cao (Advanced)
+                 ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Column="2" Grid.Row="3" Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,4">
+                        <Border Style="{StaticResource SectionIconBadgeStyle}">
+                            <ui:SymbolIcon Symbol="Wrench24" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static resources:Strings.AdvancedSectionTitle}" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBlock Text="{x:Static resources:Strings.AdvancedSectionSubtitle}" Style="{StaticResource DescriptionTextStyle}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static resources:Strings.LaunchUriTemplateStatus}" Style="{StaticResource SettingLabelStyle}" Margin="0,1,8,1" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LaunchUriTemplateStatus}" Style="{StaticResource MonospaceTextStyle}" FontSize="11" VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static resources:Strings.PlaceLauncherUrlTemplateStatus}" Style="{StaticResource SettingLabelStyle}" Margin="0,1,8,1" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PlaceLauncherUrlTemplateStatus}" Style="{StaticResource MonospaceTextStyle}" FontSize="11" VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static resources:Strings.EnableUatTelemetry}" Style="{StaticResource SettingLabelStyle}" Margin="0,1,8,1" />
+                    <ui:ToggleSwitch Grid.Row="3" Grid.Column="1"
+                                     AutomationProperties.AutomationId="Settings_UatTelemetryToggle"
+                                     AutomationProperties.Name="{x:Static resources:Strings.EnableUatTelemetry}"
+                                     IsChecked="{Binding EnableUatTelemetry, Mode=OneWay}"
+                                     Command="{Binding EnableUatTelemetryToggledCommand}"
+                                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=IsChecked}"
+                                     VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Page>

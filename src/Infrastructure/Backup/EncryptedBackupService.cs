@@ -21,6 +21,7 @@ public sealed partial class EncryptedBackupService : IBackupService
 {
     public const int MinimumPasswordLength = 12;
     public const uint MinimumIterations = 600_000;
+    public const uint MaximumIterations = 10_000_000;
     public const uint DefaultIterations = 600_000;
 
     private static readonly byte[] MagicBytes = [0x52, 0x42, 0x58, 0x42]; // "RBXB"
@@ -50,29 +51,40 @@ public sealed partial class EncryptedBackupService : IBackupService
         }
 
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
-        if (accounts.Count == 0)
+        List<BackupAccountDto> dtos;
+        try
         {
-            throw new InvalidOperationException("Cannot export an empty vault.");
-        }
-
-        LogExporting(accounts.Count);
-
-        List<BackupAccountDto> dtos = new(accounts.Count);
-        foreach (Account account in accounts)
-        {
-            dtos.Add(new BackupAccountDto
+            if (accounts.Count == 0)
             {
-                Id = account.Id.Value,
-                Alias = account.Alias,
-                Group = account.Group,
-                Note = account.Note,
-                Cookie = account.Cookie.Reveal(),
-                CreatedAt = account.CreatedAt,
-                UserId = account.UserId,
-                Username = account.Username,
-                Status = (int)account.Status,
-                LastCheckedAt = account.LastCheckedAt
-            });
+                throw new InvalidOperationException("Cannot export an empty vault.");
+            }
+
+            LogExporting(accounts.Count);
+
+            dtos = new(accounts.Count);
+            foreach (Account account in accounts)
+            {
+                dtos.Add(new BackupAccountDto
+                {
+                    Id = account.Id.Value,
+                    Alias = account.Alias,
+                    Group = account.Group,
+                    Note = account.Note,
+                    Cookie = account.Cookie.Reveal(),
+                    CreatedAt = account.CreatedAt,
+                    UserId = account.UserId,
+                    Username = account.Username,
+                    Status = (int)account.Status,
+                    LastCheckedAt = account.LastCheckedAt
+                });
+            }
+        }
+        finally
+        {
+            foreach (Account account in accounts)
+            {
+                account.Cookie.Dispose();
+            }
         }
 
         byte[] plaintextBytes = JsonSerializer.SerializeToUtf8Bytes(dtos, RbxManagerJsonContext.Default.ListBackupAccountDto);
@@ -176,6 +188,11 @@ public sealed partial class EncryptedBackupService : IBackupService
             throw new BackupException($"Backup iterations ({iterations}) below minimum required ({MinimumIterations}).");
         }
 
+        if (iterations > MaximumIterations)
+        {
+            throw new BackupException($"Backup iterations ({iterations}) exceeds maximum allowed ({MaximumIterations}).");
+        }
+
         byte[] nonce = fileSpan.Slice(25, NonceLength).ToArray();
         byte[] tag = fileSpan.Slice(37, TagLength).ToArray();
         byte[] ciphertext = fileSpan[HeaderLength..].ToArray();
@@ -215,11 +232,23 @@ public sealed partial class EncryptedBackupService : IBackupService
         }
 
         IReadOnlyList<Account> existingAccounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
-        HashSet<string> existingAliases = existingAccounts.Select(a => a.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> existingAliases;
+        long nextId;
+        try
+        {
+            existingAliases = existingAccounts.Select(a => a.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            nextId = existingAccounts.Count > 0 ? existingAccounts.Max(a => a.Id.Value) + 1 : 1;
+        }
+        finally
+        {
+            foreach (Account existing in existingAccounts)
+            {
+                existing.Cookie.Dispose();
+            }
+        }
 
         int importedCount = 0;
         int skippedCount = 0;
-        long nextId = existingAccounts.Count > 0 ? existingAccounts.Max(a => a.Id.Value) + 1 : 1;
 
         foreach (BackupAccountDto dto in dtos)
         {

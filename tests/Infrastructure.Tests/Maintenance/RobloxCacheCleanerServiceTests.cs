@@ -118,4 +118,18 @@ public sealed class RobloxCacheCleanerServiceTests : IDisposable
 
         Assert.Equal(new CacheCleanResult(0, 0, 0), result);
     }
+
+    [Fact]
+    public void ClearSharedCookiesFile_RemovesReadOnlyCookiesDat_ReturnsTrue()
+    {
+        string cookiesDat = CreateFile(Path.Combine(_local, "LocalStorage", "RobloxCookies.dat"), 256);
+        File.SetAttributes(cookiesDat, FileAttributes.ReadOnly);
+
+        RobloxCacheCleanerService cleaner = CreateCleaner();
+        bool removed = cleaner.ClearSharedCookiesFile();
+
+        Assert.True(removed);
+        Assert.False(File.Exists(cookiesDat));
+        Assert.False(cleaner.ClearSharedCookiesFile());
+    }
 }

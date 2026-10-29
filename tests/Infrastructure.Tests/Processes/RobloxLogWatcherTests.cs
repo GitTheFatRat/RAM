@@ -81,6 +81,8 @@ public sealed class RobloxLogWatcherTests : IDisposable
     [InlineData("Network disconnect: Connection lost to host", "Connection lost")]
     [InlineData("Critical failure: Error 277 occurred", "Error 277")]
     [InlineData("Security kick: Error 268 client behavior", "Error 268")]
+    [InlineData("[FLog::SingleSurfaceApp] returnToLuaApp", "returnToLuaApp")]
+    [InlineData("[FLog::SurfaceController] SurfaceController[_:1]::stop", "SurfaceController[_:1]::stop")]
     public async Task WatchLog_KnownKeywords_RaiseDisconnectEvents(string logLine, string expectedKeyword)
     {
         string logPath = Path.Combine(_tempDir, $"0.1_Player_{Guid.NewGuid():N}_last.log");
@@ -169,5 +171,56 @@ public sealed class RobloxLogWatcherTests : IDisposable
         Task completedTask = await Task.WhenAny(tcs.Task, Task.Delay(2000));
         Assert.Same(tcs.Task, completedTask);
         Assert.Equal(6006, await tcs.Task);
+    }
+
+    [Fact]
+    public async Task StartWatching_WhenLogFileCreatedShortlyAfterStart_PollsAndDetectsDisconnect()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        using RobloxLogWatcher watcher = new(_tempDir);
+        TaskCompletionSource<int> tcs = new();
+        watcher.GhostDisconnectDetected += (pid, _) => tcs.TrySetResult(pid);
+
+        // Start watching before the log file exists on disk
+        watcher.StartWatching(7007, now);
+
+        string logPath = Path.Combine(_tempDir, "0.1_Player_delayed.log");
+        await Task.Delay(200);
+        await File.WriteAllTextAsync(logPath, "Starting...\n");
+        File.SetCreationTimeUtc(logPath, now.UtcDateTime.AddSeconds(1));
+        await File.AppendAllTextAsync(logPath, "Error 277 disconnected\n");
+
+        Task completedTask = await Task.WhenAny(tcs.Task, Task.Delay(3000));
+        Assert.Same(tcs.Task, completedTask);
+        Assert.Equal(7007, await tcs.Task);
+    }
+
+    [Fact]
+    public async Task WatchLog_MultipleDisconnectLines_ContinuesTailingAfterFirstMatch()
+    {
+        string logPath = Path.Combine(_tempDir, "0.1_Player_multi.log");
+        await File.WriteAllTextAsync(logPath, "Initial line\n");
+
+        using RobloxLogWatcher watcher = new(_tempDir);
+        int matchCount = 0;
+        TaskCompletionSource<bool> secondMatch = new();
+
+        watcher.GhostDisconnectDetected += (_, _) =>
+        {
+            if (System.Threading.Interlocked.Increment(ref matchCount) >= 2)
+            {
+                secondMatch.TrySetResult(true);
+            }
+        };
+
+        watcher.StartWatching(8008, DateTimeOffset.UtcNow, logPath);
+
+        await File.AppendAllTextAsync(logPath, "First transient: Connection lost\n");
+        await Task.Delay(300);
+        await File.AppendAllTextAsync(logPath, "Second real: Error 277\n");
+
+        Task completedTask = await Task.WhenAny(secondMatch.Task, Task.Delay(2000));
+        Assert.Same(secondMatch.Task, completedTask);
+        Assert.Equal(2, matchCount);
     }
 }

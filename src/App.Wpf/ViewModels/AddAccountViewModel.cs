@@ -6,20 +6,23 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RbxManager.App.Resources;
 using RbxManager.App.Services;
 using RbxManager.Core.Auth;
+using RbxManager.Core.Bridge;
 using RbxManager.Core.Common;
 using RbxManager.Core.Models;
 using RbxManager.Core.Network;
 using RbxManager.Core.Storage;
+using RbxManager.Infrastructure.Bridge;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Extensions;
 
-public partial class AddAccountViewModel : ObservableObject
+public partial class AddAccountViewModel : ObservableObject, IDisposable
 {
     private static readonly CompositeFormat BulkImportProgressFormat = CompositeFormat.Parse(Strings.BulkImportProgress);
     private static readonly CompositeFormat BulkImportCompletedFormat = CompositeFormat.Parse(Strings.BulkImportCompleted);
@@ -29,6 +32,12 @@ public partial class AddAccountViewModel : ObservableObject
     private readonly IDpiToolService? _dpiToolService;
     private readonly ISnackbarService? _snackbarService;
     private readonly Func<string, bool> _browserLauncher;
+    private readonly ILocalExtensionBridge _extensionBridge;
+    private readonly bool _ownsExtensionBridge;
+    private bool _disposed;
+
+    [ObservableProperty]
+    private bool _isExtensionBridgeListening;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanImport))]
@@ -72,7 +81,8 @@ public partial class AddAccountViewModel : ObservableObject
         ISnackbarService? snackbarService = null,
         Func<bool>? browserLauncher = null,
         IDpiToolService? dpiToolService = null,
-        Func<string, bool>? urlBrowserLauncher = null)
+        Func<string, bool>? urlBrowserLauncher = null,
+        ILocalExtensionBridge? extensionBridge = null)
     {
         _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
@@ -82,7 +92,72 @@ public partial class AddAccountViewModel : ObservableObject
                 ? (_ => browserLauncher())
                 : IncognitoBrowserLauncher.TryLaunch);
         _dpiToolService = dpiToolService;
+        if (extensionBridge != null)
+        {
+            _extensionBridge = extensionBridge;
+            _ownsExtensionBridge = false;
+        }
+        else
+        {
+            _extensionBridge = new LocalExtensionBridgeService(_accountStore, _authService);
+            _ownsExtensionBridge = true;
+        }
+
         IsGoodbyeDpiRunning = _dpiToolService?.IsRunning() == true;
+    }
+
+    public void StartExtensionBridge()
+    {
+        _extensionBridge.AccountImported -= OnExtensionAccountImported;
+        _extensionBridge.AccountImported += OnExtensionAccountImported;
+        IsExtensionBridgeListening = _extensionBridge.StartListening();
+    }
+
+    public void StopExtensionBridge()
+    {
+        _extensionBridge.AccountImported -= OnExtensionAccountImported;
+        _extensionBridge.StopListening();
+        IsExtensionBridgeListening = false;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        StopExtensionBridge();
+        if (_ownsExtensionBridge)
+        {
+            _extensionBridge.Dispose();
+        }
+
+        GC.SuppressFinalize(this);
+    }
+
+    private void OnExtensionAccountImported(ExtensionImportedAccount imported)
+    {
+        void ApplyImportedOnUi()
+        {
+            ImportedCount++;
+            ErrorMessage = string.Empty;
+            StatusMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                CompositeFormat.Parse(Strings.ExtensionBridgeImportedStatusFormat),
+                imported.Username,
+                ImportedCount);
+        }
+
+        if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+        {
+            _ = Application.Current.Dispatcher.InvokeAsync(ApplyImportedOnUi);
+        }
+        else
+        {
+            ApplyImportedOnUi();
+        }
     }
 
     public void RefreshGoodbyeDpiStatus()
@@ -214,13 +289,65 @@ public partial class AddAccountViewModel : ObservableObject
                     if (!validationResult.IsSuccess || validationResult.Value == null)
                     {
                         failCount++;
+                        if (string.Equals(validationResult.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
+                        {
+                            break;
+                        }
+
+                        if (i < parsedCookies.Count - 1)
+                        {
+                            await Task.Delay(500);
+                        }
+
                         continue;
                     }
 
                     RobloxUser user = validationResult.Value;
                     if (existingUserIds.Contains(user.Id))
                     {
-                        failCount++;
+                        Account? existingAccount = existingAccounts.FirstOrDefault(a =>
+                            a.UserId == user.Id ||
+                            string.Equals(a.Username, user.Name, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(a.Alias, user.Name, StringComparison.OrdinalIgnoreCase));
+
+                        if (existingAccount != null)
+                        {
+                            Account updatedAccount = existingAccount with
+                            {
+                                Cookie = cookie.Clone(),
+                                Username = user.Name,
+                                UserId = user.Id,
+                                Status = AccountStatus.Valid,
+                                LastCheckedAt = DateTimeOffset.UtcNow
+                            };
+
+                            try
+                            {
+                                Result updateResult = await _accountStore.UpdateAsync(updatedAccount);
+                                if (updateResult.IsSuccess)
+                                {
+                                    successCount++;
+                                }
+                                else
+                                {
+                                    failCount++;
+                                }
+                            }
+                            finally
+                            {
+                                updatedAccount.Cookie.Dispose();
+                            }
+                        }
+                        else
+                        {
+                            failCount++;
+                        }
+
+                        if (i < parsedCookies.Count - 1)
+                        {
+                            await Task.Delay(500);
+                        }
+
                         continue;
                     }
 
@@ -240,14 +367,26 @@ public partial class AddAccountViewModel : ObservableObject
                         Status: AccountStatus.Valid,
                         LastCheckedAt: DateTimeOffset.UtcNow);
 
-                    Result addResult = await _accountStore.AddAsync(newAccount);
-                    if (addResult.IsSuccess)
+                    try
                     {
-                        successCount++;
+                        Result addResult = await _accountStore.AddAsync(newAccount);
+                        if (addResult.IsSuccess)
+                        {
+                            successCount++;
+                        }
+                        else
+                        {
+                            failCount++;
+                        }
                     }
-                    else
+                    finally
                     {
-                        failCount++;
+                        newAccount.Cookie.Dispose();
+                    }
+
+                    if (i < parsedCookies.Count - 1)
+                    {
+                        await Task.Delay(500);
                     }
                 }
             }
@@ -269,7 +408,7 @@ public partial class AddAccountViewModel : ObservableObject
             IsImporting = false;
         }
 
-        ImportedCount = successCount;
+        ImportedCount += successCount;
         string summary = string.Format(CultureInfo.CurrentCulture, BulkImportCompletedFormat, successCount, failCount);
         StatusMessage = summary;
 

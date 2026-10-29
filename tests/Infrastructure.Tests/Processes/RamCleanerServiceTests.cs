@@ -27,6 +27,14 @@ public sealed class RamCleanerServiceTests
             SettingsChanged?.Invoke(settings);
             return Task.CompletedTask;
         }
+
+        public Task<AppSettings> UpdateSettingsAsync(Func<AppSettings, AppSettings> mutate, CancellationToken ct = default)
+        {
+            AppSettings updated = mutate(CurrentSettings);
+            CurrentSettings = updated;
+            SettingsChanged?.Invoke(updated);
+            return Task.FromResult(updated);
+        }
     }
 
     private sealed class FakeMemoryOptimizer : IMemoryOptimizer

@@ -139,7 +139,15 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
                 return Result.Failure<RobloxUser>("The account cookie has expired.", AuthErrorCodes.Expired, details);
             }
 
-            if ((int)response.StatusCode == 429)
+            if (response.StatusCode == HttpStatusCode.Forbidden &&
+                robloxMessage?.Contains("moderated", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                _validationCache.TryRemove(cacheKey, out _);
+                LogValidateFailed(AuthErrorCodes.Moderated);
+                return Result.Failure<RobloxUser>("Account has a pending moderation warning on Roblox (User is moderated). Please log in via browser to reactivate.", AuthErrorCodes.Moderated, details);
+            }
+
+            if ((int)response.StatusCode == 429 || response.StatusCode == HttpStatusCode.Forbidden)
             {
                 LogValidateFailed(AuthErrorCodes.RateLimited);
                 return Result.Failure<RobloxUser>("Rate limited by Roblox.", AuthErrorCodes.RateLimited, details);
@@ -220,6 +228,7 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
         {
             using HttpRequestMessage request = new(HttpMethod.Post, "https://auth.roblox.com/v1/authentication-ticket");
             request.Headers.Add("Cookie", $".ROBLOSECURITY={revealedCookie}");
+            request.Headers.Add("Origin", "https://www.roblox.com");
             request.Headers.Add("Referer", "https://www.roblox.com/");
             request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
 
@@ -270,6 +279,14 @@ public sealed partial class RobloxAuthService : IRobloxAuthService
                 _validationCache.TryRemove(cacheKey, out _);
                 LogTicketFailed(AuthErrorCodes.Expired);
                 return Result.Failure<SecretValue>("Account cookie has expired.", AuthErrorCodes.Expired, details);
+            }
+
+            if (response.StatusCode == HttpStatusCode.Forbidden &&
+                robloxMessage?.Contains("moderated", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                _validationCache.TryRemove(cacheKey, out _);
+                LogTicketFailed(AuthErrorCodes.Moderated);
+                return Result.Failure<SecretValue>("Account has a pending moderation warning on Roblox (User is moderated). Please log in via browser to reactivate.", AuthErrorCodes.Moderated, details);
             }
 
             if ((int)response.StatusCode == 429 || response.StatusCode == HttpStatusCode.Forbidden)

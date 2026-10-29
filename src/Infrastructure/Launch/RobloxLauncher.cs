@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -34,6 +36,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
     private DateTimeOffset? _lastCacheCleanTime;
     private DateTimeOffset? _cooldownUntil;
     private int _consecutiveThrottleCount;
+    private AccountId? _lastModeratedAccountId;
     private readonly IRobloxCacheCleaner? _cacheCleaner;
     private bool _disposed;
 
@@ -106,7 +109,10 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
             int delaySeconds = _settingsService?.CurrentSettings.LaunchDelaySeconds ?? AppSettings.DefaultLaunchDelaySeconds;
             TimeSpan minInterval = TimeSpan.FromSeconds(delaySeconds) + _jitterProvider();
 
-            if (_lastLaunchStartTime.HasValue)
+            bool isImmediateRecoveryRetry = _lastModeratedAccountId.HasValue && _lastModeratedAccountId.Value == request.AccountId;
+            _lastModeratedAccountId = null;
+
+            if (!isImmediateRecoveryRetry && _lastLaunchStartTime.HasValue)
             {
                 DateTimeOffset now = _timeProvider.GetUtcNow();
                 TimeSpan elapsed = now - _lastLaunchStartTime.Value;
@@ -147,16 +153,21 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
                 Result<SecretValue> ticketResult = await _authService.GetAuthTicketAsync(account.Cookie, ct).ConfigureAwait(false);
                 if (!ticketResult.IsSuccess)
                 {
-                    if (string.Equals(ticketResult.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase) ||
-                        ticketResult.Details?.HttpStatus is 429 or 403)
+                    if (string.Equals(ticketResult.ErrorCode, AuthErrorCodes.Moderated, StringComparison.OrdinalIgnoreCase))
                     {
-                        _consecutiveThrottleCount = Math.Min(_consecutiveThrottleCount + 1, 5);
-                        int backoffSeconds = Math.Min(300, 30 * (1 << (_consecutiveThrottleCount - 1)));
+                        _lastModeratedAccountId = request.AccountId;
+                    }
+                    else if (string.Equals(ticketResult.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase) ||
+                        (ticketResult.Details?.HttpStatus is 429 or 403 &&
+                         !string.Equals(ticketResult.ErrorCode, AuthErrorCodes.Moderated, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _consecutiveThrottleCount = LaunchBackoffPolicy.NextStrikeCount(_consecutiveThrottleCount);
+                        int backoffSeconds = LaunchBackoffPolicy.ComputeBackoffSeconds(_consecutiveThrottleCount);
                         _cooldownUntil = _timeProvider.GetUtcNow() + TimeSpan.FromSeconds(backoffSeconds);
                     }
 
                     LogLaunchFailed(ticketResult.ErrorCode ?? "TicketFailed");
-                    return Result.Failure(ticketResult.Error ?? "Failed to acquire authentication ticket.", ticketResult.ErrorCode);
+                    return Result.Failure(ticketResult.Error ?? "Failed to acquire authentication ticket.", ticketResult.ErrorCode, ticketResult.Details);
                 }
 
                 _consecutiveThrottleCount = 0;
@@ -164,7 +175,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
 
                 using SecretValue ticketSecret = ticketResult.Value!;
                 string ticket = ticketSecret.Reveal();
-                string trackerId = Random.Shared.Next(100000000, 999999999).ToString(CultureInfo.InvariantCulture);
+                string trackerId = ComputeDeterministicTrackerId(account.Id);
                 long unixMs = _timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
 
                 string? launchUriTemplate = _settingsService?.CurrentSettings.Advanced?.LaunchUriTemplate;
@@ -191,6 +202,7 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
                     launchUriTemplate,
                     placeLauncherUrlTemplate);
 
+                _cacheCleaner?.ClearSharedCookiesFile();
                 bool started = _processStarter.Start(launchUri);
 
                 if (!started)
@@ -228,6 +240,15 @@ public sealed partial class RobloxLauncher : ILauncher, IDisposable
         {
             _launchGate.Release();
         }
+    }
+
+    public static string ComputeDeterministicTrackerId(AccountId accountId)
+    {
+        byte[] input = Encoding.UTF8.GetBytes($"RbxTracker:{accountId.Value.ToString(CultureInfo.InvariantCulture)}");
+        byte[] hash = SHA256.HashData(input);
+        uint value = BitConverter.ToUInt32(hash, 0);
+        long trackerNumber = 100_000_000L + (value % 900_000_000L);
+        return trackerNumber.ToString(CultureInfo.InvariantCulture);
     }
 
     public void Dispose()

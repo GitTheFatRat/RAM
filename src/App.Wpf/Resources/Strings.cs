@@ -57,6 +57,7 @@ public static class Strings
     public static string StatusExpired => GetString(nameof(StatusExpired));
     public static string StatusError => GetString(nameof(StatusError));
     public static string ExpiredHint => GetString(nameof(ExpiredHint));
+    public static string ModeratedHint => GetString(nameof(ModeratedHint));
     public static string LaunchDialogTitle => GetString(nameof(LaunchDialogTitle));
     public static string PlaceIdLabel => GetString(nameof(PlaceIdLabel));
     public static string JobIdLabel => GetString(nameof(JobIdLabel));
@@ -281,6 +282,15 @@ public static class Strings
     public static string EnableCustomResolutionDescription => GetString(nameof(EnableCustomResolutionDescription));
     public static string ResolutionWidthLabel => GetString(nameof(ResolutionWidthLabel));
     public static string ResolutionHeightLabel => GetString(nameof(ResolutionHeightLabel));
+    public static string ScanPotassium => GetString(nameof(ScanPotassium));
+    public static string LaunchPotassium => GetString(nameof(LaunchPotassium));
+    public static string PotassiumStatusNotScanned => GetString(nameof(PotassiumStatusNotScanned));
+    public static string PotassiumStatusNotFound => GetString(nameof(PotassiumStatusNotFound));
+    public static string PotassiumStatusRunningFormat => GetString(nameof(PotassiumStatusRunningFormat));
+    public static string PotassiumStatusInstalledFormat => GetString(nameof(PotassiumStatusInstalledFormat));
+    public static string PotassiumLaunchedSuccess => GetString(nameof(PotassiumLaunchedSuccess));
+    public static string PotassiumLaunchFailed => GetString(nameof(PotassiumLaunchFailed));
+    public static string ExtensionBridgeImportedStatusFormat => GetString(nameof(ExtensionBridgeImportedStatusFormat));
 
     private static string GetString(string name) =>
         ResourceManagerInstance.GetString(name, Culture) ?? name;

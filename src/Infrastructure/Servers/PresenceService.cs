@@ -71,6 +71,11 @@ public sealed partial class PresenceService : IPresenceService
             LogLookupFailed(AuthErrorCodes.Network);
             return Result.Failure<TargetServer>("Request timed out looking up target presence.", AuthErrorCodes.Network);
         }
+        catch (Exception)
+        {
+            LogLookupFailed(AuthErrorCodes.Unexpected);
+            return Result.Failure<TargetServer>("Unexpected error looking up target presence.", AuthErrorCodes.Unexpected);
+        }
     }
 
     private async Task<Result<long>> ResolveUserIdAsync(string username, CancellationToken ct)
@@ -107,7 +112,12 @@ public sealed partial class PresenceService : IPresenceService
         {
             Content = JsonContent.Create(body, RbxManagerJsonContext.Default.PresenceRequest)
         };
-        request.Headers.Add("Cookie", $".ROBLOSECURITY={viewerCookie.Reveal()}");
+        string rawCookie = viewerCookie.Reveal().Trim();
+        if (rawCookie.StartsWith(".ROBLOSECURITY=", StringComparison.OrdinalIgnoreCase))
+        {
+            rawCookie = rawCookie[".ROBLOSECURITY=".Length..].Trim();
+        }
+        request.Headers.TryAddWithoutValidation("Cookie", $".ROBLOSECURITY={rawCookie}");
 
         using HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
         Result? statusFailure = MapStatus(response, "presence lookup");

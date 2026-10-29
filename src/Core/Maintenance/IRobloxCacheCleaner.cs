@@ -12,4 +12,11 @@ public interface IRobloxCacheCleaner
     /// never deleted, so live sessions keep their log (disconnect detection) and content cache.
     /// </summary>
     Task<CacheCleanResult> CleanAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Removes %LOCALAPPDATA%\Roblox\LocalStorage\RobloxCookies.dat before launching an account
+    /// so sequential instances cannot read or overwrite each other's session cookie (preventing
+    /// Error 773 and cross-account telemetry linking).
+    /// </summary>
+    bool ClearSharedCookiesFile() => false;
 }

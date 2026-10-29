@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Maintenance;
@@ -147,5 +148,69 @@ public sealed class RotationManagerTests
 
         Assert.Equal(expectedCode, result.ErrorCode);
         Assert.False(manager.Status.IsRunning);
+    }
+
+    [Fact]
+    public async Task LaunchGroup_WhenRateLimited_PausesForExponentialBackoffAndContinuesGroup()
+    {
+        bool firstLaunchReturned = false;
+        _launcher.LaunchAsync(Arg.Any<LaunchRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                if (!firstLaunchReturned)
+                {
+                    firstLaunchReturned = true;
+                    return Task.FromResult(Result.Failure("Rate limited", AuthErrorCodes.RateLimited));
+                }
+
+                return Task.FromResult(Result.Success());
+            });
+
+        using RotationManager manager = CreateManager();
+        manager.Start(new RotationPlan(["Group 1"], GroupDuration, 1818));
+
+        await WaitUntilAsync(() => firstLaunchReturned);
+        await Task.Delay(30);
+        Assert.Equal(["launch 1@1818"], _events.ToArray());
+
+        _time.Advance(TimeSpan.FromSeconds(29));
+        await Task.Delay(30);
+        Assert.Equal(["launch 1@1818"], _events.ToArray());
+
+        _time.Advance(TimeSpan.FromSeconds(1));
+        await WaitUntilAsync(() => manager.Status.Phase == RotationPhase.Farming);
+        Assert.Equal(["launch 1@1818", "launch 2@1818"], _events.ToArray());
+
+        await manager.StopAsync();
+    }
+
+    [Fact]
+    public async Task LaunchGroup_WhenModerated_DoesNotSkipAndPerformsRecoveryLaunchWithWaitingStatus()
+    {
+        int a1Attempts = 0;
+        List<RotationPhase> observedPhases = [];
+        _launcher.LaunchAsync(Arg.Any<LaunchRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                LaunchRequest req = call.Arg<LaunchRequest>();
+                if (req.AccountId.Value == 1 && ++a1Attempts == 1)
+                {
+                    return Task.FromResult(Result.Failure("User is moderated", AuthErrorCodes.Moderated));
+                }
+
+                return Task.FromResult(Result.Success());
+            });
+
+        using RotationManager manager = CreateManager();
+        manager.StatusChanged += status => observedPhases.Add(status.Phase);
+        manager.Start(new RotationPlan(["Group 1"], GroupDuration, 1818));
+
+        await WaitUntilAsync(() => manager.Status.Phase == RotationPhase.Farming);
+
+        // Account 1 failed initial launch with Moderated, triggered recovery launch ("launch 1@1818" twice), then launched Account 2.
+        Assert.Equal(["launch 1@1818", "launch 1@1818", "launch 2@1818"], _events.ToArray());
+        Assert.Contains(RotationPhase.WaitingForRecovery, observedPhases);
+
+        await manager.StopAsync();
     }
 }

@@ -47,6 +47,7 @@ public sealed class Result<T>
 public static class AuthErrorCodes
 {
     public const string Expired = "Expired";
+    public const string Moderated = "Moderated";
     public const string RateLimited = "RateLimited";
     public const string Network = "Network";
     public const string Unexpected = "Unexpected";

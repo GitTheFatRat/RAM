@@ -20,6 +20,7 @@ public partial class AddAccountWindow : FluentWindow
         Loaded += (_, _) =>
         {
             IncognitoBrowserLauncher.CookieCaptured += OnBrowserCookieCaptured;
+            ViewModel.StartExtensionBridge();
             CookiesTextBox.Focus();
         };
 
@@ -27,7 +28,8 @@ public partial class AddAccountWindow : FluentWindow
         {
             ViewModel.RequestClose -= OnRequestClose;
             IncognitoBrowserLauncher.CookieCaptured -= OnBrowserCookieCaptured;
-            IncognitoBrowserLauncher.CleanupAllSessions();
+            ViewModel.Dispose();
+            IncognitoBrowserLauncher.CleanupLoginSessions();
         };
     }
 

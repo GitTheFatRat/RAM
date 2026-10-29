@@ -37,7 +37,12 @@ public partial class MasterPasswordWindow : FluentWindow
 
         try
         {
-            await _accountStore.ListAsync();
+            var unlockedAccounts = await _accountStore.ListAsync();
+            foreach (Account acc in unlockedAccounts)
+            {
+                acc.Cookie.Dispose();
+            }
+
             DialogResult = true;
             Close();
         }

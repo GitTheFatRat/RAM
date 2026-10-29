@@ -103,6 +103,8 @@ public sealed class XamlSmokeTests
 
             AccountsPage page = new(viewModel);
             Assert.NotNull(page);
+            Assert.Equal(28, page.AccountsDataGrid.RowHeight);
+            Assert.Equal(System.Windows.Controls.ScrollBarVisibility.Auto, System.Windows.Controls.ScrollViewer.GetVerticalScrollBarVisibility(page.AccountsDataGrid));
         });
     }
 
@@ -193,6 +195,8 @@ public sealed class XamlSmokeTests
             Assert.NotNull(page);
             Assert.True(page.Resources.Contains("SettingLabelStyle"));
             Assert.IsType<Style>(page.Resources["SettingLabelStyle"]);
+            Assert.NotNull(page.SettingsBentoGrid);
+            Assert.Equal(8, page.SettingsBentoGrid.Children.Count);
         });
     }
 
@@ -278,6 +282,9 @@ public sealed class XamlSmokeTests
                 settingsService);
 
             Assert.NotNull(window);
+            Assert.Equal(Wpf.Ui.Controls.NavigationViewPaneDisplayMode.Top, window.RootNavigation.PaneDisplayMode);
+            Assert.False(window.RootNavigation.IsPaneToggleVisible);
+            Assert.Equal(48, window.RootNavigation.OpenPaneLength);
         });
     }
 

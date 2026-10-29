@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using RbxManager.Core.Auth;
 using RbxManager.Core.Common;
 using RbxManager.Core.Launch;
 using RbxManager.Core.Maintenance;
@@ -33,6 +34,8 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
     private CancellationTokenSource? _cts;
     private Task _loop = Task.CompletedTask;
     private RotationStatus _status = RotationStatus.Idle;
+
+    public Func<Account, LaunchRequest, CancellationToken, Task<Result>>? ModerationRecoveryHandler { get; set; }
 
     public RotationManager(
         IAccountStore accountStore,
@@ -117,7 +120,7 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
             for (int index = 0; ; index = (index + 1) % plan.Groups.Count)
             {
                 string group = plan.Groups[index];
-                await LaunchGroupAsync(group, plan.PlaceId, ct).ConfigureAwait(false);
+                await RunStepSafelyAsync("launch", group, () => LaunchGroupAsync(group, plan.PlaceId, ct)).ConfigureAwait(false);
 
                 DateTimeOffset switchAt = _timeProvider.GetUtcNow() + plan.GroupDuration;
                 SetStatus(new RotationStatus(RotationPhase.Farming, group, switchAt));
@@ -125,11 +128,11 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
 
                 SetStatus(new RotationStatus(RotationPhase.Stopping, group, null));
                 LogSwitching(group, _sessionTracker.ActiveSessions.Count);
-                await _sessionTracker.CloseAllSessionsAsync(graceful: false).ConfigureAwait(false);
+                await RunStepSafelyAsync("close", group, () => _sessionTracker.CloseAllSessionsAsync(graceful: false)).ConfigureAwait(false);
                 await Task.Delay(ExitGracePeriod, _timeProvider, ct).ConfigureAwait(false);
 
                 SetStatus(new RotationStatus(RotationPhase.Cleaning, group, null));
-                await _cacheCleaner.CleanAsync(ct).ConfigureAwait(false);
+                await RunStepSafelyAsync("clean", group, () => _cacheCleaner.CleanAsync(ct)).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -155,18 +158,102 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
     {
         SetStatus(new RotationStatus(RotationPhase.Launching, group, null));
         IReadOnlyList<Account> accounts = await _accountStore.ListAsync(ct).ConfigureAwait(false);
-        List<Account> members = accounts
-            .Where(a => string.Equals(a.Group, group, StringComparison.OrdinalIgnoreCase) && a.Status != AccountStatus.Expired)
-            .ToList();
-        LogLaunchingGroup(group, members.Count);
-
-        // RobloxLauncher serialises launches and enforces the configured spacing, so no extra pacing here.
-        foreach (Account account in members)
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            LaunchRequest request = new(account.Id, placeId);
-            await _sessionTracker.TrackLaunchAsync(account.Id, request, () => _launcher.LaunchAsync(request, ct), ct)
-                .ConfigureAwait(false);
+            List<Account> members = accounts
+                .Where(a => string.Equals(a.Group, group, StringComparison.OrdinalIgnoreCase) && a.Status != AccountStatus.Expired)
+                .ToList();
+            LogLaunchingGroup(group, members.Count);
+
+            // RobloxLauncher serialises launches and enforces the configured spacing, so no extra pacing here.
+            int consecutiveRateLimits = 0;
+            for (int i = 0; i < members.Count; i++)
+            {
+                Account account = members[i];
+                ct.ThrowIfCancellationRequested();
+                Result? launchResult;
+                try
+                {
+                    launchResult = await LaunchMemberAsync(account, group, placeId, ct).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // One account's vault/recovery failure must not end the whole rotation.
+                    LogAccountFailed(account.Id.Value, group, ex.GetType().Name);
+                    continue;
+                }
+
+                if (launchResult is { IsSuccess: true })
+                {
+                    consecutiveRateLimits = 0;
+                }
+                else if (string.Equals(launchResult?.ErrorCode, AuthErrorCodes.RateLimited, StringComparison.OrdinalIgnoreCase))
+                {
+                    consecutiveRateLimits = LaunchBackoffPolicy.NextStrikeCount(consecutiveRateLimits);
+                    if (i + 1 < members.Count)
+                    {
+                        int backoffSeconds = LaunchBackoffPolicy.ComputeBackoffSeconds(consecutiveRateLimits);
+                        await Task.Delay(TimeSpan.FromSeconds(backoffSeconds), _timeProvider, ct).ConfigureAwait(false);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            foreach (Account acc in accounts)
+            {
+                acc.Cookie.Dispose();
+            }
+        }
+    }
+
+    private async Task<Result?> LaunchMemberAsync(Account account, string group, long placeId, CancellationToken ct)
+    {
+        LaunchRequest request = new(account.Id, placeId);
+        Result? launchResult = await TrackedLaunchAsync(account, request, ct).ConfigureAwait(false);
+        if (!string.Equals(launchResult?.ErrorCode, AuthErrorCodes.Moderated, StringComparison.OrdinalIgnoreCase))
+        {
+            return launchResult;
+        }
+
+        SetStatus(new RotationStatus(RotationPhase.WaitingForRecovery, group, null));
+        try
+        {
+            return ModerationRecoveryHandler != null
+                ? await ModerationRecoveryHandler(account, request, ct).ConfigureAwait(false)
+                : await TrackedLaunchAsync(account, request, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            SetStatus(new RotationStatus(RotationPhase.Launching, group, null));
+        }
+    }
+
+    private async Task<Result?> TrackedLaunchAsync(Account account, LaunchRequest request, CancellationToken ct)
+    {
+        Result? launchResult = null;
+        await _sessionTracker.TrackLaunchAsync(
+            account.Id,
+            request,
+            async () =>
+            {
+                launchResult = await _launcher.LaunchAsync(request, ct).ConfigureAwait(false);
+                return launchResult;
+            },
+            ct).ConfigureAwait(false);
+        return launchResult;
+    }
+
+    // Close/clean are housekeeping between groups: a locked cache file or a stuck process must not stop farming.
+    private async Task RunStepSafelyAsync(string step, string group, Func<Task> action)
+    {
+        try
+        {
+            await action().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogStepFailed(step, group, ex.GetType().Name);
         }
     }
 
@@ -196,4 +283,10 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
 
     [LoggerMessage(EventId = 803, Level = LogLevel.Error, Message = "Rotation loop stopped by {ExceptionType}.")]
     private partial void LogLoopFailed(string exceptionType);
+
+    [LoggerMessage(EventId = 804, Level = LogLevel.Warning, Message = "Rotation: account {AccountId} in group '{Group}' failed with {ExceptionType}; continuing.")]
+    private partial void LogAccountFailed(long accountId, string group, string exceptionType);
+
+    [LoggerMessage(EventId = 805, Level = LogLevel.Warning, Message = "Rotation: step '{Step}' for group '{Group}' failed with {ExceptionType}; rotation continues.")]
+    private partial void LogStepFailed(string step, string group, string exceptionType);
 }

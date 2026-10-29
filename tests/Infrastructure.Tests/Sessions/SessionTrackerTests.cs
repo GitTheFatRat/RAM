@@ -361,6 +361,14 @@ public sealed class SessionTrackerTests
             SettingsChanged?.Invoke(settings);
             return Task.CompletedTask;
         }
+
+        public Task<Core.Settings.AppSettings> UpdateSettingsAsync(Func<Core.Settings.AppSettings, Core.Settings.AppSettings> mutate, CancellationToken ct = default)
+        {
+            Core.Settings.AppSettings updated = mutate(CurrentSettings);
+            CurrentSettings = updated;
+            SettingsChanged?.Invoke(updated);
+            return Task.FromResult(updated);
+        }
     }
 
     [Fact]
@@ -778,5 +786,146 @@ public sealed class SessionTrackerTests
         {
             Directory.Delete(logsDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task TrackLaunchAsync_IgnoresAlreadyActiveSessionPids()
+    {
+        FakeProcessProvider provider = new();
+        using SessionTracker tracker = new(provider, new FakeAccountStore(), new FakeAuthService(), new FakeLauncher());
+
+        AccountId acc1 = new(1);
+        AccountId acc2 = new(2);
+        LaunchRequest req1 = new(acc1, 1818);
+        LaunchRequest req2 = new(acc2, 1818);
+
+        RunningSession? bound = await tracker.TrackLaunchAsync(acc2, req2, () =>
+        {
+            // Simulate Launch 1 spawning and binding PID 801 while Launch 2 was waiting on the launch gate
+            provider.Processes.Add(new ProcessSnapshot(801, DateTimeOffset.UtcNow, 1));
+            tracker.RegisterSession(new RunningSession(acc1, req1, 801, DateTimeOffset.UtcNow));
+
+            // Launch 2 spawns PID 802
+            provider.Processes.Add(new ProcessSnapshot(802, DateTimeOffset.UtcNow, 1));
+            return Task.FromResult(Result.Success());
+        });
+
+        Assert.NotNull(bound);
+        Assert.Equal(802, bound.ProcessId);
+        Assert.Equal(acc2, bound.AccountId);
+        Assert.Equal(2, tracker.ActiveSessions.Count);
+    }
+
+    [Fact]
+    public async Task CloseAllSessionsAsync_CancelsInFlightAutoRejoin()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account account = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new();
+        FakeLauncher launcher = new();
+
+        using SessionTracker tracker = new(
+            provider,
+            new FakeAccountStore(account),
+            new FakeAuthService(),
+            launcher,
+            policyFactory: () => new RejoinPolicy(initialDelay: TimeSpan.FromSeconds(5)));
+
+        tracker.SetAutoRejoin(account.Id, true);
+        tracker.RegisterSession(new RunningSession(account.Id, new LaunchRequest(account.Id, 1818), 901, DateTimeOffset.UtcNow));
+
+        Task pollTask = tracker.PollProcessesAsync();
+        await Task.Delay(50);
+
+        await tracker.CloseAllSessionsAsync(graceful: false);
+        await pollTask;
+
+        Assert.Empty(launcher.Launches);
+    }
+
+    [Fact]
+    public async Task PollProcessesAsync_WhenWaitForRejoinsFalse_DoesNotBlockOtherSessionExitDetection()
+    {
+        using SecretValue cookie = SecretValue.FromString("TEST_COOKIE");
+        Account acc1 = new(new AccountId(1), "Alias1", null, null, cookie, DateTimeOffset.UtcNow);
+        Account acc2 = new(new AccountId(2), "Alias2", null, null, cookie, DateTimeOffset.UtcNow);
+        FakeProcessProvider provider = new()
+        {
+            Processes = [new ProcessSnapshot(902, DateTimeOffset.UtcNow, 1)]
+        };
+        FakeLauncher launcher = new();
+
+        using SessionTracker tracker = new(
+            provider,
+            new FakeAccountStore(acc1, acc2),
+            new FakeAuthService(),
+            launcher,
+            policyFactory: () => new RejoinPolicy(initialDelay: TimeSpan.FromSeconds(10)));
+
+        tracker.SetAutoRejoin(acc1.Id, true);
+        tracker.RegisterSession(new RunningSession(acc1.Id, new LaunchRequest(acc1.Id, 1818), 901, DateTimeOffset.UtcNow));
+        tracker.RegisterSession(new RunningSession(acc2.Id, new LaunchRequest(acc2.Id, 1818), 902, DateTimeOffset.UtcNow));
+
+        // PID 901 exited and enters a 10s rejoin backoff, but waitForRejoins: false returns immediately.
+        await tracker.PollProcessesAsync(waitForRejoins: false);
+        Assert.Single(tracker.ActiveSessions);
+        Assert.Equal(902, tracker.ActiveSessions[0].ProcessId);
+
+        // PID 902 exits while acc1 is still waiting in its 10s rejoin delay.
+        provider.Processes.Clear();
+        await tracker.PollProcessesAsync(waitForRejoins: false);
+        Assert.Empty(tracker.ActiveSessions);
+
+        await tracker.CloseAllSessionsAsync(graceful: false);
+    }
+
+    [Fact]
+    public async Task TrackLaunchAsync_ExistingSessionForSameAccount_KillsOldDuplicateBeforeBindingNew()
+    {
+        FakeProcessProvider provider = new()
+        {
+            Processes = [new ProcessSnapshot(500, DateTimeOffset.UtcNow, 50000)]
+        };
+        using SessionTracker tracker = new(provider, new FakeAccountStore(), new FakeAuthService(), new FakeLauncher());
+        AccountId acc1 = new(1);
+        LaunchRequest req = new(acc1, 1818);
+
+        tracker.RegisterSession(new RunningSession(acc1, req, 500, DateTimeOffset.UtcNow));
+
+        RunningSession? newSession = await tracker.TrackLaunchAsync(acc1, req, () =>
+        {
+            provider.Processes.Add(new ProcessSnapshot(501, DateTimeOffset.UtcNow, 50000));
+            return Task.FromResult(Result.Success());
+        });
+
+        Assert.Contains(500, provider.KilledPids);
+        Assert.NotNull(newSession);
+        Assert.Equal(501, newSession.ProcessId);
+        Assert.Single(tracker.ActiveSessions);
+        Assert.Equal(501, tracker.ActiveSessions[0].ProcessId);
+    }
+
+    [Fact]
+    public async Task TrackLaunchAsync_WhenLaunchActionFails_PreservesExistingSessionForSameAccount()
+    {
+        FakeProcessProvider provider = new()
+        {
+            Processes = [new ProcessSnapshot(500, DateTimeOffset.UtcNow, 50000)]
+        };
+        using SessionTracker tracker = new(provider, new FakeAccountStore(), new FakeAuthService(), new FakeLauncher());
+        AccountId acc1 = new(1);
+        LaunchRequest req = new(acc1, 1818);
+
+        tracker.RegisterSession(new RunningSession(acc1, req, 500, DateTimeOffset.UtcNow));
+
+        RunningSession? newSession = await tracker.TrackLaunchAsync(
+            acc1,
+            req,
+            () => Task.FromResult(Result.Failure("Rate limited", AuthErrorCodes.RateLimited)));
+
+        Assert.Null(newSession);
+        Assert.Empty(provider.KilledPids);
+        Assert.Single(tracker.ActiveSessions);
+        Assert.Equal(500, tracker.ActiveSessions[0].ProcessId);
     }
 }
