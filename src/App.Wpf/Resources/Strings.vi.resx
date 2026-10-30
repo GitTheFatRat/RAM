@@ -583,6 +583,9 @@
   <data name="MasterPasswordInvalid" xml:space="preserve">
     <value>Mật khẩu chính không chính xác.</value>
   </data>
+  <data name="MasterPasswordRebindConfirm" xml:space="preserve">
+    <value>Kho tài khoản chưa được khóa bằng mật khẩu. Nhập lại đúng mật khẩu một lần nữa để xác nhận và khóa.</value>
+  </data>
   <data name="MasterPasswordRequired" xml:space="preserve">
     <value>Vui lòng nhập mật khẩu chính.</value>
   </data>

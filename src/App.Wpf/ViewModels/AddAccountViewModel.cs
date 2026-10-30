@@ -2,6 +2,7 @@ namespace RbxManager.App.ViewModels;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -24,6 +25,9 @@ using Wpf.Ui.Extensions;
 
 public partial class AddAccountViewModel : ObservableObject, IDisposable
 {
+    public const string DefaultLoginUrl = "https://www.roblox.com/NewLogin";
+    public const string DefaultSignUpUrl = "https://www.roblox.com/NewLogin#signup";
+
     private static readonly CompositeFormat BulkImportProgressFormat = CompositeFormat.Parse(Strings.BulkImportProgress);
     private static readonly CompositeFormat BulkImportCompletedFormat = CompositeFormat.Parse(Strings.BulkImportCompleted);
 
@@ -90,7 +94,7 @@ public partial class AddAccountViewModel : ObservableObject, IDisposable
         _browserLauncher = urlBrowserLauncher
             ?? (browserLauncher != null
                 ? (_ => browserLauncher())
-                : IncognitoBrowserLauncher.TryLaunch);
+                : OpenDefaultBrowser);
         _dpiToolService = dpiToolService;
         if (extensionBridge != null)
         {
@@ -116,8 +120,15 @@ public partial class AddAccountViewModel : ObservableObject, IDisposable
     public void StopExtensionBridge()
     {
         _extensionBridge.AccountImported -= OnExtensionAccountImported;
-        _extensionBridge.StopListening();
-        IsExtensionBridgeListening = false;
+        if (_ownsExtensionBridge)
+        {
+            _extensionBridge.StopListening();
+            IsExtensionBridgeListening = false;
+        }
+        else
+        {
+            IsExtensionBridgeListening = _extensionBridge.IsListening;
+        }
     }
 
     public void Dispose()
@@ -226,13 +237,13 @@ public partial class AddAccountViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenIncognitoBrowser()
     {
-        LaunchBrowserUrl(IncognitoBrowserLauncher.LoginUrl);
+        LaunchBrowserUrl(DefaultLoginUrl);
     }
 
     [RelayCommand]
     private void OpenSignUpBrowser()
     {
-        LaunchBrowserUrl(IncognitoBrowserLauncher.SignUpUrl);
+        LaunchBrowserUrl(DefaultSignUpUrl);
     }
 
     private void LaunchBrowserUrl(string url)
@@ -241,6 +252,22 @@ public partial class AddAccountViewModel : ObservableObject, IDisposable
         if (!_browserLauncher(url))
         {
             ErrorMessage = Strings.IncognitoBrowserFailed;
+        }
+    }
+
+    private static bool OpenDefaultBrowser(string url)
+    {
+        try
+        {
+            using Process? process = Process.Start(new ProcessStartInfo(url)
+            {
+                UseShellExecute = true
+            });
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 

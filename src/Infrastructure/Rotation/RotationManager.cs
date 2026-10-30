@@ -120,7 +120,7 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
             for (int index = 0; ; index = (index + 1) % plan.Groups.Count)
             {
                 string group = plan.Groups[index];
-                await RunStepSafelyAsync("launch", group, () => LaunchGroupAsync(group, plan.PlaceId, ct)).ConfigureAwait(false);
+                await RunStepSafelyAsync("launch", group, () => LaunchGroupAsync(group, plan.PlaceId, ct), ct).ConfigureAwait(false);
 
                 DateTimeOffset switchAt = _timeProvider.GetUtcNow() + plan.GroupDuration;
                 SetStatus(new RotationStatus(RotationPhase.Farming, group, switchAt));
@@ -128,11 +128,11 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
 
                 SetStatus(new RotationStatus(RotationPhase.Stopping, group, null));
                 LogSwitching(group, _sessionTracker.ActiveSessions.Count);
-                await RunStepSafelyAsync("close", group, () => _sessionTracker.CloseAllSessionsAsync(graceful: false)).ConfigureAwait(false);
+                await RunStepSafelyAsync("close", group, () => _sessionTracker.CloseAllSessionsAsync(graceful: false), ct).ConfigureAwait(false);
                 await Task.Delay(ExitGracePeriod, _timeProvider, ct).ConfigureAwait(false);
 
                 SetStatus(new RotationStatus(RotationPhase.Cleaning, group, null));
-                await RunStepSafelyAsync("clean", group, () => _cacheCleaner.CleanAsync(ct)).ConfigureAwait(false);
+                await RunStepSafelyAsync("clean", group, () => _cacheCleaner.CleanAsync(ct), ct).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -176,9 +176,10 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
                 {
                     launchResult = await LaunchMemberAsync(account, group, placeId, ct).ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
                 {
-                    // One account's vault/recovery failure must not end the whole rotation.
+                    // One account's vault/recovery failure (incl. an HTTP timeout surfacing as TaskCanceledException)
+                    // must not end the whole rotation; only a real stop request may escape.
                     LogAccountFailed(account.Id.Value, group, ex.GetType().Name);
                     continue;
                 }
@@ -245,13 +246,13 @@ public sealed partial class RotationManager : IRotationManager, IDisposable
     }
 
     // Close/clean are housekeeping between groups: a locked cache file or a stuck process must not stop farming.
-    private async Task RunStepSafelyAsync(string step, string group, Func<Task> action)
+    private async Task RunStepSafelyAsync(string step, string group, Func<Task> action, CancellationToken ct)
     {
         try
         {
             await action().ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogStepFailed(step, group, ex.GetType().Name);
         }

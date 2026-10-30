@@ -52,6 +52,7 @@ public sealed class WindowSizeLock : IDisposable
     private IntPtr _hWnd;
     private bool _isUserDragging;
     private bool _isApplying;
+    private bool _pendingTileMove;
     private long _burstStartedAt;
     private int _burstCorrections;
     private int _trailingScheduled;
@@ -203,24 +204,17 @@ public sealed class WindowSizeLock : IDisposable
         {
             _hWnd = hWnd;
             _isUserDragging = false;
+            if (User32.IsIconicOverride?.Invoke(hWnd) ?? User32.IsIconic(hWnd))
+            {
+                // Never un-minimize behind the user's back: adopt the handle and finish placement on MINIMIZEEND.
+                _pendingTileMove = _tilePosition.HasValue;
+                return;
+            }
+
             if (_tilePosition is GridSlot tile)
             {
                 // A recreated window (app shell -> game, teleport) spawns centered again; put it back in its tile.
-                _isApplying = true;
-                try
-                {
-                    if (User32.IsIconicOverride?.Invoke(hWnd) ?? User32.IsIconic(hWnd))
-                    {
-                        _ = User32.ShowWindowOverride?.Invoke(hWnd, User32.SW_RESTORE) ?? User32.ShowWindow(hWnd, User32.SW_RESTORE);
-                    }
-
-                    User32.ForceWindowedMode(hWnd);
-                    User32.MoveResizeWindow(hWnd, tile.X, tile.Y, _width, _height);
-                }
-                finally
-                {
-                    _isApplying = false;
-                }
+                MoveToTile(tile);
             }
             else
             {
@@ -245,24 +239,52 @@ public sealed class WindowSizeLock : IDisposable
                 EnforceSize();
                 break;
             case EVENT_SYSTEM_MINIMIZESTART:
-            case EVENT_SYSTEM_MINIMIZEEND:
-                EnforceSize();
+                // The user (or the throttler) is minimizing: restoring here would bounce the window straight back.
                 break;
+            case EVENT_SYSTEM_MINIMIZEEND:
             case EVENT_OBJECT_LOCATIONCHANGE when !_isUserDragging:
                 // Fighting the move loop mid-drag only causes flicker; correct after release instead.
-                EnforceSize();
+                // A still-minimized window is parked at (-32000, -32000); resizing it would corrupt its restore rect.
+                if (!(User32.IsIconicOverride?.Invoke(hWnd) ?? User32.IsIconic(hWnd)))
+                {
+                    if (_pendingTileMove && _tilePosition is GridSlot pendingTile)
+                    {
+                        _pendingTileMove = false;
+                        MoveToTile(pendingTile);
+                    }
+                    else
+                    {
+                        EnforceSize();
+                    }
+                }
+
                 break;
+        }
+    }
+
+    private void MoveToTile(GridSlot tile)
+    {
+        _isApplying = true;
+        try
+        {
+            User32.MoveResizeWindow(_hWnd, tile.X, tile.Y, _width, _height);
+        }
+        finally
+        {
+            _isApplying = false;
         }
     }
 
     private void EnforceSize()
     {
-        if (_isApplying)
+        // Single choke point for every caller (Attach, trailing burst, MOVESIZEEND, recreated window):
+        // a minimized window sits at (-32000, -32000) and must never be restored or resized from here.
+        bool isMinimized = User32.IsIconicOverride?.Invoke(_hWnd) ?? User32.IsIconic(_hWnd);
+        if (_isApplying || isMinimized)
         {
             return;
         }
 
-        bool isMinimized = User32.IsIconicOverride?.Invoke(_hWnd) ?? User32.IsIconic(_hWnd);
         bool isMaximized = User32.IsZoomedOverride?.Invoke(_hWnd) ?? User32.IsZoomed(_hWnd);
         Rect bounds;
         bool hasBounds;
@@ -277,7 +299,7 @@ public sealed class WindowSizeLock : IDisposable
             hasBounds = GetWindowRect(_hWnd, out bounds);
         }
 
-        if (!isMinimized && !isMaximized && hasBounds &&
+        if (!isMaximized && hasBounds &&
             bounds.Right - bounds.Left == _width && bounds.Bottom - bounds.Top == _height)
         {
             return;
@@ -300,11 +322,6 @@ public sealed class WindowSizeLock : IDisposable
         _isApplying = true;
         try
         {
-            if (isMinimized)
-            {
-                _ = User32.ShowWindowOverride?.Invoke(_hWnd, User32.SW_RESTORE) ?? User32.ShowWindow(_hWnd, User32.SW_RESTORE);
-            }
-
             User32.ResizeWindow(_hWnd, _width, _height);
         }
         finally

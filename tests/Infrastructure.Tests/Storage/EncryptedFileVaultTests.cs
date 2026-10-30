@@ -760,6 +760,8 @@ public sealed class EncryptedFileVaultTests
 
         byte[] savedBytes = await File.ReadAllBytesAsync(vaultFilePath);
         Assert.Equal(0x02, savedBytes[5]);
+        // M44 B12: File.Replace rotated the legacy 0x01 (DPAPI-bypassable) primary into .bak; it must not survive.
+        Assert.False(File.Exists(vaultFilePath + ".bak"), "A password-bypassable legacy backup was left on disk.");
 
         using (VaultKeyProvider keyProvider = CreateKeyProvider(password))
         using (EncryptedFileVault vault = new(vaultFilePath, keyProvider))

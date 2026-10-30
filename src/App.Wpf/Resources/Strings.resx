@@ -583,6 +583,9 @@
   <data name="MasterPasswordInvalid" xml:space="preserve">
     <value>Invalid master password.</value>
   </data>
+  <data name="MasterPasswordRebindConfirm" xml:space="preserve">
+    <value>Your vault is not locked with a password yet. Enter the same password once more to confirm and lock it.</value>
+  </data>
   <data name="MasterPasswordRequired" xml:space="preserve">
     <value>Master password is required.</value>
   </data>

@@ -311,12 +311,16 @@ public sealed class XamlSmokeTests
             settingsService: settingsService);
 
         Assert.Equal("2753915549", viewModel.PlaceIdText);
-        settingsService.DidNotReceiveWithAnyArgs().SaveSettingsAsync(default!);
+        settingsService.DidNotReceiveWithAnyArgs().UpdateSettingsAsync(default!);
 
         viewModel.PlaceIdText = "1537690962";
 
-        settingsService.Received(1).SaveSettingsAsync(
-            Arg.Is<AppSettings>(s => s.LastPlaceId == "1537690962"));
+        // M44: saved via the locked read-modify-write (never a stale CurrentSettings snapshot).
+        settingsService.DidNotReceiveWithAnyArgs().SaveSettingsAsync(default!);
+        AppSettings placeIdBaseline = new(LastPlaceId: "2753915549");
+        settingsService.Received(1).UpdateSettingsAsync(
+            Arg.Is<Func<AppSettings, AppSettings>>(mutate => mutate(placeIdBaseline).LastPlaceId == "1537690962"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

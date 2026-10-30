@@ -50,7 +50,7 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         Core.Settings.AppSettings current = _settingsService.CurrentSettings;
         if (!string.Equals(current.LastPlaceId, trimmed, StringComparison.Ordinal))
         {
-            _ = _settingsService.SaveSettingsAsync(current with { LastPlaceId = trimmed });
+            _ = _settingsService.UpdateSettingsAsync(s => s with { LastPlaceId = trimmed });
         }
     }
 
@@ -294,24 +294,24 @@ public partial class ServersViewModel : ObservableObject, IDisposable
             {
                 currentIndex++;
                 ct.ThrowIfCancellationRequested();
-                LaunchRequest? request = await buildRequest(account, ct);
-                if (request == null)
-                {
-                    if (queue.Count == 1)
-                    {
-                        aborted = true;
-                        break;
-                    }
-
-                    continue;
-                }
-
                 bool rateLimited = false;
 
-                // Per-account isolation: a vault write or recovery failure for one account must never abort
-                // the remaining queue. Only cancellation is allowed to escape the loop.
+                // Per-account isolation: a presence lookup, vault write or recovery failure for one account must
+                // never abort the remaining queue. Only cancellation is allowed to escape the loop.
                 try
                 {
+                    LaunchRequest? request = await buildRequest(account, ct);
+                    if (request == null)
+                    {
+                        if (queue.Count == 1)
+                        {
+                            aborted = true;
+                            break;
+                        }
+
+                        continue;
+                    }
+
                     JoinStatusText = string.Create(
                         System.Globalization.CultureInfo.InvariantCulture,
                         $"Launching {currentIndex} / {queue.Count}: {account.Alias}");
@@ -423,8 +423,9 @@ public partial class ServersViewModel : ObservableObject, IDisposable
                         _snackbarService.Show(account.Alias, launchResult.Error ?? Strings.ErrorTitle, ControlAppearance.Danger);
                     }
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
                 {
+                    // Filter on the token, not the type: an HttpClient timeout is a TaskCanceledException too.
                     Serilog.Log.Warning(
                         "Join queue item {AccountId} failed with {ExceptionType}; continuing with the next account.",
                         account.Id.Value,

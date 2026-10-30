@@ -561,6 +561,148 @@ public sealed class CheckAllPacingTests
         });
     }
 
+    // M44 R1: after the user presses Cancel, a non-cancellation error from the in-flight account (vault IO, recovery)
+    // must still be isolated — it must not escape the async command as an unhandled "fatal error".
+    [Fact]
+    public void ExecuteSequentialLaunchQueueAsync_WhenAccountThrowsIoAfterUserCancel_EndsCleanly()
+    {
+        StaRunner.Run(() =>
+        {
+            FakeTimeProvider timeProvider = new();
+            using SecretValue c1 = SecretValue.FromString("fake-cookie-1");
+            using SecretValue c2 = SecretValue.FromString("fake-cookie-2");
+            ILauncher launcher = Substitute.For<ILauncher>();
+            AccountsViewModel? vm = null;
+            List<AccountId> launchedIds = [];
+            launcher.LaunchAsync(Arg.Any<LaunchRequest>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    launchedIds.Add(call.Arg<LaunchRequest>().AccountId);
+                    vm!.CancelBulkLaunch();
+                    return Task.FromException<Result>(new System.IO.IOException("vault.dat is locked by another process"));
+                });
+
+            vm = new AccountsViewModel(
+                new FakeAccountStore(
+                    new Account(new AccountId(1), "A1", null, null, c1, DateTimeOffset.UtcNow),
+                    new Account(new AccountId(2), "A2", null, null, c2, DateTimeOffset.UtcNow)),
+                Substitute.For<IContentDialogService>(),
+                Substitute.For<ISnackbarService>(),
+                new FakeAuthService(timeProvider),
+                launcher,
+                timeProvider: timeProvider,
+                randomDelayGenerator: (_, _) => 5);
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+            for (int i = 0; i < 10 && !launchTask.IsCompleted; i++)
+            {
+                timeProvider.Advance(TimeSpan.FromSeconds(1));
+            }
+
+            Exception? escaped = Record.Exception(() => launchTask.GetAwaiter().GetResult());
+            Assert.Null(escaped);
+            Assert.Equal([new AccountId(1)], launchedIds);
+            Assert.False(vm.IsBulkLaunching);
+        });
+    }
+
+    // M44 Flow 3: an HTTP timeout surfaces as TaskCanceledException while the user has NOT cancelled the queue.
+    [Fact]
+    public void ExecuteSequentialLaunchQueueAsync_WhenAccountThrowsNonUserTaskCanceled_ContinuesWithNextAccount()
+    {
+        StaRunner.Run(() =>
+        {
+            FakeTimeProvider timeProvider = new();
+            using SecretValue c1 = SecretValue.FromString("fake-cookie-1");
+            using SecretValue c2 = SecretValue.FromString("fake-cookie-2");
+            using SecretValue c3 = SecretValue.FromString("fake-cookie-3");
+            ILauncher launcher = Substitute.For<ILauncher>();
+            List<AccountId> launchedIds = [];
+            launcher.LaunchAsync(Arg.Any<LaunchRequest>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    AccountId accountId = call.Arg<LaunchRequest>().AccountId;
+                    launchedIds.Add(accountId);
+                    return accountId.Value == 2
+                        ? Task.FromException<Result>(new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout"))
+                        : Task.FromResult(Result.Success());
+                });
+
+            AccountsViewModel vm = new(
+                new FakeAccountStore(
+                    new Account(new AccountId(1), "A1", null, null, c1, DateTimeOffset.UtcNow),
+                    new Account(new AccountId(2), "A2", null, null, c2, DateTimeOffset.UtcNow),
+                    new Account(new AccountId(3), "A3", null, null, c3, DateTimeOffset.UtcNow)),
+                Substitute.For<IContentDialogService>(),
+                Substitute.For<ISnackbarService>(),
+                new FakeAuthService(timeProvider),
+                launcher,
+                timeProvider: timeProvider,
+                randomDelayGenerator: (_, _) => 5);
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+
+            for (int i = 0; i < 30 && !launchTask.IsCompleted; i++)
+            {
+                timeProvider.Advance(TimeSpan.FromSeconds(1));
+            }
+
+            launchTask.GetAwaiter().GetResult();
+            Assert.Equal([new AccountId(1), new AccountId(2), new AccountId(3)], launchedIds);
+        });
+    }
+
+    // M44 Flow 3: wait after HTTP 429 must be Math.Max(normalGap, backoff) — here gap 90s > backoff 30s.
+    [Fact]
+    public void ExecuteSequentialLaunchQueueAsync_WhenPacingExceedsBackoff_WaitsTheLongerPacingGap()
+    {
+        StaRunner.Run(() =>
+        {
+            FakeTimeProvider timeProvider = new();
+            using SecretValue c1 = SecretValue.FromString("fake-cookie-1");
+            using SecretValue c2 = SecretValue.FromString("fake-cookie-2");
+            ILauncher launcher = Substitute.For<ILauncher>();
+            List<AccountId> launchedIds = [];
+            launcher.LaunchAsync(Arg.Any<LaunchRequest>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    AccountId accountId = call.Arg<LaunchRequest>().AccountId;
+                    launchedIds.Add(accountId);
+                    return accountId.Value == 1
+                        ? Task.FromResult(Result.Failure("Too many requests", AuthErrorCodes.RateLimited))
+                        : Task.FromResult(Result.Success());
+                });
+
+            AccountsViewModel vm = new(
+                new FakeAccountStore(
+                    new Account(new AccountId(1), "A1", null, null, c1, DateTimeOffset.UtcNow),
+                    new Account(new AccountId(2), "A2", null, null, c2, DateTimeOffset.UtcNow)),
+                Substitute.For<IContentDialogService>(),
+                Substitute.For<ISnackbarService>(),
+                new FakeAuthService(timeProvider),
+                launcher,
+                timeProvider: timeProvider,
+                randomDelayGenerator: (_, _) => 90);
+
+            vm.LoadAccountsAsync().GetAwaiter().GetResult();
+            Task launchTask = vm.ExecuteSequentialLaunchQueueAsync(vm.FilteredAccounts, 1818);
+
+            Assert.Contains("90", vm.BulkLaunchCountdownText, StringComparison.Ordinal);
+            for (int i = 0; i < 89; i++)
+            {
+                timeProvider.Advance(TimeSpan.FromSeconds(1));
+            }
+
+            Assert.Equal([new AccountId(1)], launchedIds);
+
+            timeProvider.Advance(TimeSpan.FromSeconds(1));
+            launchTask.GetAwaiter().GetResult();
+            Assert.Equal([new AccountId(1), new AccountId(2)], launchedIds);
+        });
+    }
+
     [Fact]
     public void ExecuteSequentialLaunchQueueAsync_WhenRateLimitedOrModerated_SurvivesAndResumesAfterBackoff()
     {

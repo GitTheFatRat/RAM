@@ -150,6 +150,39 @@ public sealed class RotationManagerTests
         Assert.False(manager.Status.IsRunning);
     }
 
+    // M44 real-data: the timeout comes from a real HttpClient against a real loopback socket that never answers,
+    // i.e. the exact TaskCanceledException an HTTP timeout produces while the user has NOT stopped rotation.
+    [Fact]
+    public async Task LaunchGroup_WhenAccountHitsRealHttpTimeout_ContinuesGroupAndKeepsRotating()
+    {
+        using System.Net.Sockets.TcpListener silentServer = new(System.Net.IPAddress.Loopback, 0);
+        silentServer.Start();
+        int port = ((System.Net.IPEndPoint)silentServer.LocalEndpoint).Port;
+        using System.Net.Http.HttpClient timingOutClient = new() { Timeout = TimeSpan.FromMilliseconds(200) };
+        int launchCalls = 0;
+        _launcher.LaunchAsync(Arg.Any<LaunchRequest>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                if (Interlocked.Increment(ref launchCalls) == 1)
+                {
+                    using System.Net.Http.HttpResponseMessage _ = await timingOutClient.GetAsync(
+                        new Uri($"http://127.0.0.1:{port}/auth-ticket"),
+                        call.Arg<CancellationToken>());
+                }
+
+                return Result.Success();
+            });
+
+        using RotationManager manager = CreateManager();
+        manager.Start(new RotationPlan(["Group 1"], GroupDuration, 1818));
+
+        await WaitUntilAsync(() => manager.Status.Phase == RotationPhase.Farming);
+        Assert.Equal(["launch 1@1818", "launch 2@1818"], _events.ToArray());
+        Assert.True(manager.Status.IsRunning);
+
+        await manager.StopAsync();
+    }
+
     [Fact]
     public async Task LaunchGroup_WhenRateLimited_PausesForExponentialBackoffAndContinuesGroup()
     {

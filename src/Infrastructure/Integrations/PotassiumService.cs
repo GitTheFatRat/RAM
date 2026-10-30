@@ -54,8 +54,8 @@ public sealed partial class PotassiumService : IPotassiumService
             _settingsService != null &&
             !string.Equals(_settingsService.CurrentSettings.PotassiumExecutablePath, result.ExecutablePath, StringComparison.OrdinalIgnoreCase))
         {
-            AppSettings updated = _settingsService.CurrentSettings with { PotassiumExecutablePath = result.ExecutablePath };
-            await _settingsService.SaveSettingsAsync(updated, ct).ConfigureAwait(false);
+            // UpdateSettingsAsync applies the change to the latest state under the lock (no lost concurrent edits).
+            await _settingsService.UpdateSettingsAsync(s => s with { PotassiumExecutablePath = result.ExecutablePath }, ct).ConfigureAwait(false);
         }
 
         LastScanResult = result;

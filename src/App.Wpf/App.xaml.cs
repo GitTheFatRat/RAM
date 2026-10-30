@@ -76,7 +76,7 @@ public partial class App : Application
 
     private static void ConfigureLogging()
     {
-        string logPath = "logs/app-.log";
+        string logPath = Path.Combine(ResolveLogDirectory(), "app-.log");
 #if DEBUG
         string? dataDir = Environment.GetEnvironmentVariable("RBXMANAGER_DATA_DIR");
         if (!string.IsNullOrWhiteSpace(dataDir))
@@ -89,11 +89,43 @@ public partial class App : Application
             .MinimumLevel.Information()
             .Enrich.With<RobloxSecretRedactionEnricher>()
             .WriteTo.File(
+                formatter: new RedactingTextFormatter(),
                 path: logPath,
                 rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 14,
-                formatProvider: CultureInfo.InvariantCulture)
+                retainedFileCountLimit: 14)
             .CreateLogger();
+    }
+
+    /// <summary>
+    /// A relative "logs/" path resolves against the working directory, which is System32 for autostart/Task Scheduler
+    /// launches — the sink then fails silently. Anchor to the exe folder (next to crash_log.txt) and fall back to
+    /// %LOCALAPPDATA% when that folder is read-only (e.g. Program Files).
+    /// </summary>
+    internal static string ResolveLogDirectory(string? preferredBaseDirectory = null)
+    {
+        string exeLogs = Path.Combine(preferredBaseDirectory ?? AppContext.BaseDirectory, "logs");
+        if (IsWritableDirectory(exeLogs))
+        {
+            return exeLogs;
+        }
+
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RbxManager", "logs");
+    }
+
+    private static bool IsWritableDirectory(string directory)
+    {
+        try
+        {
+            Directory.CreateDirectory(directory);
+            string probe = Path.Combine(directory, ".write-probe-" + Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+            File.WriteAllText(probe, string.Empty);
+            File.Delete(probe);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private static void ConfigureGlobalExceptionHandling()
@@ -128,7 +160,7 @@ public partial class App : Application
         try
         {
             MessageBox.Show(
-                $"A fatal error occurred. Check crash_log.txt for details.\n\n{e.Exception.Message}",
+                $"A fatal error occurred. Check crash_log.txt for details.\n\n{RobloxSecretRedactionEnricher.Redact(e.Exception.Message)}",
                 "RbxManager",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -139,7 +171,7 @@ public partial class App : Application
         }
     }
 
-    private static void WriteCrashLog(string source, Exception? exception)
+    internal static void WriteCrashLog(string source, Exception? exception)
     {
         try
         {
@@ -171,7 +203,8 @@ public partial class App : Application
             }
             sb.AppendLine();
 
-            File.AppendAllText(crashLogPath, sb.ToString());
+            // Exception messages can embed request/cookie text; this file bypasses Serilog, so scrub it here.
+            File.AppendAllText(crashLogPath, RobloxSecretRedactionEnricher.Redact(sb.ToString()));
         }
         catch
         {
@@ -406,6 +439,16 @@ public partial class App : Application
         }
 
         MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        if (!isUiTest && _host.Services.GetService<Core.Bridge.ILocalExtensionBridge>() is Core.Bridge.ILocalExtensionBridge extensionBridge)
+        {
+            AccountsViewModel accountsVm = _host.Services.GetRequiredService<AccountsViewModel>();
+            extensionBridge.AccountImported += imported =>
+            {
+                _ = Dispatcher.InvokeAsync(async () => await accountsVm.LoadAccountsAsync());
+            };
+            _ = extensionBridge.StartListening();
+        }
+
         mainWindow.Show();
     }
 
@@ -502,7 +545,9 @@ public partial class App : Application
         }
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    // Deliberately synchronous: in an async void override, everything after the first real await (host stop,
+    // mutex release, final log flush) may never run once the dispatcher has shut down.
+    protected override void OnExit(ExitEventArgs e)
     {
         Log.Information("RbxManager application shutting down.");
 
@@ -511,6 +556,7 @@ public partial class App : Application
             // Stop in-flight 60–120s launch queues and any CDP Chrome left open before the host disposes services.
             _host.Services.GetService<AccountsViewModel>()?.CancelBulkLaunch();
             _host.Services.GetService<ServersViewModel>()?.CancelJoin();
+            _host.Services.GetService<Core.Bridge.ILocalExtensionBridge>()?.StopListening();
             RbxManager.App.Services.IncognitoBrowserLauncher.CleanupAllSessions();
 
             // Resolution edits sit in a 500 ms debounce before hitting disk. Flush synchronously (bounded): continuations
@@ -541,7 +587,11 @@ public partial class App : Application
 
         using (_host)
         {
-            await _host.StopAsync();
+            // Off the UI thread and bounded, so a hosted service that needs the dispatcher can't deadlock shutdown.
+            if (!Task.Run(() => _host.StopAsync(TimeSpan.FromSeconds(5))).Wait(TimeSpan.FromSeconds(6)))
+            {
+                Log.Warning("Host did not stop within the shutdown budget.");
+            }
         }
 
         if (_appSingleInstanceMutex != null)
@@ -562,7 +612,7 @@ public partial class App : Application
         ReleaseGlobalRobloxMutex(ref _globalRobloxMutex);
         ReleaseGlobalRobloxMutex(ref _globalRobloxSingletonMutex);
 
-        await Log.CloseAndFlushAsync();
+        Log.CloseAndFlush();
 
         base.OnExit(e);
     }

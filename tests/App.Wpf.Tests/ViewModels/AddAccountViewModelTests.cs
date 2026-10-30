@@ -56,7 +56,7 @@ public sealed class AddAccountViewModelTests
         vm.OpenSignUpBrowserCommand.Execute(null);
 
         Assert.Equal(
-            [IncognitoBrowserLauncher.LoginUrl, IncognitoBrowserLauncher.SignUpUrl],
+            [AddAccountViewModel.DefaultLoginUrl, AddAccountViewModel.DefaultSignUpUrl],
             launchedUrls);
         Assert.False(vm.HasErrorMessage);
     }

@@ -714,7 +714,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
             _lastPlaceId = placeIdStr;
             if (_settingsService != null && !string.Equals(_settingsService.CurrentSettings.LastPlaceId, placeIdStr, StringComparison.Ordinal))
             {
-                _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings with { LastPlaceId = placeIdStr });
+                _ = _settingsService.UpdateSettingsAsync(s => s with { LastPlaceId = placeIdStr });
             }
 
             if (_instanceGate is { IsMultiInstanceEnabled: false })
@@ -934,7 +934,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                 SortColumn = SortColumn,
                 SortDescending = SortDescending
             };
-            _ = _settingsService.SaveSettingsAsync(current with { UiState = uiState });
+            _ = _settingsService.UpdateSettingsAsync(s => s with { UiState = (s.UiState ?? new UiStateSettings()) with { SortColumn = uiState.SortColumn, SortDescending = uiState.SortDescending } });
         }
         catch
         {
@@ -1129,7 +1129,7 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
         _lastPlaceId = placeIdStr;
         if (_settingsService != null && !string.Equals(_settingsService.CurrentSettings.LastPlaceId, placeIdStr, StringComparison.Ordinal))
         {
-            _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings with { LastPlaceId = placeIdStr });
+            _ = _settingsService.UpdateSettingsAsync(s => s with { LastPlaceId = placeIdStr });
         }
         string? jobId = dialogControl.JobIdText;
         if (!string.IsNullOrWhiteSpace(jobId) && !Guid.TryParse(jobId, out _))
@@ -1239,8 +1239,9 @@ public partial class AccountsViewModel : ObservableObject, IDisposable
                         await UpdateAccountStatusOnLaunchFailureAsync(account, launchResult.ErrorCode);
                     }
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
                 {
+                    // Filter on the token, not the type: an HttpClient timeout is a TaskCanceledException too.
                     failCount++;
                     Serilog.Log.Warning(
                         "Launch queue item {AccountId} failed with {ExceptionType}; continuing with the next account.",

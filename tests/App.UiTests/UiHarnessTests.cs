@@ -128,7 +128,7 @@ public sealed class UiHarnessTests
         {
             SendEscape(session.MainWindowHandle);
             Thread.Sleep(200);
-        });
+        }, capturePopups: true);
 
         // 6. AccountsAddCookieDialog — the split-button menu opens and the editor dialog appears and accepts input.
         RunScenario(session, "AccountsAddCookieDialog", theme, artifactsDir, results, () =>
@@ -391,7 +391,8 @@ public sealed class UiHarnessTests
         List<ScenarioRecord> results,
         Action action,
         Func<UiAppSession, IntPtr>? targetWindowFinder = null,
-        Action? postAction = null)
+        Action? postAction = null,
+        bool capturePopups = false)
     {
         string imagePath = Path.Combine(artifactsDir, $"{scenarioName}-{theme}.png");
         string jsonPath = Path.Combine(artifactsDir, $"{scenarioName}-{theme}.uia.json");
@@ -411,7 +412,17 @@ public sealed class UiHarnessTests
 
             // Window-only capture via Win32 PrintWindow with render-full-content flag
             using Bitmap screenshot = NativeWindowCapture.CaptureWindow(targetHwnd);
-            NativeWindowCapture.SaveBitmap(screenshot, imagePath);
+            if (capturePopups)
+            {
+                // Assertions below keep using the raw window capture; the saved PNG must show the real popup menu.
+                using Bitmap withPopups = NativeWindowCapture.ComposeWithProcessPopups(screenshot, targetHwnd, session.Process.Id, out int popupCount);
+                AutomationHelper.RequireThat(popupCount > 0, "Popup menu window was rendered into the screenshot");
+                NativeWindowCapture.SaveBitmap(withPopups, imagePath);
+            }
+            else
+            {
+                NativeWindowCapture.SaveBitmap(screenshot, imagePath);
+            }
 
             // Dump UI tree via UI Automation
             AutomationElement targetElement = AutomationElement.FromHandle(targetHwnd);

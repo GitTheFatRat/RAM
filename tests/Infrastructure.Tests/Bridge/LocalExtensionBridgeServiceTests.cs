@@ -34,9 +34,13 @@ public sealed class LocalExtensionBridgeServiceTests
     [InlineData("", false)]
     [InlineData("https://www.roblox.com", false)]
     [InlineData("http://127.0.0.1:48123", false)]
-    [InlineData("chrome-extension://abcdefghijklmnop", true)]
-    [InlineData("moz-extension://1234-5678", true)]
-    [InlineData("extension://edge-ext-id", true)]
+    [InlineData("null", false)]
+    [InlineData("chrome-extension://abcdefghijklmnop", false)]
+    [InlineData("chrome-extension://" + LocalExtensionBridgeService.TrustedExtensionId + ".evil", false)]
+    [InlineData("moz-extension://1234-5678", false)]
+    [InlineData("extension://edge-ext-id", false)]
+    [InlineData(LocalExtensionBridgeService.TrustedExtensionOrigin, true)]
+    [InlineData(LocalExtensionBridgeService.TrustedExtensionOrigin + "/", true)]
     public void IsAllowedExtensionOrigin_ValidatesStrictly(string? origin, bool expected)
     {
         Assert.Equal(expected, LocalExtensionBridgeService.IsAllowedExtensionOrigin(origin));
@@ -77,6 +81,57 @@ public sealed class LocalExtensionBridgeServiceTests
         Assert.Empty(store.Accounts);
     }
 
+    // M44 Flow 5 real loopback: another installed extension (valid chrome-extension:// scheme, wrong ID) must be rejected.
+    [Fact]
+    public async Task ImportEndpoint_WhenForeignExtensionOrigin_Returns403AndStoresNothing()
+    {
+        int port = GetFreeLoopbackPort();
+        FakeAccountStore store = new();
+        using LocalExtensionBridgeService bridge = new(store, new FakeAuthService(), port: port);
+        Assert.True(bridge.StartListening());
+
+        using HttpClient client = new();
+        foreach (string foreignOrigin in new[] { "chrome-extension://aaaabbbbccccddddeeeeffffgggghhhh", "moz-extension://1234-5678", "null" })
+        {
+            using HttpRequestMessage request = new(HttpMethod.Post, bridge.EndpointUrl)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new { cookie = ValidSampleCookie }), Encoding.UTF8, "application/json")
+            };
+            request.Headers.TryAddWithoutValidation("Origin", foreignOrigin);
+
+            using HttpResponseMessage response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        Assert.Empty(store.Accounts);
+    }
+
+    [Fact]
+    public void ExtensionManifest_PinnedKey_DerivesTheTrustedExtensionId()
+    {
+        string manifestPath = FindRepoFile(Path.Combine("tools", "BrowserExtension", "manifest.json"));
+        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
+        byte[] publicKey = Convert.FromBase64String(manifest.RootElement.GetProperty("key").GetString()!);
+
+        string hex = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(publicKey), 0, 16).ToLowerInvariant();
+        string derivedId = string.Concat(hex.Select(c => (char)('a' + Convert.ToInt32(c.ToString(), 16))));
+
+        Assert.Equal(LocalExtensionBridgeService.TrustedExtensionId, derivedId);
+    }
+
+    private static string FindRepoFile(string relativePath)
+    {
+        for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+        {
+            string candidate = Path.Combine(dir.FullName, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new FileNotFoundException(relativePath);
+    }
     [Fact]
     public async Task ImportEndpoint_WhenValidExtensionOriginAndValidCookie_SavesAccountAndReturns200()
     {
@@ -101,7 +156,7 @@ public sealed class LocalExtensionBridgeServiceTests
                 Encoding.UTF8,
                 "application/json")
         };
-        request.Headers.TryAddWithoutValidation("Origin", "chrome-extension://mpklnbtestextensionid");
+        request.Headers.TryAddWithoutValidation("Origin", LocalExtensionBridgeService.TrustedExtensionOrigin);
 
         using HttpResponseMessage response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -141,11 +196,67 @@ public sealed class LocalExtensionBridgeServiceTests
                 Encoding.UTF8,
                 "application/json")
         };
-        request.Headers.TryAddWithoutValidation("Origin", "chrome-extension://mpklnbtestextensionid");
+        request.Headers.TryAddWithoutValidation("Origin", LocalExtensionBridgeService.TrustedExtensionOrigin);
 
         using HttpResponseMessage response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
         Assert.Empty(store.Accounts);
+    }
+
+    [Theory]
+    [InlineData("www.roblox.com:443", true)]
+    [InlineData("roblox.com:443", true)]
+    [InlineData("auth.roblox.com:443", true)]
+    [InlineData("www.roblox.com", true)]
+    [InlineData("www.roblox.com:80", false)]
+    [InlineData("evil-roblox.com:443", false)]
+    [InlineData("example.com:443", false)]
+    [InlineData("", false)]
+    public void LocalSniDpiBypassProxy_TryParseAllowedRobloxTarget_ValidatesHostAndPort(string authority, bool expected)
+    {
+        bool actual = LocalSniDpiBypassProxy.TryParseAllowedRobloxTarget(authority, out _, out int port);
+        Assert.Equal(expected, actual);
+        if (actual)
+        {
+            Assert.Equal(443, port);
+        }
+    }
+
+    [Fact]
+    public async Task LocalSniDpiBypassProxy_TryWriteSplitTlsClientHelloAsync_SplitsSniAcrossTwoValidTlsRecords()
+    {
+        byte[] payload = Encoding.ASCII.GetBytes("HELLO_PREFIX_www.roblox.com_HELLO_SUFFIX");
+        byte[] tlsRecord = new byte[5 + payload.Length];
+        tlsRecord[0] = 0x16;
+        tlsRecord[1] = 0x03;
+        tlsRecord[2] = 0x01;
+        tlsRecord[3] = (byte)((payload.Length >> 8) & 0xFF);
+        tlsRecord[4] = (byte)(payload.Length & 0xFF);
+        Buffer.BlockCopy(payload, 0, tlsRecord, 5, payload.Length);
+
+        using MemoryStream output = new();
+        bool split = await LocalSniDpiBypassProxy.TryWriteSplitTlsClientHelloAsync(
+            output,
+            tlsRecord,
+            tlsRecord.Length,
+            CancellationToken.None);
+
+        Assert.True(split);
+
+        byte[] written = output.ToArray();
+        Assert.Equal(tlsRecord.Length + 5, written.Length);
+
+        int len1 = (written[3] << 8) | written[4];
+        string part1 = Encoding.ASCII.GetString(written, 5, len1);
+        Assert.DoesNotContain("roblox.com", part1, StringComparison.OrdinalIgnoreCase);
+
+        int rec2Offset = 5 + len1;
+        Assert.Equal(0x16, written[rec2Offset]);
+        int len2 = (written[rec2Offset + 3] << 8) | written[rec2Offset + 4];
+        string part2 = Encoding.ASCII.GetString(written, rec2Offset + 5, len2);
+        Assert.DoesNotContain("roblox.com", part2, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal("HELLO_PREFIX_www.roblox.com_HELLO_SUFFIX", part1 + part2);
     }
 
     private sealed class FakeAuthService : IRobloxAuthService

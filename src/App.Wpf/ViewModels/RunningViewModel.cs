@@ -230,8 +230,8 @@ public partial class RunningViewModel : ObservableObject, IDisposable
             return;
         }
 
-        AppSettings current = _settingsService.CurrentSettings;
-        await _settingsService.SaveSettingsAsync(current with
+        // Merged inside the settings lock so a concurrent toggle/resolution save is not overwritten by a stale snapshot.
+        await _settingsService.UpdateSettingsAsync(current => current with
         {
             RotationGroups = groups,
             RotationDurationMinutes = (int)duration.TotalMinutes,

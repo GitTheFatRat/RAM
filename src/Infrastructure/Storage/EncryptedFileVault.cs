@@ -59,6 +59,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     private bool _disposed;
     private bool _recoveredFromBackup;
     private bool _legacyBackupsPurged;
+    private readonly HashSet<string> _pendingSecureDeletes = new(StringComparer.OrdinalIgnoreCase);
 
     public string VaultPath => _filePath;
 
@@ -224,6 +225,8 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
     {
         await _semaphore.WaitAsync(ct).ConfigureAwait(false);
         List<Account>? loadedAccounts = null;
+        // Disk keeps the old protection until the save commits; the in-memory key must match it on failure.
+        SecretValue? previousKey = _keyProvider?.GetKey()?.Clone();
         try
         {
             loadedAccounts = await LoadInternalAsync(ct).ConfigureAwait(false);
@@ -239,7 +242,20 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 }
             }
 
-            await SaveInternalAsync(loadedAccounts, ct).ConfigureAwait(false);
+            try
+            {
+                await SaveInternalAsync(loadedAccounts, ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                if (_keyProvider != null)
+                {
+                    _keyProvider.SetKey(previousKey);
+                    previousKey = null;
+                }
+
+                throw;
+            }
 
             // Backups still carry the previous protection level (e.g. no password / old password).
             List<string> staleBackups = GetLegacyV1BackupPaths();
@@ -248,6 +264,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
         finally
         {
+            previousKey?.Dispose();
             if (loadedAccounts != null)
             {
                 foreach (Account loaded in loadedAccounts)
@@ -320,6 +337,13 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         }
 
         _recoveredFromBackup = false;
+
+        // Retry stale-backup wipes only once the primary has proven readable: a pending .bak may be the sole
+        // recovery copy if the primary turned out corrupt.
+        if (_pendingSecureDeletes.Count > 0)
+        {
+            SecureDeleteFiles(_pendingSecureDeletes.ToList());
+        }
 
         // v1 upgrade backups are kept only until the upgraded (v2+) primary has been proven readable.
         if (fileBytes[4] != Version1Byte && !_legacyBackupsPurged)
@@ -805,37 +829,114 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
 
         string tmpPath = _filePath + ".tmp";
         string bakPath = _filePath + ".bak";
+        bool backupWouldBeWeaker = false;
+        bool rotatedIntoBackup = false;
 
-        await using (FileStream fs = new(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
+        try
         {
-            await fs.WriteAsync(outputBuffer, ct).ConfigureAwait(false);
-            await fs.FlushAsync(ct).ConfigureAwait(false);
-            fs.Flush(true);
-        }
-
-        if (File.Exists(_filePath))
-        {
-            if (_recoveredFromBackup)
+            await using (FileStream fs = new(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
             {
-                // The primary is known-corrupted: replace it without rotating it over the good .bak.
-                File.Move(tmpPath, _filePath, overwrite: true);
+                await fs.WriteAsync(outputBuffer, ct).ConfigureAwait(false);
+                await fs.FlushAsync(ct).ConfigureAwait(false);
+                fs.Flush(true);
+            }
+
+            if (File.Exists(_filePath))
+            {
+                if (_recoveredFromBackup)
+                {
+                    // The primary is known-corrupted: replace it without rotating it over the good .bak.
+                    File.Move(tmpPath, _filePath, overwrite: true);
+                }
+                else
+                {
+                    if (BackupV1VaultIfUpgrading(_filePath))
+                    {
+                        _legacyBackupsPurged = false;
+                    }
+
+                    backupWouldBeWeaker = useArgon2 && !IsPasswordWrappedOnDisk(_filePath);
+                    File.Replace(tmpPath, _filePath, bakPath);
+                    rotatedIntoBackup = true;
+                }
             }
             else
             {
-                if (BackupV1VaultIfUpgrading(_filePath))
-                {
-                    _legacyBackupsPurged = false;
-                }
-
-                File.Replace(tmpPath, _filePath, bakPath);
+                File.Move(tmpPath, _filePath);
             }
         }
-        else
+        catch
         {
-            File.Move(tmpPath, _filePath);
+            // A stranded .tmp may carry a different protection level than the committed primary.
+            TryDeleteFile(tmpPath);
+            throw;
+        }
+
+        // File.Replace just rotated a DPAPI-only / legacy 0x01 primary into .bak: that copy opens without the password.
+        if (backupWouldBeWeaker)
+        {
+            SecureDeleteFiles([bakPath]);
+        }
+        else if (rotatedIntoBackup)
+        {
+            // .bak now holds a fresh copy at the current protection level; an older queued wipe must not destroy it.
+            _pendingSecureDeletes.Remove(bakPath);
         }
 
         _recoveredFromBackup = false;
+    }
+
+    private static bool IsPasswordWrappedOnDisk(string path)
+    {
+        Span<byte> header = stackalloc byte[6];
+        using FileStream fs = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return fs.Read(header) == header.Length && header[4] == Version2Byte && header[5] == KdfTypeArgon2idKeyWrap;
+    }
+
+    /// <summary>
+    /// True when the vault on disk actually requires the master password (KDF 0x01 legacy or 0x02). A DPAPI-only
+    /// vault ignores any supplied key, so "unlocking" it proves nothing about the password.
+    /// </summary>
+    public bool IsPasswordProtectedOnDisk()
+    {
+        if (!File.Exists(_filePath))
+        {
+            return false;
+        }
+
+        Span<byte> header = stackalloc byte[6];
+        using FileStream fs = new(_filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return fs.Read(header) == header.Length &&
+               header[4] == Version2Byte &&
+               header[5] is KdfTypeArgon2idDpapi or KdfTypeArgon2idKeyWrap;
+    }
+
+    /// <summary>
+    /// Heals settings/vault drift (e.g. crash between the vault write and the settings write): if the user is asked for
+    /// a master password but the file is DPAPI-only, re-protect it with that password right away.
+    /// </summary>
+    /// <returns>True when the vault had to be re-encrypted.</returns>
+    public async Task<bool> EnsurePasswordProtectionAsync(SecretValue password, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(password);
+        if (!password.HasContent || !File.Exists(_filePath) || IsPasswordProtectedOnDisk())
+        {
+            return false;
+        }
+
+        await ReencryptAsync(password, ct).ConfigureAwait(false);
+        return true;
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     private static byte[] WrapDataKey(byte[] dataKey, byte[] passwordKey, byte[] aad)
@@ -870,6 +971,7 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
         {
             if (!File.Exists(path))
             {
+                _pendingSecureDeletes.Remove(path);
                 continue;
             }
 
@@ -883,9 +985,12 @@ public sealed partial class EncryptedFileVault : IAccountStore, IDisposable
                 }
 
                 File.Delete(path);
+                _pendingSecureDeletes.Remove(path);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                // A locked backup still carries the old protection level: keep retrying instead of forgetting it.
+                _pendingSecureDeletes.Add(path);
                 if (_logger != null)
                 {
                     LogBackupDeletionFailed(_logger, Path.GetFileName(path), ex.GetType().Name);

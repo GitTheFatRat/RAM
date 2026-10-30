@@ -13,6 +13,20 @@
 
     <Page.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <!-- Long aliases/groups/usernames end in an ellipsis (full value in the tooltip) instead of being hard-clipped. -->
+        <Style x:Key="TrimmedCellTextStyle"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource DefaultDataGridTextElementStyle}">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
+            <Style.Triggers>
+                <!-- Empty cells (e.g. no group) must not pop an empty tooltip box. -->
+                <Trigger Property="Text" Value="">
+                    <Setter Property="ToolTip" Value="{x:Null}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Page.Resources>
 
     <Grid Margin="10,6">
@@ -266,21 +280,24 @@
                             <DataGridTextColumn Header="{x:Static resources:Strings.ColumnAlias}"
                                                 Binding="{Binding Alias}"
                                                 SortMemberPath="Alias"
-                                                Width="2*"
+                                                ElementStyle="{StaticResource TrimmedCellTextStyle}"
+                                                Width="1.6*"
                                                 MinWidth="110" />
 
                             <!-- Group Column -->
                             <DataGridTextColumn Header="{x:Static resources:Strings.ColumnGroup}"
                                                 Binding="{Binding Group}"
                                                 SortMemberPath="Group"
-                                                Width="0.8*"
+                                                ElementStyle="{StaticResource TrimmedCellTextStyle}"
+                                                Width="1*"
                                                 MinWidth="56" />
 
                             <!-- Username Column -->
                             <DataGridTextColumn Header="{x:Static resources:Strings.ColumnUsername}"
                                                 Binding="{Binding Username}"
                                                 SortMemberPath="Username"
-                                                Width="1.7*"
+                                                ElementStyle="{StaticResource TrimmedCellTextStyle}"
+                                                Width="1.5*"
                                                 MinWidth="104" />
 
                             <!-- Status Chip Column -->
@@ -366,12 +383,13 @@
                             <!-- Last Checked Column -->
                             <DataGridTemplateColumn Header="{x:Static resources:Strings.ColumnLastChecked}"
                                                     SortMemberPath="LastChecked"
-                                                    Width="1.2*"
+                                                    Width="1.5*"
                                                     MinWidth="88">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding LastCheckedRelative}"
                                                    ToolTip="{Binding LastCheckedTooltip}"
+                                                   TextTrimming="CharacterEllipsis"
                                                    VerticalAlignment="Center"
                                                    FontSize="12" />
                                     </DataTemplate>

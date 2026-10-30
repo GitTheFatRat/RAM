@@ -216,6 +216,7 @@ public static class Strings
     public static string MasterPasswordExitButton => GetString(nameof(MasterPasswordExitButton));
     public static string MasterPasswordInvalid => GetString(nameof(MasterPasswordInvalid));
     public static string MasterPasswordRequired => GetString(nameof(MasterPasswordRequired));
+    public static string MasterPasswordRebindConfirm => GetString(nameof(MasterPasswordRebindConfirm));
     public static string EnableMasterPassword => GetString(nameof(EnableMasterPassword));
     public static string EnableMasterPasswordDescription => GetString(nameof(EnableMasterPasswordDescription));
     public static string SetupMasterPasswordTitle => GetString(nameof(SetupMasterPasswordTitle));

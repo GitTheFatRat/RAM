@@ -99,16 +99,35 @@ public partial class MainWindow : FluentWindow
     {
         try
         {
-            AppSettings current = _settingsService.CurrentSettings;
             bool isMaximized = WindowState == WindowState.Maximized;
             double width = RestoreBounds.Width > 0 ? RestoreBounds.Width : Width;
             double height = RestoreBounds.Height > 0 ? RestoreBounds.Height : Height;
-            double top = RestoreBounds.Top;
-            double left = RestoreBounds.Left;
-
             string lastPage = RootNavigation.SelectedItem?.TargetPageType?.Name ?? nameof(AccountsPage);
 
-            UiStateSettings uiState = (current.UiState ?? new UiStateSettings()) with
+            // Merge into the latest state inside the settings lock: a snapshot taken here would overwrite a resolution
+            // or toggle save that is still in flight. Bounded wait so the write lands before the process exits.
+            Task uiStateSave = _settingsService.UpdateSettingsAsync(
+                WithUiState(width, height, RestoreBounds.Top, RestoreBounds.Left, isMaximized, lastPage));
+            if (!uiStateSave.Wait(TimeSpan.FromSeconds(2)))
+            {
+                Serilog.Log.Warning("Window state save did not finish before close.");
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    internal static Func<AppSettings, AppSettings> WithUiState(
+        double width,
+        double height,
+        double top,
+        double left,
+        bool isMaximized,
+        string lastPage) =>
+        settings => settings with
+        {
+            UiState = (settings.UiState ?? new UiStateSettings()) with
             {
                 WindowWidth = width,
                 WindowHeight = height,
@@ -116,14 +135,8 @@ public partial class MainWindow : FluentWindow
                 WindowLeft = left,
                 IsMaximized = isMaximized,
                 LastSelectedPage = lastPage
-            };
-
-            _ = _settingsService.SaveSettingsAsync(current with { UiState = uiState });
-        }
-        catch
-        {
-        }
-    }
+            }
+        };
 
     private void OnMainWindowPreviewKeyDown(object sender, KeyEventArgs e)
     {

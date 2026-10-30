@@ -9,8 +9,14 @@ using Serilog.Events;
 
 public sealed class RobloxSecretRedactionEnricher : ILogEventEnricher
 {
+    public const string RedactedPlaceholder = "[REDACTED]";
+
+    // Covers raw, URL-encoded (%7C / %3D / %3A), spaced (".ROBLOSECURITY = x") and JSON (".ROBLOSECURITY":"x") forms.
     private static readonly Regex SecretRedactRegex = new(
-        @"(_\|WARNING:-DO-NOT-SHARE-THIS\S*)|(\.ROBLOSECURITY=\S*)|(\|_[A-Za-z0-9]{16,})",
+        @"((?:_|%5F)(?:\||%7C)WARNING(?::|%3A)-DO-NOT-SHARE-THIS\S*)" +
+        @"|(\.ROBLOSECURITY\s*(?:=|%3D)\s*\S*)" +
+        @"|(\.ROBLOSECURITY""?\s*:\s*""[^""]*""?)" +
+        @"|((?:\||%7C)_[A-Za-z0-9]{16,})",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
@@ -29,9 +35,11 @@ public sealed class RobloxSecretRedactionEnricher : ILogEventEnricher
     {
         if (value is ScalarValue scalar)
         {
-            if (scalar.Value is string text && ContainsSensitiveMarker(text))
+            // Non-string scalars (Uri, custom types) render via ToString(), so they can carry a cookie too.
+            string? text = scalar.Value as string ?? (scalar.Value is null or ValueType ? null : scalar.Value.ToString());
+            if (text is not null && ContainsSensitiveMarker(text))
             {
-                return new ScalarValue("[REDACTED]");
+                return new ScalarValue(RedactedPlaceholder);
             }
             return scalar;
         }
@@ -81,7 +89,7 @@ public sealed class RobloxSecretRedactionEnricher : ILogEventEnricher
                 ScalarValue key = kv.Key;
                 if (key.Value is string keyText && ContainsSensitiveMarker(keyText))
                 {
-                    key = new ScalarValue("[REDACTED]");
+                    key = new ScalarValue(RedactedPlaceholder);
                     changed = true;
                 }
                 LogEventPropertyValue redactedVal = RedactPropertyValue(kv.Value);
@@ -106,4 +114,8 @@ public sealed class RobloxSecretRedactionEnricher : ILogEventEnricher
 
         return SecretRedactRegex.IsMatch(text);
     }
+
+    /// <summary>Replaces every cookie/secret occurrence in free text (exception dumps, crash files, dialogs).</summary>
+    public static string Redact(string? text) =>
+        string.IsNullOrEmpty(text) ? text ?? string.Empty : SecretRedactRegex.Replace(text, RedactedPlaceholder);
 }

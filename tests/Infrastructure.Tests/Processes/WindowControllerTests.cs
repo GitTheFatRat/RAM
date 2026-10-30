@@ -338,4 +338,108 @@ public sealed class WindowControllerTests
             Native.User32.SetWindowPosOverride = null;
         }
     }
+
+    // M44 real-data: genuine top-level Win32 windows minimized by the OS, no User32 overrides involved.
+    [Fact]
+    public void RealWindow_WhileMinimized_AttachAndEveryLockEvent_NeverRestoresOrResizes()
+    {
+        using RealTopLevelWindow window = RealTopLevelWindow.Create(120, 140, 640, 480);
+        window.MinimizeWithoutActivating();
+        Assert.True(Native.User32.IsIconic(window.Handle));
+
+        Assert.True(Native.WindowSizeLock.Attach(window.Handle, 200, 400));
+        Assert.True(Native.User32.IsIconic(window.Handle));
+
+        using Native.WindowSizeLock sizeLock = new(window.Handle, 200, 400, tilePosition: new GridSlot(0, 0));
+        uint[] lockEvents =
+        [
+            Native.WindowSizeLock.EVENT_SYSTEM_MOVESIZEEND,
+            Native.WindowSizeLock.EVENT_SYSTEM_MINIMIZESTART,
+            Native.WindowSizeLock.EVENT_SYSTEM_MINIMIZEEND,
+            Native.WindowSizeLock.EVENT_OBJECT_LOCATIONCHANGE,
+        ];
+        foreach (uint eventType in lockEvents)
+        {
+            sizeLock.OnWinEvent(IntPtr.Zero, eventType, window.Handle, Native.WindowSizeLock.OBJID_WINDOW, 0, 0, 0);
+            Assert.True(Native.User32.IsIconic(window.Handle), $"Event 0x{eventType:X} restored a minimized window.");
+        }
+
+        // The restore rect must still be the original 640x480 at (120, 140), not the lock size or a parked coordinate.
+        window.Restore();
+        (int left, int top, int width, int height) = window.Bounds;
+        Assert.Equal((120, 140, 640, 480), (left, top, width, height));
+    }
+
+    [Fact]
+    public void RealWindow_RecreatedWhileMinimized_IsAdoptedWithoutRestore_AndTiledOnUserRestore()
+    {
+        using RealTopLevelWindow original = RealTopLevelWindow.Create(300, 300, 640, 480);
+        using RealTopLevelWindow recreated = RealTopLevelWindow.Create(400, 400, 640, 480);
+        recreated.MinimizeWithoutActivating();
+
+        using Native.WindowSizeLock sizeLock = new(original.Handle, 200, 400, tilePosition: new GridSlot(50, 60));
+        sizeLock.OnWinEvent(IntPtr.Zero, Native.WindowSizeLock.EVENT_OBJECT_SHOW, recreated.Handle, Native.WindowSizeLock.OBJID_WINDOW, 0, 0, 0);
+        Assert.True(Native.User32.IsIconic(recreated.Handle));
+
+        recreated.Restore();
+        sizeLock.OnWinEvent(IntPtr.Zero, Native.WindowSizeLock.EVENT_SYSTEM_MINIMIZEEND, recreated.Handle, Native.WindowSizeLock.OBJID_WINDOW, 0, 0, 0);
+
+        Assert.False(Native.User32.IsIconic(recreated.Handle));
+        Assert.Equal((50, 60, 200, 400), recreated.Bounds);
+    }
+
+    private sealed class RealTopLevelWindow : IDisposable
+    {
+        private const int WS_OVERLAPPEDWINDOW = 0x00CF0000;
+        private const int WS_VISIBLE = 0x10000000;
+        private const int WS_EX_NOACTIVATE = 0x08000000;
+        private const int SW_SHOWMINNOACTIVE = 7;
+        private const int SW_SHOWNOACTIVATE = 4;
+
+        private RealTopLevelWindow(IntPtr handle) => Handle = handle;
+
+        public IntPtr Handle { get; }
+
+        public (int Left, int Top, int Width, int Height) Bounds =>
+            GetWindowRect(Handle, out NativeRect rect)
+                ? (rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)
+                : throw new InvalidOperationException("GetWindowRect failed.");
+
+        public static RealTopLevelWindow Create(int x, int y, int width, int height)
+        {
+            IntPtr handle = CreateWindowEx(WS_EX_NOACTIVATE, "STATIC", "M44 real-data window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, x, y, width, height, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+            Assert.NotEqual(IntPtr.Zero, handle);
+            return new RealTopLevelWindow(handle);
+        }
+
+        public void MinimizeWithoutActivating() => _ = ShowWindow(Handle, SW_SHOWMINNOACTIVE);
+
+        public void Restore() => _ = ShowWindow(Handle, SW_SHOWNOACTIVATE);
+
+        public void Dispose() => _ = DestroyWindow(Handle);
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct NativeRect
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "CreateWindowExW", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr CreateWindowEx(int exStyle, string className, string windowName, int style, int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool DestroyWindow(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool ShowWindow(IntPtr hWnd, int command);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out NativeRect rect);
+    }
 }

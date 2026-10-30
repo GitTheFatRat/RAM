@@ -78,8 +78,8 @@ public sealed partial class RamCleanerService : BackgroundService
                                 {
                                     _consecutiveAccessDeniedCycles = 0;
                                     LastDisabledDueToAccessDenied = true;
-                                    await _settingsService.SaveSettingsAsync(
-                                        _settingsService.CurrentSettings with { EnableRamCleaner = false },
+                                    await _settingsService.UpdateSettingsAsync(
+                                        s => s with { EnableRamCleaner = false },
                                         stoppingToken).ConfigureAwait(false);
 
                                     LogRamCleanerAutoDisabled(_logger);

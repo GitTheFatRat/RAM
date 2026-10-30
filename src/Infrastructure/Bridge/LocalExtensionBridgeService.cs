@@ -32,6 +32,7 @@ public sealed partial class LocalExtensionBridgeService : ILocalExtensionBridge
     private HttpListener? _listener;
     private CancellationTokenSource? _cts;
     private Task? _listenLoopTask;
+    private LocalSniDpiBypassProxy? _sniProxy;
     private bool _disposed;
 
     public LocalExtensionBridgeService(
@@ -88,6 +89,19 @@ public sealed partial class LocalExtensionBridgeService : ILocalExtensionBridge
                 _cts = cts;
                 _listenLoopTask = Task.Run(() => AcceptLoopAsync(listener, cts.Token));
 
+                if (_port == DefaultPort)
+                {
+                    LocalSniDpiBypassProxy sniProxy = new(LocalSniDpiBypassProxy.DefaultProxyPort, configureSystemPac: true);
+                    if (sniProxy.Start())
+                    {
+                        _sniProxy = sniProxy;
+                    }
+                    else
+                    {
+                        sniProxy.Dispose();
+                    }
+                }
+
                 if (_logger is not null)
                 {
                     LogBridgeStarted(_logger, _port);
@@ -118,6 +132,19 @@ public sealed partial class LocalExtensionBridgeService : ILocalExtensionBridge
 
     private void CleanupListenerLocked()
     {
+        if (_sniProxy != null)
+        {
+            try
+            {
+                _sniProxy.Dispose();
+            }
+            catch
+            {
+            }
+
+            _sniProxy = null;
+        }
+
         if (_cts != null)
         {
             try
@@ -366,18 +393,17 @@ public sealed partial class LocalExtensionBridgeService : ILocalExtensionBridge
             }).ConfigureAwait(false);
     }
 
-    public static bool IsAllowedExtensionOrigin(string? origin)
-    {
-        if (string.IsNullOrWhiteSpace(origin))
-        {
-            return false;
-        }
+    /// <summary>
+    /// ID derived from the public "key" pinned in tools/BrowserExtension/manifest.json (same ID in Chrome and Edge).
+    /// A prefix match would let ANY installed extension plant or overwrite vault accounts.
+    /// </summary>
+    public const string TrustedExtensionId = "omebbdjjpdniojlcceimbbmfndljgjdp";
 
-        string trimmed = origin.Trim();
-        return trimmed.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("moz-extension://", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("extension://", StringComparison.OrdinalIgnoreCase);
-    }
+    public const string TrustedExtensionOrigin = "chrome-extension://" + TrustedExtensionId;
+
+    public static bool IsAllowedExtensionOrigin(string? origin) =>
+        !string.IsNullOrWhiteSpace(origin) &&
+        string.Equals(origin.Trim().TrimEnd('/'), TrustedExtensionOrigin, StringComparison.OrdinalIgnoreCase);
 
     private static async Task<string?> ReadCookieFromBodyAsync(Stream inputStream, CancellationToken ct)
     {
